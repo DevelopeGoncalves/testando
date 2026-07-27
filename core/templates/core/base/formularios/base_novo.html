@@ -238,94 +238,109 @@
 
 
                     {% if apenas_pendentes %}
-                    <div id="container-ligacoes">
-                        <div class="bloco-ligacao" id="ligacao-1" style="display:none;">
-                            <h5 class="text-primary border-bottom pb-2 mb-3 mt-5 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
-                            <div class="row g-3">
-
-                                <div class="col-md-3">
-                                    <label class="fw-bold small mb-1">Data/Hora da Ligação</label>
-                                    <input type="datetime-local" step="1" class="form-control" name="ligacao_data" id="edit_ligacao_data">
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="fw-bold small mb-1">Protocolo</label>
-                                    <input type="text" class="form-control bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(gerado automaticamente)">
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="fw-bold small mb-1">Ramal</label>
-                                    <input type="text" class="form-control" name="ligacao_ramal" id="edit_ligacao_ramal">
-                                </div>
-
-                                <div class="col-md-1 d-flex flex-column">
-                                    <label class="fw-bold small mb-1">Vendas Central</label>
-                                    <div class="form-check mt-1">
-                                        <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
-                                    </div>
-                                </div>
-
-                                <div class="col-md-1 d-flex flex-column">
-                                    <label class="fw-bold small mb-1">Vendas Agência</label>
-                                    <div class="form-check mt-1">
-                                        <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
-                                    </div>
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="fw-bold small mb-1">Prêmio Total</label>
-                                    <input type="text" inputmode="numeric" class="form-control campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
-                                </div>
-
-                                <div class="col-md-3">
-                                    <label class="fw-bold small mb-1">Motivo Não Venda</label>
-                                    <select class="form-select" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
-                                        <option value="">-- Selecione --</option>
-                                        {% for m in motivos_nao_venda %}
-                                        <option value="{{ m.id }}">{{ m.motivo }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-
-                                <div class="col-md-3">
-                                    <label class="fw-bold small mb-1">Próximo contato</label>
-                                    <input type="datetime-local" step="1" class="form-control campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
-                                </div>
-
-                                <div class="col-md-5">
-                                    <label class="fw-bold small mb-1">Observações</label>
-                                    <textarea class="form-control" name="ligacao_obs" id="edit_ligacao_obs" rows="2"></textarea>
-                                </div>
-                                
-                                                                {% comment %}
-                                <div class="col-md-2">
-                                    <label class="fw-bold small mb-1 text-primary">Status</label>
-                                    <select class="form-select border-primary text-primary fw-bold" name="ligacao_status" id="edit_ligacao_status">
-                                        <option value="">-- Selecione --</option>
-                                        <option value="Atendida">Atendida</option>
-                                        <option value="Não atendida">Não atendida</option>
-                                        <option value="Caixa postal">Caixa postal</option>
-                                        <option value="Reagendar">Reagendar</option>
-                                    </select>
-                                </div>
-                                {% endcomment %}
-
-                                <div class="col-md-2">
-                                    <label class="fw-bold small mb-1">Cadastrado/tratado por</label>
-                                    <input type="text" class="form-control bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
-                                </div>
-                                
-                            </div>
-                        </div>
-                    </div>
-
+                    <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação -->
                     <div class="mt-4 text-end border-bottom pb-4">
-                        <button type="button" id="btn-iniciar-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="iniciarPrimeiraLigacao()">
+                        <span id="resumo-ligacoes" class="text-success fw-bold me-3"></span>
+                        <button type="button" id="btn-iniciar-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalLigacao(true)">
                             <i class="fas fa-phone-alt"></i> Iniciar Ligação
                         </button>
-                        <button type="button" id="btn-registrar-outra-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="adicionarLigacao()" style="display:none;">
+                        <button type="button" id="btn-registrar-outra-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalLigacao(false)" style="display:none;">
                             <i class="fas fa-plus"></i> Registrar outra Ligação
                         </button>
+                    </div>
+
+                    <!-- POP-UP para registrar a ligação. Fica DENTRO do <form> para os campos
+                         serem enviados no Salvar da ficha. Não fecha clicando fora nem com ESC
+                         (backdrop static / keyboard false) e não tem "X": só sai por
+                         "Salvar Ligação" ou "Cancelar". -->
+                    <div class="modal fade" id="modalLigacao" tabindex="-1" aria-labelledby="modalLigacaoLabel"
+                         data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+                      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
+                            </div>
+                            <div class="modal-body">
+                                <div id="container-ligacoes">
+                                    <div class="bloco-ligacao" id="ligacao-1">
+                                        <h5 class="text-primary border-bottom pb-2 mb-3 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
+                                        <div class="row g-3">
+
+                                            <div class="col-md-3">
+                                                <label class="fw-bold small mb-1">Data/Hora da Ligação</label>
+                                                <input type="datetime-local" step="1" class="form-control" name="ligacao_data" id="edit_ligacao_data">
+                                            </div>
+
+                                            <div class="col-md-2">
+                                                <label class="fw-bold small mb-1">Protocolo</label>
+                                                <input type="text" class="form-control bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(gerado automaticamente)">
+                                            </div>
+
+                                            <div class="col-md-2">
+                                                <label class="fw-bold small mb-1">Ramal</label>
+                                                <input type="text" class="form-control" name="ligacao_ramal" id="edit_ligacao_ramal">
+                                            </div>
+
+                                            <div class="col-md-1 d-flex flex-column">
+                                                <label class="fw-bold small mb-1">Vendas Central</label>
+                                                <div class="form-check mt-1">
+                                                    <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-1 d-flex flex-column">
+                                                <label class="fw-bold small mb-1">Vendas Agência</label>
+                                                <div class="form-check mt-1">
+                                                    <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-2">
+                                                <label class="fw-bold small mb-1">Prêmio Total</label>
+                                                <input type="text" inputmode="numeric" class="form-control campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="fw-bold small mb-1">Motivo Não Venda</label>
+                                                <select class="form-select" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
+                                                    <option value="">-- Selecione --</option>
+                                                    {% for m in motivos_nao_venda %}
+                                                    <option value="{{ m.id }}">{{ m.motivo }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="fw-bold small mb-1">Próximo contato</label>
+                                                <input type="datetime-local" step="1" class="form-control campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
+                                            </div>
+
+                                            <div class="col-md-5">
+                                                <label class="fw-bold small mb-1">Observações</label>
+                                                <textarea class="form-control" name="ligacao_obs" id="edit_ligacao_obs" rows="2"></textarea>
+                                            </div>
+
+                                            <div class="col-md-2">
+                                                <label class="fw-bold small mb-1">Cadastrado/tratado por</label>
+                                                <input type="text" class="form-control bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end mt-3">
+                                    <button type="button" id="btn-add-ligacao-modal" class="btn btn-sm btn-outline-primary fw-bold" onclick="adicionarLigacao()">
+                                        <i class="fas fa-plus"></i> Registrar outra Ligação
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
+                                <button type="button" class="btn btn-success fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fas fa-check"></i> Salvar Ligação</button>
+                            </div>
+                        </div>
+                      </div>
                     </div>
                     {% endif %}
 
@@ -357,10 +372,20 @@
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
 
+    let modalLigacao = null;          // instância do pop-up (segunda tela) de ligação
+    let algumaLigacaoSalva = false;   // já houve ao menos uma ligação confirmada nesta ficha?
+    let blocosSnapshot = 1;           // qtd de blocos ao abrir o pop-up (usado pelo Cancelar)
+
     $(document).ready(function() {
 
         // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
         iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19]);
+
+        // Prepara o pop-up de ligação (só existe na tela do card "Novo").
+        if (PODE_REGISTRAR_LIGACAO) {
+            modalLigacao = new bootstrap.Modal(document.getElementById('modalLigacao'));
+            atualizarResumoLigacoes();
+        }
 
         {% if form_indicacao.errors %}
             $('#lista-base-novo').hide();
@@ -380,12 +405,12 @@
             avisoElegante("{{ erro_formulario_msg|escapejs }}", 'Não foi possível salvar');
         {% endif %}
 
-        // Só gera o Protocolo e a Data/Hora da Ligação quando o atendente realmente começa
-        // a preencher a ligação - ao selecionar/focar qualquer um dos campos dela (Data,
-        // Ramal, Vendas Central/Agência, Prêmio, Motivo, Próximo contato, Observações).
-        // Gerar isso assim que a ficha/bloco de ligação abre desperdiça números de
-        // protocolo com ligações que acabam nunca sendo preenchidas nem salvas.
-        $('#container-ligacoes').on('focusin', [
+        // Só gera o Protocolo e a Data/Hora da Ligação quando o atendente realmente
+        // INFORMA um dado da ligação - ou seja, ao digitar/preencher/marcar algum campo
+        // (eventos 'input'/'change'), e não apenas ao clicar/focar. Apenas abrir o pop-up
+        // ou clicar num campo sem preencher nada não gera protocolo, evitando desperdiçar
+        // números com ligações que acabam nunca sendo preenchidas nem salvas.
+        $('#container-ligacoes').on('input change', [
             'input[name^="ligacao_data"]',
             'input[name^="ligacao_ramal"]',
             'input[name^="ligacao_venda_central"]',
@@ -395,6 +420,10 @@
             'input[name^="ligacao_proximo"]',
             'textarea[name^="ligacao_obs"]'
         ].join(', '), function() {
+            // Ignora quando o campo foi apenas percorrido/limpo sem informar nada:
+            // caixas de seleção contam quando marcadas; demais campos quando têm valor.
+            var informou = (this.type === 'checkbox') ? this.checked : (this.value || '').trim() !== '';
+            if (!informou) return;
             gerarProtocoloEDataSeNecessario($(this).closest('.bloco-ligacao'));
         });
 
@@ -470,12 +499,95 @@
         }
     }
 
-    // Revela o bloco "1ª Ligação" (oculto por padrão) e troca o botão "Iniciar
-    // Ligação" pelo "Registrar outra Ligação", usado para a 2ª em diante.
+    // Chamada ao ABRIR uma ficha que já tem ligações salvas (modo edição): não abre o
+    // pop-up, apenas ajusta os botões (mostra "Registrar outra Ligação") e o resumo. Os
+    // dados das ligações já foram carregados nos blocos por editarIndicacao().
     function iniciarPrimeiraLigacao() {
-        $('#ligacao-1').show();
+        algumaLigacaoSalva = true;
         $('#btn-iniciar-ligacao').hide();
         $('#btn-registrar-outra-ligacao').show();
+        atualizarResumoLigacoes();
+    }
+
+    // Abre o pop-up (segunda tela) para registrar a ligação.
+    //  - primeira=true  -> "Iniciar Ligação": abre com o 1º bloco pronto.
+    //  - primeira=false -> "Registrar outra Ligação": abre e adiciona um novo bloco.
+    function abrirModalLigacao(primeira) {
+        if (!modalLigacao) return;
+        $('#ligacao-1').show();
+        // guarda quantos blocos existiam antes; o Cancelar remove os criados nesta sessão.
+        blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
+        if (!primeira) {
+            adicionarLigacao();
+        }
+        ativarBloqueioSaida();
+        modalLigacao.show();
+    }
+
+    // "Salvar Ligação": valida e fecha o pop-up mantendo os dados na ficha (os campos vão
+    // no POST quando o usuário clicar em Salvar da ficha). Não some com o registro.
+    function salvarLigacaoModal() {
+        let faltando = false;
+        document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(function(bloco) {
+            let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+            let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
+            let premio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+            let marcouVenda = (central && central.checked) || (agencia && agencia.checked);
+            if (marcouVenda && premio && !premio.value.trim()) {
+                faltando = true;
+            }
+        });
+        if (faltando) {
+            avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
+            return;
+        }
+        algumaLigacaoSalva = true;
+        desativarBloqueioSaida();
+        modalLigacao.hide();
+        $('#btn-iniciar-ligacao').hide();
+        $('#btn-registrar-outra-ligacao').show();
+        atualizarResumoLigacoes();
+    }
+
+    // "Cancelar": descarta o que foi preenchido nesta sessão do pop-up e fecha. Remove os
+    // blocos criados desde a abertura; se nenhuma ligação havia sido salva antes, volta ao
+    // estado inicial (botão "Iniciar Ligação").
+    function cancelarLigacaoModal() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        for (let i = blocos.length - 1; i >= blocosSnapshot; i--) {
+            blocos[i].remove();
+        }
+        reorganizarLigacoes();
+        if (!algumaLigacaoSalva) {
+            resetarContainerLigacoes();
+        }
+        desativarBloqueioSaida();
+        modalLigacao.hide();
+        atualizarResumoLigacoes();
+    }
+
+    // Enquanto o pop-up está aberto, o navegador avisa/impede sair da página (fechar aba,
+    // recarregar, navegar) sem antes Salvar ou Cancelar a ligação.
+    function avisarSaida(e) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+    function ativarBloqueioSaida() {
+        window.addEventListener('beforeunload', avisarSaida);
+    }
+    function desativarBloqueioSaida() {
+        window.removeEventListener('beforeunload', avisarSaida);
+    }
+
+    // Mostra na ficha quantas ligações já foram registradas.
+    function atualizarResumoLigacoes() {
+        let resumo = document.getElementById('resumo-ligacoes');
+        if (!resumo) return;
+        let n = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
+        resumo.innerHTML = (algumaLigacaoSalva && n > 0)
+            ? '<i class="fas fa-check-circle"></i> ' + n + ' ligação(ões) registrada(s)'
+            : '';
     }
 
     function resetarContainerLigacoes() {
@@ -497,10 +609,12 @@
         document.getElementById('edit_ligacao_motivo_nao_venda').value = '';
         document.getElementById('edit_ligacao_cadastrado_por').value = '';
         // Ficha nova: nenhuma ligação começada ainda, só o botão "Iniciar Ligação".
+        algumaLigacaoSalva = false;
         $('#ligacao-1').hide();
         $('#btn-iniciar-ligacao').show();
         $('#btn-registrar-outra-ligacao').hide();
         sincronizarExclusividadeVenda(document.getElementById('ligacao-1'));
+        atualizarResumoLigacoes();
     }
 
     // Vendas Central e Vendas Agência continuam mutuamente exclusivos entre si e com o
