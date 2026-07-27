@@ -1,0 +1,702 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Produção</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'producao_formularios' %}" class="text-primary text-decoration-none">Formulários</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'producao_formularios_painel' agrupamento_id=agrupamento.id %}" class="text-primary text-decoration-none">{{ agrupamento.agrupamento }}</a>
+        <span class="text-primary text-decoration-none">/</span> 
+        <span class="text-primary text-decoration-none">{{ fase_nome }}</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div id="tela-fase" style="min-width: 0; width: 100%; overflow: hidden;">
+    
+    <div id="lista-fase">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 mt-2 gap-2">
+            <h4 class="m-0 text-truncate"><i class="fas fa-list text-primary"></i> {{ fase_nome }} - {{ agrupamento.agrupamento }}</h4>
+            <div class="text-end text-nowrap">
+                {% if fase_nome == 'Importados' or fase_nome == 'Pendentes' %}
+                <button id="btn-filtro-duplicados" type="button" class="btn btn-outline-danger me-1 fw-bold" onclick="toggleFiltroDuplicados()">
+                    <i class="fas fa-filter"></i> Duplicados{% if ids_duplicados %} ({{ ids_duplicados|length }}){% endif %}
+                </button>
+                {% endif %}
+                {% if fase_nome == 'Importados' %}
+                <button class="btn btn-warning me-1 fw-bold text-dark" onclick="validarSelecionados()">
+                    <i class="fas fa-check-double"></i> Validar
+                </button>
+                {% endif %}
+                {% if fase_nome == 'Pendentes' %}
+                <button class="btn btn-warning me-1 fw-bold text-dark" onclick="enviarParaEmitidos()">
+                    <i class="fas fa-paper-plane"></i> Enviar para Emitidos
+                </button>
+                {% endif %}
+                <button class="btn btn-success me-1" onclick="exportarCSV('{{ fase_nome|lower }}.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-fase')"><i class="fas fa-trash-alt"></i></button>
+                <button class="btn btn-primary" onclick="avisoElegante('Novo cadastro em construção!')"><i class="fas fa-plus"></i> Novo</button>
+            </div>
+        </div>
+        
+        <div class="tabela-container bg-white border rounded shadow-sm w-100" style="min-width: 0;">
+            <form id="form-delete-fase" method="post" action="#">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="excluir">
+                
+                <div class="table-responsive w-100">
+                    <table class="table table-striped table-hover mb-0 w-100" id="tabela-fase" style="font-size: 0.85rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
+                                <th style="display:none;"></th> 
+                                <th>Seguradora</th>
+                                <th>Grupo/Ramo</th>
+                                <th>Tipo documento</th>
+                                <th>Documento</th>
+                                <th>Cliente</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reg in registros %}
+                            <tr class="tr-clickable{% if reg.id in ids_duplicados %} table-danger{% endif %}" ondblclick="abrirDetalhes(this)" style="cursor: pointer;"
+                                data-id="{{ reg.id }}"
+                                data-mes="{{ reg.mes_producao|default:'' }}"
+                                data-seguradora="{{ reg.seguradora.id|default:'' }}"
+                                data-gruporamo="{{ reg.grupo_ramo_id|default:'' }}"
+                                data-tipodoc="{{ reg.tipo_documento_id|default:'' }}"
+                                data-documento="{{ reg.documento|default:'' }}"
+                                data-endosso="{{ reg.endosso|default:'' }}"
+                                data-motivo_endosso="{{ reg.motivo_endosso|default:'' }}"
+                                data-qtdparcelas="{{ reg.qtd_parcelas|default:'' }}"
+                                data-iniciovig="{{ reg.inicio_vigencia|date:'Y-m-d'|default:'' }}" 
+                                data-fimvig="{{ reg.fim_vigencia|date:'Y-m-d'|default:'' }}"
+                                data-renovacao_propria="{{ reg.renovacao_propria|default:'' }}"
+                                data-tipopessoa="{{ reg.tipo_pessoa|default:'' }}"                                data-cpfcnpj="{{ reg.cpf_cnpj|default:'' }}"
+                                data-cliente="{{ reg.cliente|default:'' }}"
+                                data-nomesocial="{{ reg.nome_social|default:'' }}"
+                                data-celular="{{ reg.celular|default:'' }}"
+                                data-telefone="{{ reg.telefone|default:'' }}"
+                                data-email="{{ reg.email|default:'' }}"
+                                data-unidade="{{ reg.unidade.id|default:'' }}"
+
+                                data-superintendencia="{{ reg.superintendencia|default:'' }}"
+                                data-nomeunidade="{{ reg.nome_unidade|default:'' }}"
+                                data-grupo="{{ reg.grupo|default:'' }}"
+                                data-colaborador="{{ reg.colaborador|default:'' }}"
+                                data-nomecolaborador="{{ reg.nome_colaborador|default:'' }}"
+                                data-gerente="{{ reg.gerente_agencia|default:'' }}"
+                                data-superintendente="{{ reg.superintendente|default:'' }}"
+                                
+                                data-premio="{{ reg.premio_bruto|default:'' }}"
+                                data-premio_liquido="{{ reg.premio_liquido|default:'' }}"
+                                data-comissao="{{ reg.perc_comissao|default:'' }}"
+                                data-realizado="{{ reg.realizado|default:'' }}"
+                                data-observacoes="{{ reg.observacoes|default:'' }}"
+                            >
+                                <td class="text-center" onclick="event.stopPropagation()">
+                                    <input type="checkbox" name="ids_selecionados" value="{{ reg.id }}" class="chk-row" {% if reg.id in ids_duplicados %}checked{% endif %}>
+                                </td>
+                                
+                                <td style="display:none;" class="dados-endossos-extras">
+                                    {% for exp in reg.endossos_extras.all %}
+                                    <span class="extra-item"
+                                          data-mes="{{ exp.mes_producao|default:'' }}"
+                                          data-endosso="{{ exp.endosso|default:'' }}"
+                                          data-motivo="{{ exp.motivo_endosso|default:'' }}"
+                                          data-iniciovig="{{ exp.inicio_vigencia|date:'Y-m-d'|default:'' }}"
+                                          data-fimvig="{{ exp.fim_vigencia|date:'Y-m-d'|default:'' }}"
+                                          data-qtdparcelas="{{ exp.qtd_parcelas|default:'' }}"
+                                          data-renovacao="{{ exp.renovacao_propria|default:'' }}"
+                                          data-premio="{{ exp.premio_bruto|default:'' }}"
+                                          data-premioliquido="{{ exp.premio_liquido|default:'' }}"
+                                          data-comissao="{{ exp.perc_comissao|default:'' }}"
+                                          data-realizado="{{ exp.realizado|default:'' }}"
+                                          data-unidade="{{ exp.unidade|default:'' }}"
+
+                                          data-superintendencia="{{ exp.superintendencia|default:'' }}"
+                                          data-nomeunidade="{{ exp.nome_unidade|default:'' }}"
+                                          data-grupo="{{ exp.grupo|default:'' }}"
+                                          data-colaborador="{{ exp.colaborador|default:'' }}"
+                                          data-nomecolaborador="{{ exp.nome_colaborador|default:'' }}"
+                                          data-gerente="{{ exp.gerente_agencia|default:'' }}"
+                                          data-superintendente="{{ exp.superintendente|default:'' }}">
+                                    </span>
+                                    {% endfor %}
+                                </td>
+
+                                <td>{{ reg.seguradora.seguradora|default:"-" }}</td>
+                                <td>{{ reg.grupo_ramo|default:"-" }}</td>
+                                <td>{{ reg.tipo_documento.tipo_documento|default:"-" }}</td>
+                                <td>{{ reg.documento|default:"-" }}</td>
+                                <td>{{ reg.cliente|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="form-fase" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+            <h4 class="m-0 text-primary"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+            <button type="button" class="btn btn-outline-secondary" onclick="fecharDetalhes()">
+                <i class="fas fa-arrow-left"></i> Voltar para a Lista
+            </button>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <form method="post" action="{% url 'producao_lista_fase' agrupamento.id fase_nome|lower %}">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="editar">
+                <input type="hidden" name="registro_id" id="edit_id">
+
+                <div class="card-body p-4" style="font-size: 0.95rem;">
+                    <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-file-contract"></i> Bloco Apólice</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="fw-bold small mb-1">Seguradora</label>
+                            <select class="form-select" name="seguradora" id="edit_seguradora">
+                                <option value="">-- Selecione a Seguradora --</option>
+                                {% for s in seguradoras_base %}
+                                    <option value="{{ s.id }}">{{ s.seguradora }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="fw-bold small mb-1">Grupo/Ramo</label>
+                            <select class="form-select" name="grupo_ramo" id="edit_gruporamo">
+                                <option value="">-- Selecione o Ramo --</option>
+                                {% for r in ramos_hab %}
+                                    <option value="{{ r.id }}">{{ r.grupo_e_ramo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="fw-bold small mb-1">Tipo Documento</label>
+                            <select class="form-select" name="tipo_documento" id="edit_tipodoc">
+                                <option value="">-- Selecione o Tipo --</option>
+                                {% for t in tipos_doc %}
+                                    <option value="{{ t.id }}">{{ t.tipo_documento }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4"><label class="fw-bold small mb-1">Documento</label><input type="text" class="form-control" name="documento" id="edit_documento"></div>
+                        
+                        <div class="col-md-3">
+                            <label class="fw-bold small mb-1">Tipo de Pessoa</label>
+                            <select class="form-select" name="tipo_pessoa" id="edit_tipopessoa">
+                                <option value="">-- Selecione o Tipo --</option>
+                                {% for tp in tipos_pessoa %}
+                                    <option value="{{ tp.tipo_pessoa }}">{{ tp.tipo_pessoa }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3"><label class="fw-bold small mb-1">CPF / CNPJ</label><input type="text" class="form-control" name="cpf_cnpj" id="edit_cpfcnpj"></div>
+                        <div class="col-md-6"><label class="fw-bold small mb-1">Cliente</label><input type="text" class="form-control" name="cliente" id="edit_cliente"></div>
+                        <div class="col-md-4"><label class="fw-bold small mb-1">Nome Social</label><input type="text" class="form-control" name="nome_social" id="edit_nomesocial"></div>
+                        <div class="col-md-6"><label class="fw-bold small mb-1">Celular</label><input type="text" class="form-control" name="celular" id="edit_celular"></div>
+                        <div class="col-md-6"><label class="fw-bold small mb-1">Telefone</label><input type="text" class="form-control" name="telefone" id="edit_telefone"></div>
+                        <div class="col-md-4"><label class="fw-bold small mb-1">E-mail</label><input type="email" class="form-control" name="email" id="edit_email"></div>                                                                                                                        
+                    </div>
+
+                    </div>
+
+                    <div id="container-endossos">
+                        <div class="bloco-endosso" id="endosso-1">
+                            <h5 class="text-primary border-bottom pb-2 mb-3 mt-5 titulo-endosso"><i class="fas fa-sync-alt"></i> 1º Endosso</h5>
+                            <div class="row g-3">
+                                
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Mês da Produção</label>
+                                    <input type="text" class="form-control" name="mes_producao" id="edit_mes">
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1 text-primary">Endosso</label>
+                                    <input type="text" class="form-control border-primary text-primary fw-bold" style="background-color: #f8f9fc; font-size: 1.05rem;" name="endosso" id="edit_endosso">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold small mb-1">Motivo do Endosso</label>
+                                    <input type="text" class="form-control" name="motivo_endosso" id="edit_motivo_endosso">
+                                </div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Qtd. Parcelas</label><input type="number" class="form-control" name="qtd_parcelas" id="edit_qtdparcelas"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Renovação Própria</label><input type="text" class="form-control" name="renovacao_propria" id="edit_renovacao_propria"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Início de Vigência</label><input type="date" class="form-control" name="inicio_vigencia" id="edit_iniciovig"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Fim de Vigência</label><input type="date" class="form-control" name="fim_vigencia" id="edit_fimvig"></div>
+                                
+                                <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Superintendência</label><input type="text" class="form-control bg-light" name="superintendencia" id="edit_superintendencia" readonly tabindex="-1"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Grupo</label><input type="text" class="form-control bg-light" name="grupo" id="edit_grupo" readonly tabindex="-1"></div>                                
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Unidade</label>
+                                    <select class="form-select border-primary" name="unidade" id="edit_unidade" onchange="autoPreencherUnidadeEdicao(this)">
+                                        <option value="">-- Selecione a Unidade --</option>
+                                        {% for u in unidades %}
+                                            <option value="{{ u.id }}" data-sup="{{ u.superintendencia|default:'' }}" data-grupo="{{ u.grupo|default:'' }}" data-nome="{{ u.unidade|default:'' }}" data-mat-ger="{{ u.matricula_gg|default:'' }}" data-mat-sup="{{ u.matricula_superintendente|default:'' }}">{{ u.cid_unidade }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Nome da Unidade</label><input type="text" class="form-control bg-light" name="nome_unidade" id="edit_nomeunidade" readonly tabindex="-1"></div>
+
+                                <div class="col-md-6"><label class="fw-bold small mb-1 text-muted">Matrícula do Superintendente</label><input type="text" class="form-control bg-light" name="superintendente" id="edit_superintendente" readonly tabindex="-1"></div>
+                                <div class="col-md-6"><label class="fw-bold small mb-1 text-muted">Matrícula do Gerente da Agência</label><input type="text" class="form-control bg-light" name="gerente_agencia" id="edit_gerente" readonly tabindex="-1"></div>
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Matrícula do Colaborador</label>
+                                    <select class="form-select border-primary" name="colaborador" id="edit_colaborador" onchange="autoPreencherColaboradorEdicao(this)">
+                                        <option value="">-- Selecione o Colaborador --</option>
+                                        {% for c in colaboradores %}
+                                            <option value="{{ c.matricula }}" data-nome="{{ c.colaborador|default:'' }}">{{ c.matricula }} - {{ c.colaborador }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Nome do Colaborador</label><input type="text" class="form-control bg-light" name="nome_colaborador" id="edit_nomecolaborador" readonly tabindex="-1"></div>
+
+                                <div class="col-md-3"><label class="fw-bold small mb-1">% Comissão</label><input type="number" step="0.01" class="form-control" name="perc_comissao" id="edit_comissao"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Prêmio Líquido (R$)</label><input type="number" step="0.01" class="form-control" name="premio_liquido" id="edit_premio_liquido"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Prêmio Bruto / Parcela (R$)</label><input type="number" step="0.01" class="form-control text-success fw-bold" name="premio_bruto" id="edit_premio"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Realizado</label><input type="text" class="form-control" name="realizado" id="edit_realizado"></div>
+                                                              
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-end border-bottom pb-4">
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="adicionarEndosso()">
+                            <i class="fas fa-plus"></i> Adicionar outro Endosso
+                        </button>
+                    </div>
+
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-12">
+                            <label class="fw-bold small mb-1">Observações da Ficha</label>
+                            <textarea class="form-control" name="observacoes" id="edit_observacoes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light text-end p-3">
+                    <button type="button" class="btn btn-secondary me-2" onclick="fecharDetalhes()">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4"><i class="fas fa-save"></i> Guardar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let contadorEndossos = 1;
+    const FASE_ATUAL = "{{ fase_nome }}";
+
+    $(document).ready(function() {
+        if (typeof iniciarTabelaExcel === 'function') {
+            iniciarTabelaExcel('tabela-fase');
+        }
+        avisarDuplicadosDaUrl();
+        configurarSubmissaoEdicao();
+    });
+
+    // --- FILTRO "SOMENTE DUPLICADOS" ---
+    // As linhas duplicadas já chegam do servidor marcadas com a classe "table-danger"
+    // (ver ids_duplicados no views.py). Este filtro apenas esconde, via DataTables,
+    // as linhas que não têm essa marcação - evita ter que procurar manualmente entre
+    // centenas/milhares de registos espalhados por várias páginas.
+    let filtroDuplicadosAtivo = false;
+
+    $.fn.dataTable.ext.search.push(function(settings, searchData, dataIndex) {
+        if (settings.nTable.id !== 'tabela-fase' || !filtroDuplicadosAtivo) return true;
+        const linha = settings.aoData[dataIndex].nTr;
+        return $(linha).hasClass('table-danger');
+    });
+
+    function toggleFiltroDuplicados() {
+        const btn = document.getElementById('btn-filtro-duplicados');
+        // Importante: não usar querySelectorAll direto na tabela - o DataTables só
+        // mantém no DOM as linhas da página atual (paginação client-side). Para contar
+        // em TODAS as páginas é preciso passar pela API do DataTables (rows().nodes()),
+        // que devolve os <tr> de todos os registos, estejam eles na página exibida ou não.
+        const totalDuplicados = tableInstance
+            ? tableInstance.rows().nodes().to$().filter('.table-danger').length
+            : 0;
+
+        if (!filtroDuplicadosAtivo && totalDuplicados === 0) {
+            avisoElegante('Nenhum registo duplicado encontrado nesta lista.');
+            return;
+        }
+
+        filtroDuplicadosAtivo = !filtroDuplicadosAtivo;
+        btn.classList.toggle('btn-outline-danger', !filtroDuplicadosAtivo);
+        btn.classList.toggle('btn-danger', filtroDuplicadosAtivo);
+        btn.classList.toggle('text-white', filtroDuplicadosAtivo);
+        btn.innerHTML = filtroDuplicadosAtivo
+            ? '<i class="fas fa-filter-circle-xmark"></i> Ver Todos'
+            : `<i class="fas fa-filter"></i> Duplicados${totalDuplicados ? ' (' + totalDuplicados + ')' : ''}`;
+
+        tableInstance.draw();
+    }
+
+    // Se a última tentativa de Validar/Emitir foi barrada por duplicidade, o servidor
+    // redireciona para cá com ?duplicados=1,2,3&bloqueio=validar|emitir. Mostra o aviso
+    // padrão (mesma caixa amarela usada no resto do sistema) explicando o motivo.
+    function avisarDuplicadosDaUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const duplicados = params.get('duplicados');
+        const bloqueio = params.get('bloqueio');
+        if (!duplicados) return;
+
+        const qtd = duplicados.split(',').filter(Boolean).length;
+        let mensagem = '';
+        if (bloqueio === 'validar') {
+            mensagem = `Existem ${qtd} registo(s) duplicado(s) em Importados. Apague ou edite os registos destacados em vermelho antes de validar.`;
+        } else if (bloqueio === 'emitir') {
+            mensagem = `Os registos não duplicados já foram enviados para Emitidos. ${qtd} registo(s) duplicado(s) permaneceram em Pendentes (destacados em vermelho) — apague ou edite-os antes de tentar emitir novamente.`;
+        }
+        if (mensagem) {
+            avisoElegante(mensagem, 'Duplicidade encontrada');
+        }
+    }
+
+    function toggleDeleteAll(source) {
+        let checkboxes = document.getElementsByClassName('chk-row');
+        for(let i=0; i<checkboxes.length; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+
+    function processarAcaoEmLote(acao, mensagemConfirmacao) {
+        const marcados = document.querySelectorAll('.chk-row:checked');
+        if (marcados.length === 0) {
+            avisoElegante('Selecione ao menos um registo.');
+            return;
+        }
+
+        confirmarElegante(mensagemConfirmacao, function() {
+            const form = document.getElementById('form-delete-fase');
+            form.querySelector('input[name="acao"]').value = acao;
+            form.submit();
+        });
+    }
+
+    // Validar e Enviar para Emitidos agem sobre todos os registos da fase,
+    // não é necessário marcar os checkboxes.
+    function processarAcaoTodos(acao, mensagemConfirmacao) {
+        confirmarElegante(mensagemConfirmacao, function() {
+            const form = document.getElementById('form-delete-fase');
+            form.querySelector('input[name="acao"]').value = acao;
+            form.submit();
+        });
+    }
+
+    function validarSelecionados() {
+        processarAcaoTodos('validar', 'Validar todos os registos e enviá-los para Pendentes?');
+    }
+
+    function enviarParaEmitidos() {
+        processarAcaoTodos('emitir', 'Enviar todos os registos para Emitidos? Depois de emitidos não será mais possível editá-los.');
+    }
+
+    // Preenche hierarquia automaticamente ao trocar a unidade
+    function autoPreencherUnidadeEdicao(selectEl) {
+        const option = selectEl.options[selectEl.selectedIndex];
+        if(option && option.value !== "") {
+            const bloco = selectEl.closest('.row');
+
+            const inputSup = bloco.querySelector('input[name^="superintendencia"]');
+            if(inputSup) inputSup.value = option.getAttribute('data-sup') || '';
+
+            const inputGrupo = bloco.querySelector('input[name^="grupo"]');
+            if(inputGrupo) inputGrupo.value = option.getAttribute('data-grupo') || '';
+
+            const inputNomeUnidade = bloco.querySelector('input[name^="nome_unidade"]');
+            if(inputNomeUnidade) inputNomeUnidade.value = option.getAttribute('data-nome') || '';
+
+            const inputMatGer = bloco.querySelector('input[name^="gerente_agencia"]');
+            if(inputMatGer) inputMatGer.value = option.getAttribute('data-mat-ger') || '';
+
+            const inputMatSup = bloco.querySelector('input[name^="superintendente"]');
+            if(inputMatSup) inputMatSup.value = option.getAttribute('data-mat-sup') || '';
+        }
+    }
+
+    // Busca o colaborador na datalist pela matrícula digitada e preenche o nome
+    // Preenche o nome do colaborador automaticamente ao selecionar a matrícula (mesmo padrão da Unidade)
+    function autoPreencherColaboradorEdicao(selectEl) {
+        const option = selectEl.options[selectEl.selectedIndex];
+        const bloco = selectEl.closest('.row');
+        const inputNome = bloco ? bloco.querySelector('input[name^="nome_colaborador"]') : null;
+        if (!inputNome) return;
+
+        inputNome.value = (option && option.value !== "") ? (option.getAttribute('data-nome') || '') : '';
+    }
+
+    // Seleciona no <select> de Unidade a opção cujo CID (texto exibido) bate com o valor salvo
+    function selecionarUnidadePorCid(selectEl, cid) {
+        if (!selectEl) return;
+        if (!cid) { selectEl.value = ''; return; }
+        for (const opt of selectEl.options) {
+            if (opt.textContent.trim() === cid.trim()) {
+                selectEl.value = opt.value;
+                return;
+            }
+        }
+        selectEl.value = '';
+    }
+
+    function abrirDetalhes(row) {
+        const dados = row.dataset;
+
+        limparMarcacaoDuplicados();
+        contadorEndossos = 1;
+        let container = document.getElementById('container-endossos');
+        while (container.children.length > 1) {
+            container.removeChild(container.lastChild);
+        }
+
+        document.getElementById('edit_id').value = dados.id || '';
+        document.getElementById('edit_cliente').value = dados.cliente || '';
+        document.getElementById('edit_cpfcnpj').value = dados.cpfcnpj || '';
+        document.getElementById('edit_documento').value = dados.documento || '';
+        document.getElementById('edit_nomesocial').value = dados.nomesocial || '';
+        document.getElementById('edit_email').value = dados.email || '';
+        document.getElementById('edit_celular').value = dados.celular || '';
+        document.getElementById('edit_telefone').value = dados.telefone || '';
+        
+        document.getElementById('edit_mes').value = dados.mes || '';
+        document.getElementById('edit_endosso').value = dados.endosso || '';
+        document.getElementById('edit_motivo_endosso').value = dados.motivo_endosso || '';
+        document.getElementById('edit_iniciovig').value = dados.iniciovig || '';
+        document.getElementById('edit_fimvig').value = dados.fimvig || '';
+        document.getElementById('edit_qtdparcelas').value = dados.qtdparcelas || '';
+        document.getElementById('edit_renovacao_propria').value = dados.renovacao_propria || '';
+        
+        document.getElementById('edit_premio').value = dados.premio ? parseFloat(dados.premio.replace(',','.')).toFixed(2) : '';
+        document.getElementById('edit_premio_liquido').value = dados.premio_liquido ? parseFloat(dados.premio_liquido.replace(',','.')).toFixed(2) : '';
+        document.getElementById('edit_comissao').value = dados.comissao ? parseFloat(dados.comissao.replace(',','.')).toFixed(2) : '';
+        document.getElementById('edit_realizado').value = dados.realizado || '';
+        
+        document.getElementById('edit_superintendencia').value = dados.superintendencia || '';
+        document.getElementById('edit_nomeunidade').value = dados.nomeunidade || '';
+        document.getElementById('edit_grupo').value = dados.grupo || '';
+        document.getElementById('edit_colaborador').value = dados.colaborador || '';
+        document.getElementById('edit_nomecolaborador').value = dados.nomecolaborador || '';
+        document.getElementById('edit_gerente').value = dados.gerente || '';
+        document.getElementById('edit_superintendente').value = dados.superintendente || '';
+        document.getElementById('edit_observacoes').value = dados.observacoes || '';
+
+        // =========================================================================
+        //  MARCAÇÃO AUTOMÁTICA DOS DROPDOWNS VIA ID RELACIONAL
+        // =========================================================================
+        
+        $('#edit_seguradora').val(dados.seguradora || '');
+        $('#edit_tipodoc').val(dados.tipodoc || '');
+        $('#edit_tipopessoa').val(dados.tipopessoa || '');
+        $('#edit_unidade').val(dados.unidade || '');
+        $('#edit_gruporamo').val(dados.gruporamo || '');
+
+        // =========================================================================
+
+        let itensExtras = row.querySelectorAll('.extra-item');
+        itensExtras.forEach(item => {
+            adicionarEndosso();
+            let c = contadorEndossos; 
+            
+            document.getElementById('edit_mes_' + c).value = item.dataset.mes || '';
+            document.getElementById('edit_endosso_' + c).value = item.dataset.endosso || '';
+            document.getElementById('edit_motivo_endosso_' + c).value = item.dataset.motivo || '';
+            document.getElementById('edit_iniciovig_' + c).value = item.dataset.iniciovig || '';
+            document.getElementById('edit_fimvig_' + c).value = item.dataset.fimvig || '';
+            document.getElementById('edit_qtdparcelas_' + c).value = item.dataset.qtdparcelas || '';
+            document.getElementById('edit_renovacao_propria_' + c).value = item.dataset.renovacao || '';
+            
+            document.getElementById('edit_premio_' + c).value = item.dataset.premio ? parseFloat(item.dataset.premio).toFixed(2) : '';
+            document.getElementById('edit_premio_liquido_' + c).value = item.dataset.premioliquido ? parseFloat(item.dataset.premioliquido).toFixed(2) : '';
+            document.getElementById('edit_comissao_' + c).value = item.dataset.comissao ? parseFloat(item.dataset.comissao).toFixed(2) : '';
+            document.getElementById('edit_realizado_' + c).value = item.dataset.realizado || '';
+            
+            selecionarUnidadePorCid(document.getElementById('edit_unidade_' + c), item.dataset.unidade);
+
+            document.getElementById('edit_superintendencia_' + c).value = item.dataset.superintendencia || '';
+            document.getElementById('edit_nomeunidade_' + c).value = item.dataset.nomeunidade || '';
+            document.getElementById('edit_grupo_' + c).value = item.dataset.grupo || '';
+            document.getElementById('edit_colaborador_' + c).value = item.dataset.colaborador || '';
+            document.getElementById('edit_nomecolaborador_' + c).value = item.dataset.nomecolaborador || '';
+            document.getElementById('edit_gerente_' + c).value = item.dataset.gerente || '';
+            document.getElementById('edit_superintendente_' + c).value = item.dataset.superintendente || '';
+        });
+
+        aplicarModoSomenteLeitura();
+
+        $('#lista-fase').fadeOut(200, function() {
+            $('#form-fase').fadeIn(200);
+        });
+    }
+
+    function aplicarModoSomenteLeitura() {
+        const somenteLeitura = (FASE_ATUAL === 'Emitidos');
+        const form = document.querySelector('#form-fase form');
+
+        form.querySelectorAll('input, select, textarea').forEach(campo => campo.disabled = somenteLeitura);
+
+        const btnSalvar = form.querySelector('button[type="submit"]');
+        if (btnSalvar) btnSalvar.style.display = somenteLeitura ? 'none' : '';
+
+        document.querySelectorAll('#container-endossos .btn-outline-danger').forEach(btn => btn.style.display = somenteLeitura ? 'none' : '');
+
+        const btnAdicionarEndosso = document.querySelector('button[onclick="adicionarEndosso()"]');
+        if (btnAdicionarEndosso) btnAdicionarEndosso.style.display = somenteLeitura ? 'none' : '';
+    }
+
+    function adicionarEndosso() {
+        contadorEndossos++;
+        
+        let blocoOriginal = document.getElementById('endosso-1');
+        let novoBloco = blocoOriginal.cloneNode(true);
+        
+        novoBloco.id = 'endosso-' + contadorEndossos;
+        
+        let titulo = novoBloco.querySelector('.titulo-endosso');
+        titulo.innerHTML = `
+            <i class="fas fa-sync-alt"></i> ${contadorEndossos}º Endosso
+            <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerEndosso(this)">
+                <i class="fas fa-trash"></i> Remover
+            </button>
+        `;
+        
+        let inputs = novoBloco.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.value = ''; 
+            
+            let nomeOriginal = input.getAttribute('name');
+            if(nomeOriginal) {
+                nomeOriginal = nomeOriginal.replace(/_\d+$/, ''); 
+                input.setAttribute('name', nomeOriginal + '_' + contadorEndossos);
+            }
+            
+            let idOriginal = input.getAttribute('id');
+            if(idOriginal) {
+                idOriginal = idOriginal.replace(/_\d+$/, '');
+                input.setAttribute('id', idOriginal + '_' + contadorEndossos);
+            }
+        });
+        
+        document.getElementById('container-endossos').appendChild(novoBloco);
+    }
+
+    function removerEndosso(botao) {
+        confirmarElegante('Tem a certeza que deseja remover este endosso da ficha?', function() {
+            botao.closest('.bloco-endosso').remove();
+            reorganizarEndossos();
+        }, { titulo: 'Remover endosso', textoConfirmar: 'Sim, remover', corBotao: 'danger' });
+    }
+
+    function reorganizarEndossos() {
+        let blocos = document.querySelectorAll('#container-endossos .bloco-endosso');
+        contadorEndossos = 1;
+        
+        for(let i = 1; i < blocos.length; i++) {
+            contadorEndossos++;
+            let bloco = blocos[i];
+            
+            bloco.id = 'endosso-' + contadorEndossos;
+            
+            let titulo = bloco.querySelector('.titulo-endosso');
+            if(titulo) {
+                titulo.innerHTML = `
+                    <i class="fas fa-sync-alt"></i> ${contadorEndossos}º Endosso
+                    <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerEndosso(this)">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                `;
+            }
+            
+            let inputs = bloco.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                let nomeOriginal = input.getAttribute('name');
+                if(nomeOriginal) {
+                    nomeOriginal = nomeOriginal.replace(/_\d+$/, ''); 
+                    input.setAttribute('name', nomeOriginal + '_' + contadorEndossos);
+                }
+                
+                let idOriginal = input.getAttribute('id');
+                if(idOriginal) {
+                    idOriginal = idOriginal.replace(/_\d+$/, '');
+                    input.setAttribute('id', idOriginal + '_' + contadorEndossos);
+                }
+            });
+        }
+    }
+
+    function fecharDetalhes() {
+        limparMarcacaoDuplicados();
+        $('#form-fase').fadeOut(200, function() {
+            $('#lista-fase').fadeIn(200);
+        });
+    }
+
+    // Mapa campo-do-servidor -> id do input/select na ficha, usado para marcar
+    // visualmente qual(is) campo(s) formam a chave duplicada (Seguradora + Grupo/Ramo +
+    // Tipo de Documento + Documento + Endosso)
+    const MAPA_CAMPOS_CHAVE = {
+        seguradora: 'edit_seguradora',
+        grupo_ramo: 'edit_gruporamo',
+        tipo_documento: 'edit_tipodoc',
+        documento: 'edit_documento',
+        endosso: 'edit_endosso',
+    };
+
+    function limparMarcacaoDuplicados() {
+        Object.values(MAPA_CAMPOS_CHAVE).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('is-invalid');
+        });
+    }
+
+    function marcarCamposDuplicados(campos) {
+        (campos || []).forEach(campo => {
+            const el = document.getElementById(MAPA_CAMPOS_CHAVE[campo]);
+            if (el) el.classList.add('is-invalid');
+        });
+    }
+
+    // Envia a ficha de edição via AJAX: se o servidor recusar (ex.: chave duplicada
+    // em Pendentes), o aviso aparece na hora e a ficha continua aberta com os dados
+    // tal como foram digitados - um redirect/reload normal perderia tudo isso.
+    function configurarSubmissaoEdicao() {
+        const formEditar = document.querySelector('#form-fase form');
+        if (!formEditar) return;
+
+        formEditar.addEventListener('submit', function(event) {
+            event.preventDefault();
+            limparMarcacaoDuplicados();
+
+            fetch(formEditar.action, {
+                method: 'POST',
+                body: new FormData(formEditar),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then(resp => resp.json())
+                .then(resposta => {
+                    if (resposta.sucesso) {
+                        window.location.href = formEditar.action;
+                    } else {
+                        marcarCamposDuplicados(resposta.campos_duplicados);
+                        avisoElegante(resposta.erro || 'Não foi possível guardar as alterações.', 'Não foi possível guardar');
+                    }
+                })
+                .catch(function() {
+                    avisoElegante('Erro de comunicação com o servidor. Tente novamente.', 'Erro');
+                });
+        });
+    }
+</script>
+{% endblock %}

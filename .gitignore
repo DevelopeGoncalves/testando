@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Banco de dados local: cada ambiente usa o seu (nao versionar)
+db.sqlite3

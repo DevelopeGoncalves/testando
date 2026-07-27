@@ -1,0 +1,761 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Vendas - {% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <span class="text-primary">Produção</span> /
+        <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> /
+        <span>{% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Evita o "flash" da tabela crua: fica oculta até o DataTables terminar de
+       esconder colunas e paginar, quando recebe a classe .dt-pronta.
+       O quadro branco (.tabela-container) permanece visível como carregamento. */
+    #tabela-base-novo { visibility: hidden; }
+    #tabela-base-novo.dt-pronta { visibility: visible; }
+
+    .excel-header-btn {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+        font-weight: bold !important;
+        color: #495057 !important;
+        padding: 8px !important;
+    }
+
+    th.text-center .excel-header-btn {
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    th.text-start .excel-header-btn {
+        justify-content: flex-start !important;
+        text-align: left !important;
+    }
+
+    .excel-header-btn::after {
+        margin-left: 5px;
+    }
+
+    #tabela-base-novo td {
+        vertical-align: middle !important;
+    }
+
+    .dropdown-menu {
+        text-align: left !important;
+    }
+</style>
+
+<div id="tela-base-novo">
+    <div id="lista-base-novo">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> {% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}</h4>
+            <div>
+                <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
+                    <i class="fas fa-filter"></i> Limpar Filtros
+                </button>
+                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
+                {% if not apenas_pendentes %}
+                <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tabela-container">
+            <div class="tabela-loading text-center text-muted py-5">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="mt-2">Carregando registos...</div>
+            </div>
+            <form id="form-delete-base-novo" method="post" action="{% url 'excluir_em_massa' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_massa" value="indicacao">
+
+                <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
+                            <th style="display:none;"></th>
+                            <th class="text-center">Carimbo de data/hora</th>
+                            <th class="text-center">E-mail</th>
+                            <th class="text-center">E-mail do indicador (outro)</th>
+                            <th class="text-center">Matrícula do indicador</th>
+                            <th class="text-center">Nome do indicador</th>
+                            <th class="text-center">CID da agência</th>
+                            <th class="text-center">Telefone do indicador</th>
+                            <th class="text-center">Enviar orçamento para</th>
+                            <th class="text-center">Nome do cliente</th>
+                            <th class="text-center">Telefone do cliente</th>
+                            <th class="text-center">CPF do cliente</th>
+                            <th class="text-center">E-mail do cliente</th>
+                            <th class="text-center">Produto</th>
+                            <th class="text-start">Dados do veículo</th>
+                            <th class="text-center">Já possui seguro?</th>
+                            <th class="text-center">Seguradora</th>
+                            <th class="text-center">Grupo/Ramo</th>
+                            <th class="text-center">Tipo Documento</th>
+                            <th class="text-center">Nº Contrato</th>
+                            <th class="text-center">Nº Endosso</th>
+                            <th class="text-center">Ligações</th>
+                            <th class="text-start">Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in indicacoes %}
+                        <tr class="tr-clickable" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
+                            data-id="{{ i.id }}"
+                            data-carimbo="{{ i.carimbo_data_hora|date:'Y-m-d\TH:i'|default:'' }}"
+                            data-email="{{ i.email|default:'' }}"
+                            data-email-indicador-outro="{{ i.email_indicador_outro|default:'' }}"
+                            data-matricula="{{ i.matricula_indicador|default:'' }}"
+                            data-nome-indicador="{{ i.nome_indicador|default:'' }}"
+                            data-cid="{{ i.cid_agencia|default:'' }}"
+                            data-telefone-indicador="{{ i.telefone_indicador|default:'' }}"
+                            data-orcamento="{{ i.enviar_orcamento_para|default:'' }}"
+                            data-origem-informacao="{{ i.origem_informacao|default:'' }}"
+                            data-nome-cliente="{{ i.nome_cliente|default:'' }}"
+                            data-telefone-cliente="{{ i.telefone_cliente|default:'' }}"
+                            data-cpf-cliente="{{ i.cpf_cliente|default:'' }}"
+                            data-email-cliente="{{ i.email_cliente|default:'' }}"
+                            data-produto="{{ i.produto|default:'' }}"
+                            data-veiculo="{{ i.dados_veiculo|default:'' }}"
+                            data-possui-seguro="{{ i.possui_seguro|default:'' }}"
+                            data-seguradora="{{ i.seguradora_id|default:'' }}"
+                            data-ramo="{{ i.ramo_id|default:'' }}"
+                            data-tipo-documento="{{ i.tipo_documento_id|default:'' }}"
+                            data-contrato="{{ i.numero_contrato|default:'' }}"
+                            data-endosso="{{ i.numero_endosso|default:'' }}"
+                            data-obs="{{ i.observacoes|default:'' }}">
+
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
+                            </td>
+
+                            <td style="display:none;" class="dados-ligacoes-extras">
+                                {% for l in i.ligacoes.all %}
+                                <span class="extra-item-ligacao"
+                                      data-protocolo="{{ l.protocolo|default:'' }}"
+                                      data-data="{{ l.data_ligacao|date:'Y-m-d\TH:i:s'|default:'' }}"
+                                      data-status="{{ l.status|default:'' }}"
+                                      data-proximo="{{ l.proximo_contato|date:'Y-m-d\TH:i:s'|default:'' }}"
+                                      data-obs="{{ l.observacoes|default:'' }}"
+                                      data-ramal="{{ l.ramal|default:'' }}"
+                                      data-venda-central="{{ l.venda_central|yesno:'1,0' }}"
+                                      data-premio-total="{{ l.premio_total|floatformat:'2u' }}"
+                                      data-agn="{{ l.agn|yesno:'1,0' }}"
+                                      data-motivo="{{ l.motivo_nao_venda_id|default:'' }}"
+                                      data-cadastrado-por="{{ l.cadastrado_por|default:'' }}"></span>
+                                {% endfor %}
+                            </td>
+
+                            <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
+                            <td class="text-center">{{ i.email|default:'-' }}</td>
+                            <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
+                            <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
+                            <td class="text-center">{{ i.nome_indicador|default:'-' }}</td>
+                            <td class="text-center">{{ i.cid_agencia|default:'-' }}</td>
+                            <td class="text-center">{{ i.telefone_indicador|default:'-' }}</td>
+                            <td class="text-center">{{ i.enviar_orcamento_para|default:'-' }}</td>
+                            <td class="text-center">{{ i.nome_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.telefone_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.cpf_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.email_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.produto|default:'-' }}</td>
+                            <td class="text-start">{{ i.dados_veiculo|default:'-' }}</td>
+                            <td class="text-center">{{ i.possui_seguro|default:'-' }}</td>
+                            <td class="text-center">{{ i.seguradora.seguradora|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.grupo_e_ramo|default:'-' }}</td>
+                            <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
+                            <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
+                            <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
+                            <td class="text-center">{{ i.ligacoes.all|length }}</td>
+                            <td class="text-start">{{ i.observacoes|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="form-base-novo" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+            <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleFormLocal('base-novo', false)">
+                <i class="fas fa-arrow-left"></i> Voltar para a Lista
+            </button>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+
+                <div class="card-body p-4" style="font-size: 0.95rem;">
+
+
+                    <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Seguradora</label>{{ form_indicacao.seguradora }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Grupo/Ramo</label>{{ form_indicacao.ramo }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Tipo Documento</label>{{ form_indicacao.tipo_documento }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
+                    </div>
+
+
+                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail do indicador (se não for você)</label>{{ form_indicacao.email_indicador_outro }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Matrícula do indicador</label>{{ form_indicacao.matricula_indicador }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome do indicador</label>{{ form_indicacao.nome_indicador }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone do indicador</label>{{ form_indicacao.telefone_indicador }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Enviar orçamento para</label>{{ form_indicacao.enviar_orcamento_para }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Origem da informação</label>{{ form_indicacao.origem_informacao }}</div>
+                    </div>
+
+                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user"></i> Dados do Cliente</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="fw-bold small mb-1">Nome do cliente</label>{{ form_indicacao.nome_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone do cliente</label>{{ form_indicacao.telefone_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF do cliente</label>{{ form_indicacao.cpf_cliente }}</div>
+                        <div class="col-md-4"><label class="fw-bold small mb-1">E-mail do cliente</label>{{ form_indicacao.email_cliente }}</div>
+
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Produto</label>{{ form_indicacao.produto }}</div>
+                        <div class="col-md-4"><label class="fw-bold small mb-1">Dados do veículo (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
+                        
+                    </div>
+
+
+                    {% if apenas_pendentes %}
+                    <div id="container-ligacoes">
+                        <div class="bloco-ligacao" id="ligacao-1" style="display:none;">
+                            <h5 class="text-primary border-bottom pb-2 mb-3 mt-5 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
+                            <div class="row g-3">
+
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Data/Hora da Ligação</label>
+                                    <input type="datetime-local" step="1" class="form-control" name="ligacao_data" id="edit_ligacao_data">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="fw-bold small mb-1">Protocolo</label>
+                                    <input type="text" class="form-control bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(gerado automaticamente)">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="fw-bold small mb-1">Ramal</label>
+                                    <input type="text" class="form-control" name="ligacao_ramal" id="edit_ligacao_ramal">
+                                </div>
+
+                                <div class="col-md-1 d-flex flex-column">
+                                    <label class="fw-bold small mb-1">Vendas Central</label>
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-1 d-flex flex-column">
+                                    <label class="fw-bold small mb-1">Vendas Agência</label>
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="fw-bold small mb-1">Prêmio Total</label>
+                                    <input type="text" inputmode="numeric" class="form-control campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Motivo Não Venda</label>
+                                    <select class="form-select" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
+                                        <option value="">-- Selecione --</option>
+                                        {% for m in motivos_nao_venda %}
+                                        <option value="{{ m.id }}">{{ m.motivo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Próximo contato</label>
+                                    <input type="datetime-local" step="1" class="form-control campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <label class="fw-bold small mb-1">Observações</label>
+                                    <textarea class="form-control" name="ligacao_obs" id="edit_ligacao_obs" rows="2"></textarea>
+                                </div>
+                                
+                                                                {% comment %}
+                                <div class="col-md-2">
+                                    <label class="fw-bold small mb-1 text-primary">Status</label>
+                                    <select class="form-select border-primary text-primary fw-bold" name="ligacao_status" id="edit_ligacao_status">
+                                        <option value="">-- Selecione --</option>
+                                        <option value="Atendida">Atendida</option>
+                                        <option value="Não atendida">Não atendida</option>
+                                        <option value="Caixa postal">Caixa postal</option>
+                                        <option value="Reagendar">Reagendar</option>
+                                    </select>
+                                </div>
+                                {% endcomment %}
+
+                                <div class="col-md-2">
+                                    <label class="fw-bold small mb-1">Cadastrado/tratado por</label>
+                                    <input type="text" class="form-control bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-end border-bottom pb-4">
+                        <button type="button" id="btn-iniciar-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="iniciarPrimeiraLigacao()">
+                            <i class="fas fa-phone-alt"></i> Iniciar Ligação
+                        </button>
+                        <button type="button" id="btn-registrar-outra-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="adicionarLigacao()" style="display:none;">
+                            <i class="fas fa-plus"></i> Registrar outra Ligação
+                        </button>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-12">
+                            <label class="fw-bold small mb-1">Observações da Ficha</label>
+                            {{ form_indicacao.observacoes }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light text-end p-3">
+                    <button type="button" class="btn btn-secondary me-2" onclick="toggleFormLocal('base-novo', false)">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let contadorLigacoes = 1;
+    const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
+    // Na Base Novo o bloco de ligação nem é renderizado; as funções abaixo precisam
+    // saber disso para não tentar ler elementos que não existem naquela tela.
+    const PODE_REGISTRAR_LIGACAO = {% if apenas_pendentes %}true{% else %}false{% endif %};
+    const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
+    const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
+
+    $(document).ready(function() {
+
+        // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
+        iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19]);
+
+        {% if form_indicacao.errors %}
+            $('#lista-base-novo').hide();
+            $('#form-base-novo').show();
+
+            var id_erro = $('#base_novo_id_hidden').val();
+            if(id_erro) {
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo #' + id_erro);
+            } else {
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
+            }
+
+            {% for campo in form_indicacao %}
+                {% if campo.errors %}$('#{{ campo.id_for_label }}').addClass('is-invalid');{% endif %}
+            {% endfor %}
+
+            avisoElegante("{{ erro_formulario_msg|escapejs }}", 'Não foi possível salvar');
+        {% endif %}
+
+        // Só gera o Protocolo e a Data/Hora da Ligação quando o atendente realmente começa
+        // a preencher a ligação - ao selecionar/focar qualquer um dos campos dela (Data,
+        // Ramal, Vendas Central/Agência, Prêmio, Motivo, Próximo contato, Observações).
+        // Gerar isso assim que a ficha/bloco de ligação abre desperdiça números de
+        // protocolo com ligações que acabam nunca sendo preenchidas nem salvas.
+        $('#container-ligacoes').on('focusin', [
+            'input[name^="ligacao_data"]',
+            'input[name^="ligacao_ramal"]',
+            'input[name^="ligacao_venda_central"]',
+            'input[name^="ligacao_agn"]',
+            'input[name^="ligacao_premio_total"]',
+            'select[name^="ligacao_motivo_nao_venda"]',
+            'input[name^="ligacao_proximo"]',
+            'textarea[name^="ligacao_obs"]'
+        ].join(', '), function() {
+            gerarProtocoloEDataSeNecessario($(this).closest('.bloco-ligacao'));
+        });
+
+        // Vendas Central, Vendas Agência e Motivo Não Venda são mutuamente exclusivos: marcar/selecionar um desativa os outros dois
+        $('#container-ligacoes').on('change', 'input[name^="ligacao_venda_central"], input[name^="ligacao_agn"], select[name^="ligacao_motivo_nao_venda"]', function() {
+            sincronizarExclusividadeVenda(this.closest('.bloco-ligacao'));
+        });
+
+        // Formata o "Prêmio Total" em milhar enquanto o usuário digita
+        $('#container-ligacoes').on('input', 'input[name^="ligacao_premio_total"]', function() {
+            aplicarMascaraMilhar(this);
+        });
+
+        // Trava no navegador: não deixa salvar se uma ligação "Vendas Central" ficar sem "Prêmio Total"
+        $('#form-base-novo form').on('submit', function(e) {
+            let faltando = false;
+            document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(function(bloco) {
+                let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+                let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
+                let premio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+                let marcouVenda = (central && central.checked) || (agencia && agencia.checked);
+                if (marcouVenda && premio && !premio.value.trim()) {
+                    faltando = true;
+                }
+            });
+            if (faltando) {
+                e.preventDefault();
+                avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
+            }
+        });
+    });
+
+    // Preenche automático o campo "Cadastrado/tratado por" com o nome do usuário logado.
+    // O protocolo fica em branco (placeholder "gerado automaticamente") até o Ramal ser
+    // preenchido - ver gerarProtocoloEDataSeNecessario().
+    function prepararNovaLigacao(idProtocolo, idCadastradoPor) {
+        let campoCadastradoPor = document.getElementById(idCadastradoPor);
+        if (campoCadastradoPor) {
+            campoCadastradoPor.value = USUARIO_ATUAL_NOME;
+        }
+
+        let campoProtocolo = document.getElementById(idProtocolo);
+        if (campoProtocolo) {
+            campoProtocolo.value = '';
+        }
+    }
+
+    // Gera o Protocolo (se ainda não tiver) e carimba a Data/Hora da Ligação com o
+    // horário atual do servidor (se ainda vazia). Guarda de "gerando" evita disparar
+    // duas requisições de protocolo em paralelo (ex.: Ramal e Venda Central preenchidos
+    // quase ao mesmo tempo).
+    function gerarProtocoloEDataSeNecessario(bloco) {
+        if (!bloco || !bloco.length) return;
+
+        let campoProtocolo = bloco.find('input[name^="ligacao_protocolo"]');
+        if (campoProtocolo.length && !campoProtocolo.val() && !campoProtocolo.data('gerando')) {
+            campoProtocolo.data('gerando', true);
+            $.get(URL_GERAR_PROTOCOLO, function(resposta) {
+                if (!campoProtocolo.val()) {
+                    campoProtocolo.val(resposta.protocolo);
+                }
+                campoProtocolo.data('gerando', false);
+            });
+        }
+
+        let campoData = bloco.find('input[name^="ligacao_data"]');
+        if (campoData.length && !campoData.val()) {
+            $.get(URL_AGORA_SERVIDOR, function(resposta) {
+                if (!campoData.val()) {
+                    campoData.val(resposta.datahora);
+                }
+            });
+        }
+    }
+
+    // Revela o bloco "1ª Ligação" (oculto por padrão) e troca o botão "Iniciar
+    // Ligação" pelo "Registrar outra Ligação", usado para a 2ª em diante.
+    function iniciarPrimeiraLigacao() {
+        $('#ligacao-1').show();
+        $('#btn-iniciar-ligacao').hide();
+        $('#btn-registrar-outra-ligacao').show();
+    }
+
+    function resetarContainerLigacoes() {
+        contadorLigacoes = 1;
+        let container = document.getElementById('container-ligacoes');
+        if (!container) return;
+        while (container.children.length > 1) {
+            container.removeChild(container.lastChild);
+        }
+        document.getElementById('edit_ligacao_protocolo').value = '';
+        document.getElementById('edit_ligacao_data').value = '';
+        //document.getElementById('edit_ligacao_status').value = '';
+        document.getElementById('edit_ligacao_proximo').value = '';
+        document.getElementById('edit_ligacao_obs').value = '';
+        document.getElementById('edit_ligacao_ramal').value = '';
+        document.getElementById('edit_ligacao_venda_central').checked = false;
+        document.getElementById('edit_ligacao_premio_total').value = '';
+        document.getElementById('edit_ligacao_agn').checked = false;
+        document.getElementById('edit_ligacao_motivo_nao_venda').value = '';
+        document.getElementById('edit_ligacao_cadastrado_por').value = '';
+        // Ficha nova: nenhuma ligação começada ainda, só o botão "Iniciar Ligação".
+        $('#ligacao-1').hide();
+        $('#btn-iniciar-ligacao').show();
+        $('#btn-registrar-outra-ligacao').hide();
+        sincronizarExclusividadeVenda(document.getElementById('ligacao-1'));
+    }
+
+    // Vendas Central e Vendas Agência continuam mutuamente exclusivos entre si e com o
+    // Motivo Não Venda (marcar um desativa os outros dois). Já o Motivo Não Venda nunca
+    // fica desabilitado: o usuário pode selecioná-lo a qualquer momento.
+    function sincronizarExclusividadeVenda(bloco) {
+        if (!bloco) return;
+        let campoCentral = bloco.querySelector('input[name^="ligacao_venda_central"]');
+        let campoAgencia = bloco.querySelector('input[name^="ligacao_agn"]');
+        let campoMotivo = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
+        let campoPremio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+        let campoProximo = bloco.querySelector('input[name^="ligacao_proximo"]');
+        if (!campoCentral || !campoAgencia || !campoMotivo) return;
+
+        let temCentral = campoCentral.checked;
+        let temAgencia = campoAgencia.checked;
+        let temMotivo = campoMotivo.value !== '';
+
+        campoMotivo.disabled = false;
+
+        // Ao desabilitar Central/Agência por causa do Motivo (agora selecionável mesmo com
+        // um dos dois já marcado), desmarca também para não deixar um checkbox desabilitado
+        // e ainda marcado, que não é enviado no POST e geraria um estado inconsistente.
+        campoCentral.disabled = temAgencia || temMotivo;
+        if (campoCentral.disabled) campoCentral.checked = false;
+
+        campoAgencia.disabled = temCentral || temMotivo;
+        if (campoAgencia.disabled) campoAgencia.checked = false;
+
+        temCentral = campoCentral.checked;
+        temAgencia = campoAgencia.checked;
+
+        // "Prêmio Total" fica ativo quando a ligação é "Vendas Central" OU "Vendas Agência".
+        // Ao desmarcar ambos, desabilita e limpa para não enviar valor indevido (campo
+        // desabilitado não vai no POST).
+        if (campoPremio) {
+            campoPremio.disabled = !(temCentral || temAgencia);
+            if (!(temCentral || temAgencia)) {
+                campoPremio.value = '';
+            }
+        }
+
+        // "Próximo contato" só fica ativo quando NENHUM dos três campos de marcação
+        // (Vendas Central, Vendas Agência ou Motivo Não Venda) está preenchido, ou seja,
+        // quando a ligação ainda está em aberto (sem venda e sem motivo definido). Ao
+        // marcar/selecionar qualquer um deles a ligação foi concluída, então desabilita
+        // e limpa (campo desabilitado não vai no POST).
+        if (campoProximo) {
+            let ligacaoConcluida = temCentral || temAgencia || temMotivo;
+            campoProximo.disabled = ligacaoConcluida;
+            if (ligacaoConcluida) {
+                campoProximo.value = '';
+            }
+        }
+    }
+
+    // Máscara de milhar (formato brasileiro): os dígitos digitados são tratados como
+    // centavos -> "123456" vira "1.234,56".
+    function aplicarMascaraMilhar(input) {
+        let digitos = (input.value || '').replace(/\D/g, '');
+        if (!digitos) { input.value = ''; return; }
+        let numero = parseInt(digitos, 10) / 100;
+        input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Converte um valor "cru" salvo (ex.: "1234.56") para exibição "1.234,56".
+    function formatarValorBRL(valor) {
+        if (valor === undefined || valor === null || valor === '') return '';
+        let numero = parseFloat(valor);
+        if (isNaN(numero)) return '';
+        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function toggleFormLocal(tipo, mostrar) {
+        if(mostrar) {
+            $('#lista-' + tipo).hide();
+            $('#form-' + tipo).show();
+            if(document.getElementById('base_novo_id_hidden').value === "") {
+                $('form')[1].reset();
+                resetarContainerLigacoes();
+                prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
+            }
+        } else {
+            {% if form_indicacao.errors %}
+                window.location.href = window.location.pathname;
+            {% else %}
+                $('#form-' + tipo).hide();
+                $('#lista-' + tipo).show();
+                $('#base_novo_id_hidden').val('');
+            {% endif %}
+        }
+    }
+
+    function editarIndicacao(row) {
+        var id = row.getAttribute('data-id');
+        $('#base_novo_id_hidden').val(id);
+
+        $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
+        $('#id_email').val(row.getAttribute('data-email'));
+        $('#id_email_indicador_outro').val(row.getAttribute('data-email-indicador-outro'));
+        $('#id_matricula_indicador').val(row.getAttribute('data-matricula'));
+        $('#id_nome_indicador').val(row.getAttribute('data-nome-indicador'));
+        $('#id_cid_agencia').val(row.getAttribute('data-cid'));
+        $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
+        $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
+        $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
+        $('#id_nome_cliente').val(row.getAttribute('data-nome-cliente'));
+        $('#id_telefone_cliente').val(row.getAttribute('data-telefone-cliente'));
+        $('#id_cpf_cliente').val(row.getAttribute('data-cpf-cliente'));
+        $('#id_email_cliente').val(row.getAttribute('data-email-cliente'));
+        $('#id_produto').val(row.getAttribute('data-produto'));
+        $('#id_dados_veiculo').val(row.getAttribute('data-veiculo'));
+        $('#id_possui_seguro').val(row.getAttribute('data-possui-seguro'));
+        $('#id_seguradora').val(row.getAttribute('data-seguradora'));
+        $('#id_ramo').val(row.getAttribute('data-ramo'));
+        $('#id_tipo_documento').val(row.getAttribute('data-tipo-documento'));
+        $('#id_numero_contrato').val(row.getAttribute('data-contrato'));
+        $('#id_numero_endosso').val(row.getAttribute('data-endosso'));
+        $('#id_observacoes').val(row.getAttribute('data-obs'));
+
+        if (PODE_REGISTRAR_LIGACAO) {
+        resetarContainerLigacoes();
+        let itensLigacoes = row.querySelectorAll('.extra-item-ligacao');
+        itensLigacoes.forEach(function(item, index) {
+            if(index === 0) {
+                document.getElementById('edit_ligacao_protocolo').value = item.dataset.protocolo || '';
+                document.getElementById('edit_ligacao_data').value = item.dataset.data || '';
+                // document.getElementById('edit_ligacao_status').value = item.dataset.status || '';
+                document.getElementById('edit_ligacao_proximo').value = item.dataset.proximo || '';
+                document.getElementById('edit_ligacao_obs').value = item.dataset.obs || '';
+                document.getElementById('edit_ligacao_ramal').value = item.dataset.ramal || '';
+                document.getElementById('edit_ligacao_venda_central').checked = item.dataset.vendaCentral === '1';
+                document.getElementById('edit_ligacao_premio_total').value = formatarValorBRL(item.dataset.premioTotal);
+                document.getElementById('edit_ligacao_agn').checked = item.dataset.agn === '1';
+                document.getElementById('edit_ligacao_motivo_nao_venda').value = item.dataset.motivo || '';
+                document.getElementById('edit_ligacao_cadastrado_por').value = item.dataset.cadastradoPor || '';
+            } else {
+                adicionarLigacao();
+                let c = contadorLigacoes;
+                document.getElementById('edit_ligacao_protocolo_' + c).value = item.dataset.protocolo || '';
+                document.getElementById('edit_ligacao_data_' + c).value = item.dataset.data || '';
+                // document.getElementById('edit_ligacao_status_' + c).value = item.dataset.status || '';
+                document.getElementById('edit_ligacao_proximo_' + c).value = item.dataset.proximo || '';
+                document.getElementById('edit_ligacao_obs_' + c).value = item.dataset.obs || '';
+                document.getElementById('edit_ligacao_ramal_' + c).value = item.dataset.ramal || '';
+                document.getElementById('edit_ligacao_venda_central_' + c).checked = item.dataset.vendaCentral === '1';
+                document.getElementById('edit_ligacao_premio_total_' + c).value = formatarValorBRL(item.dataset.premioTotal);
+                document.getElementById('edit_ligacao_agn_' + c).checked = item.dataset.agn === '1';
+                document.getElementById('edit_ligacao_motivo_nao_venda_' + c).value = item.dataset.motivo || '';
+                document.getElementById('edit_ligacao_cadastrado_por_' + c).value = item.dataset.cadastradoPor || '';
+            }
+        });
+
+        document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(sincronizarExclusividadeVenda);
+
+        if(itensLigacoes.length === 0) {
+            prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
+        } else {
+            // Já existe ligação salva: revela a "1ª Ligação" (resetarContainerLigacoes a
+            // escondeu por padrão) e troca para o botão de "Registrar outra Ligação".
+            iniciarPrimeiraLigacao();
+        }
+        }
+
+        $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo #' + id);
+        toggleFormLocal('base-novo', true);
+    }
+
+    function adicionarLigacao() {
+        contadorLigacoes++;
+
+        let blocoOriginal = document.getElementById('ligacao-1');
+        let novoBloco = blocoOriginal.cloneNode(true);
+        novoBloco.id = 'ligacao-' + contadorLigacoes;
+        // O template (ligacao-1) pode estar oculto (display:none) até o usuário clicar em
+        // "Iniciar Ligação"; o clone é sempre uma ligação nova e deve aparecer imediatamente.
+        novoBloco.style.display = '';
+
+        let titulo = novoBloco.querySelector('.titulo-ligacao');
+        titulo.innerHTML = `
+            <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
+            <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerLigacao(this)">
+                <i class="fas fa-trash"></i> Remover
+            </button>
+        `;
+
+        let campos = novoBloco.querySelectorAll('input, select, textarea');
+        campos.forEach(function(campo) {
+            if(campo.type === 'checkbox') {
+                campo.checked = false;
+            } else {
+                campo.value = '';
+            }
+
+            let nomeOriginal = campo.getAttribute('name');
+            if(nomeOriginal) {
+                nomeOriginal = nomeOriginal.replace(/_\d+$/, '');
+                campo.setAttribute('name', nomeOriginal + '_' + contadorLigacoes);
+            }
+
+            let idOriginal = campo.getAttribute('id');
+            if(idOriginal) {
+                idOriginal = idOriginal.replace(/_\d+$/, '');
+                campo.setAttribute('id', idOriginal + '_' + contadorLigacoes);
+            }
+        });
+        sincronizarExclusividadeVenda(novoBloco);
+
+        document.getElementById('container-ligacoes').appendChild(novoBloco);
+        prepararNovaLigacao('edit_ligacao_protocolo_' + contadorLigacoes, 'edit_ligacao_cadastrado_por_' + contadorLigacoes);
+    }
+
+    function removerLigacao(botao) {
+        confirmarElegante('Tem a certeza que deseja remover esta ligação da ficha?', function() {
+            botao.closest('.bloco-ligacao').remove();
+            reorganizarLigacoes();
+        }, { titulo: 'Remover ligação', textoConfirmar: 'Sim, remover', corBotao: 'danger' });
+    }
+
+    function reorganizarLigacoes() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        contadorLigacoes = 1;
+
+        for(let i = 1; i < blocos.length; i++) {
+            contadorLigacoes++;
+            let bloco = blocos[i];
+
+            bloco.id = 'ligacao-' + contadorLigacoes;
+
+            let titulo = bloco.querySelector('.titulo-ligacao');
+            if(titulo) {
+                titulo.innerHTML = `
+                    <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
+                    <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerLigacao(this)">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                `;
+            }
+
+            let campos = bloco.querySelectorAll('input, select, textarea');
+            campos.forEach(function(campo) {
+                let nomeOriginal = campo.getAttribute('name');
+                if(nomeOriginal) {
+                    nomeOriginal = nomeOriginal.replace(/_\d+$/, '');
+                    campo.setAttribute('name', nomeOriginal + '_' + contadorLigacoes);
+                }
+
+                let idOriginal = campo.getAttribute('id');
+                if(idOriginal) {
+                    idOriginal = idOriginal.replace(/_\d+$/, '');
+                    campo.setAttribute('id', idOriginal + '_' + contadorLigacoes);
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

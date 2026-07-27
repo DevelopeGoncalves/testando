@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integra Banescor SPIM</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
+    <style>
+        /* --- LAYOUT FIXO --- */
+        html, body { height: 100%; margin: 0; overflow-x: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ecf0f5; }
+        #wrapper { display: flex; width: 100%; min-height: 100vh; align-items: stretch; }
+        
+        /* Sidebar */
+        #sidebar-wrapper { min-width: 230px; max-width: 230px; background-color: #222d32; color: #b8c7ce; display: flex; flex-direction: column; min-height: 100vh; }
+        .sidebar-brand { height: 50px; line-height: 50px; text-align: center; background-color: #367fa9; color: #fff; font-size: 20px; font-weight: bold; }
+        .brand-light { color: #fff; } .brand-bold { color: #fff; font-weight: 800; }
+        .sidebar-nav { padding: 0; list-style: none; margin-top: 10px; flex-grow: 1; }
+        .nav-item { border-left: 3px solid transparent; cursor: pointer; }
+        .nav-item:hover { background-color: #1e282c; color: #fff; }
+        .nav-item.active-menu { border-left-color: #3c8dbc; background-color: #1e282c; }
+        .nav-link-custom { color: #b8c7ce; padding: 12px 15px; display: flex; align-items: center; text-decoration: none; width: 100%; }
+        .nav-link-custom:hover { color: #fff; }
+        .nav-link-custom i.icon-main { width: 25px; margin-right: 5px; text-align: center; }
+        .arrow { margin-left: auto; font-size: 0.8em; transition: transform 0.3s; }
+        .submenu { list-style: none; padding: 0; background-color: #2c3b41; display: none; }
+        .submenu.show { display: block; }
+        .submenu li a { padding: 8px 15px 8px 45px; display: block; color: #8aa4af; text-decoration: none; font-size: 14px; cursor: pointer;}
+        .submenu li a:hover { color: #fff; }
+        .submenu li a.active-sub { color: #fff; font-weight: bold; }
+
+        /* Conteúdo */
+        #page-content-wrapper { flex-grow: 1; width: 100%; display: flex; flex-direction: column; }
+        .top-navbar { background-color: #3c8dbc; color: white; padding: 0 15px; height: 50px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-menu { background: none; border: none; color: white; font-size: 18px; }
+        .breadcrumb-bar { padding: 15px; background: #fff; border-bottom: 1px solid #d2d6de; margin-bottom: 20px; }
+        .breadcrumb-text { font-size: 1.1rem; color: #444; }
+        .screen-section { display: none; } 
+        .screen-section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Cards Menu */
+        .card-menu { border: none; border-radius: 3px; border-top: 3px solid #d2d6de; box-shadow: 0 1px 1px rgba(0,0,0,0.1); background: #fff; cursor: pointer; transition: transform 0.2s; }
+        .card-menu:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .card-menu.super { border-top-color: #00c0ef; }
+        .card-menu.agencia { border-top-color: #dd4b39; }
+        .card-menu.produto { border-top-color: #00a65a; }
+        .card-menu.meta { border-top-color: #f39c12; }
+
+        /* Estilo Tabelas e Dropdowns Excel */
+        .tabela-container { background: white; padding: 15px; border-top: 3px solid #3c8dbc; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .btn-acao-del { color: #dd4b39; cursor: pointer; transition: 0.2s; }
+        .btn-acao-del:hover { color: #a00; transform: scale(1.2); }
+        .form-label { font-weight: 600; color: #444; margin-bottom: 4px; }
+        .tr-clickable { cursor: pointer; }
+        .tr-clickable:hover { background-color: #fff9e6 !important; }
+
+        /* CHECKBOX DE EXCLUSÃO */
+        .chk-delete { transform: scale(1.3); cursor: pointer; accent-color: #dc3545; }
+
+        /* REMOVE SETAS PADRÃO DO DATATABLES */
+        table.dataTable thead > tr > th.sorting::before,
+        table.dataTable thead > tr > th.sorting::after,
+        table.dataTable thead > tr > th.sorting_asc::before,
+        table.dataTable thead > tr > th.sorting_asc::after,
+        table.dataTable thead > tr > th.sorting_desc::before,
+        table.dataTable thead > tr > th.sorting_desc::after {
+            display: none !important;
+            content: "" !important;
+        }
+        table.dataTable thead th {
+            background-image: none !important;
+            padding-right: 8px !important;
+            vertical-align: middle;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        /* BOTÃO DO CABEÇALHO */
+        .excel-header-btn {
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            padding: 10px 5px;
+            font-weight: bold;
+            color: #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .excel-header-btn:hover, .excel-header-btn[aria-expanded="true"] {
+            background-color: #f0f0f0;
+        }
+        .excel-header-btn::after {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            content: "\f0d7"; 
+            color: #ccc;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
+        /* MENU FLUTUANTE */
+        .excel-dropdown-menu {
+            min-width: 280px;
+            padding: 10px;
+            border-radius: 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            font-size: 0.9rem;
+            border: 1px solid #ddd;
+        }
+        .excel-list-container {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            margin-top: 5px;
+            padding: 5px;
+        }
+        
+        .excel-list-label {
+            display: block;
+            padding: 5px 8px; 
+            cursor: pointer;
+            margin: 0;
+            font-weight: normal;
+            user-select: none;
+        }
+        .excel-list-label:hover { background-color: #e9ecef; }
+        
+        .excel-list-label input { 
+            margin-right: 8px; 
+            pointer-events: none; 
+        }
+        
+        .sort-option { 
+            cursor: pointer; 
+            padding: 8px 10px; 
+            display: block; 
+            text-decoration: none; 
+            color: #333;
+            font-weight: normal !important;
+        }
+        .sort-option:hover { background-color: #f8f9fa; color: #000; }
+        .sort-option i { width: 25px; text-align: center; } 
+    </style>
+</head>
+<body>
+
+<div id="wrapper">
+
+    <nav id="sidebar-wrapper">
+        <div class="sidebar-brand"><span class="brand-light">Integra </span><span class="brand-bold">Banescor</span></div>
+        <ul class="sidebar-nav">
+            <li class="nav-item active-menu" id="nav-base">
+                <a class="nav-link-custom" onclick="toggleSubmenu('submenuBase', this)">
+                    <i class="fas fa-th-large icon-main"></i><span>Base</span><i class="fas fa-angle-down arrow rotate"></i>
+                </a>
+                <ul id="submenuBase" class="submenu show">
+                    <li><a class="active-sub" onclick="navegarMenu('base-formularios', 'Base > Formulários', this)"><i class="far fa-circle"></i> Formulários</a></li>
+                    <li><a onclick="navegarMenu('base-processamentos', 'Base > Processamentos', this)"><i class="far fa-circle"></i> Processamentos</a></li>
+                    <li><a onclick="navegarMenu('base-relatorios', 'Base > Relatórios', this)"><i class="far fa-circle"></i> Relatórios</a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item" id="nav-producao">
+                <a class="nav-link-custom" onclick="toggleSubmenu('submenuProducao', this)">
+                    <i class="fas fa-users icon-main"></i><span>Produção</span><i class="fas fa-angle-left arrow"></i>
+                </a>
+                <ul id="submenuProducao" class="submenu">
+                    <li><a onclick="navegarMenu('producao-formularios', 'Produção > Formulários', this)"><i class="far fa-circle"></i> Formulários</a></li>
+                    <li><a onclick="navegarMenu('producao-vendas', 'Produção > Vendas', this)"><i class="far fa-circle"></i> Vendas</a></li>
+                    <li><a onclick="navegarMenu('producao-processamentos', 'Produção > Processamentos', this)"><i class="far fa-circle"></i> Processamentos</a></li>
+                    <li><a onclick="navegarMenu('producao-relatorios', 'Produção > Relatórios', this)"><i class="far fa-circle"></i> Relatórios</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item" id="nav-financeiro">
+                <a class="nav-link-custom" onclick="toggleSubmenu('submenuFin', this)">
+                    <i class="fas fa-file-invoice-dollar icon-main"></i><span>Financeiro</span><i class="fas fa-angle-left arrow"></i>
+                </a>
+                <ul id="submenuFin" class="submenu">
+                    <li><a onclick="navegarMenu('financeiro-formularios', 'Financeiro > Formulários', this)"><i class="far fa-circle"></i> Formulários</a></li>
+                    <li><a onclick="navegarMenu('financeiro-extratos', 'Financeiro > Extratos', this)"><i class="far fa-circle"></i> Extratos</a></li>
+                    <li><a onclick="navegarMenu('financeiro-processamentos', 'Financeiro > Processamentos', this)"><i class="far fa-circle"></i> Processamentos</a></li>
+                    <li><a onclick="navegarMenu('financeiro-relatorios', 'Financeiro > Relatórios', this)"><i class="far fa-circle"></i> Relatórios</a></li>
+                </ul>
+            </li>
+
+            <li class="nav-item" id="nav-admin"><a class="nav-link-custom" onclick="toggleSubmenu('submenuAdmin', this)"><i class="fas fa-cogs icon-main"></i><span>Administração</span><i class="fas fa-angle-left arrow"></i></a><ul id="submenuAdmin" class="submenu"><li><a href="/admin"><i class="far fa-circle"></i> Django Admin</a></li></ul></li>
+            <li class="nav-item" id="nav-auditoria"><a class="nav-link-custom" onclick="navegarMenu('auditoria', 'Auditoria > Logs', this, true)"><i class="fas fa-history icon-main"></i><span>Auditoria</span></a></li>
+            <li class="nav-item" id="nav-exportar"><a class="nav-link-custom" onclick="navegarMenu('exportar', 'Exportar > Excel', this, true)"><i class="fas fa-file-export icon-main"></i><span>Exportar</span></a></li>
+        </ul>
+    </nav>
+
+    <div id="page-content-wrapper">
+        <nav class="top-navbar">
+            <button class="btn-menu" id="menu-toggle"><i class="fas fa-bars"></i></button>
+            <div><span class="me-3 small">Admin</span><i class="fas fa-user-circle fa-lg"></i></div>
+        </nav>
+
+        <div class="breadcrumb-bar"><h4 class="m-0 breadcrumb-text" id="page-title"><i class="fas fa-home me-2"></i> Base > Formulários</h4></div>
+
+        <div class="container-fluid px-4">
+            
+            <div id="base-formularios" class="screen-section active">
+                <div id="tela-botoes-form">
+                    <div class="row g-4">
+                        <div class="col-md-3"><div class="card-menu super p-4 text-center" onclick="abrirSubTelaForm('super')"><i class="fas fa-university fa-3x mb-3 text-info"></i><h5 class="fw-bold">Superintendências</h5><span class="text-muted small">SUREC</span></div></div>
+                        <div class="col-md-3"><div class="card-menu agencia p-4 text-center" onclick="abrirSubTelaForm('agencia')"><i class="fas fa-store fa-3x mb-3 text-danger"></i><h5 class="fw-bold">Unidades</h5><span class="text-muted small">Agências</span></div></div>
+                        <div class="col-md-3"><div class="card-menu produto p-4 text-center" onclick="abrirSubTelaForm('produto')"><i class="fas fa-box-open fa-3x mb-3 text-success"></i><h5 class="fw-bold">Produtos</h5><span class="text-muted small">Catálogo</span></div></div>
+                        <div class="col-md-3"><div class="card-menu meta p-4 text-center" onclick="abrirSubTelaForm('meta')"><i class="fas fa-bullseye fa-3x mb-3 text-warning"></i><h5 class="fw-bold">Metas Mensais</h5><span class="text-muted small">Lançamentos</span></div></div>
+                    </div>
+                </div>
+
+                <div id="tela-super" style="display:none;">
+                    <div id="lista-super">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="m-0"><i class="fas fa-university text-info"></i> Superintendências</h4>
+                            <div>
+                                <button class="btn btn-light border me-1" onclick="voltarParaBotoes()">Voltar</button>
+                                <button class="btn btn-outline-secondary me-1" onclick="limparFiltrosGeral()"><i class="fas fa-filter"></i> Limpar Filtros</button>
+                                <button class="btn btn-success me-1" onclick="exportarCSV()" title="Exportar para Excel">
+                                    <i class="fas fa-file-csv"></i> Exportar
+                                </button> 
+                                <button class="btn btn-danger me-1" onclick="document.getElementById('form-delete-super').submit()" title="Excluir" data-bs-toggle="tooltip" data-bs-placement="top">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <button class="btn btn-info text-blue" onclick="limparFormSuper(); toggleForm('super', true)"><i class="fas fa-plus"></i> Novo</button>
+                            </div>
+                        </div>
+                        
+                        <div class="tabela-container">
+                            <form id="form-delete-super" method="post" action="{% url 'excluir_em_massa' %}" onsubmit="return confirmarFormSubmit(event, 'Tem certeza que deseja excluir os itens selecionados?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="tipo_massa" value="superintendencia">
+                                
+                                <table class="table table-striped table-hover mb-0" id="tabela-super" style="width:100%">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="5%" class="text-center align-middle">
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)">
+                                                </div>
+                                            </th>
+                                            <th>ID</th>
+                                            <th>CID Superintendência</th>
+                                            <th>Superintendência</th>
+                                            <th>Nome completo da Superintendência</th>
+                                            <th>Matrícula Superintendente</th>
+                                            <th>inativada em</th>
+                                            <th>Observações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for s in superintendencias %}
+                                        <tr class="tr-clickable" ondblclick="editarSuper(this)"
+                                            data-id="{{ s.id }}" data-cid="{{ s.cid_superintendencia }}" data-sigla="{{ s.superintendencia }}"
+                                            data-nome="{{ s.nome_descritivo }}" data-matricula="{{ s.matricula_superintendente }}"
+                                            data-inativada="{{ s.inativada_em|date:'Y-m-d'|default:'' }}" data-obs="{{ s.observacoes|default:'' }}">
+                                            
+                                            <td class="text-center align-middle" onclick="event.stopPropagation()">
+                                                <input type="checkbox" name="ids_excluir" value="{{ s.id }}" class="chk-delete chk-row">
+                                            </td>
+                                            
+                                            <td>{{ s.id }}</td>
+                                            <td>{{ s.cid_superintendencia }}</td> 
+                                            <td>{{ s.superintendencia }}</td>
+                                            <td>{{ s.nome_descritivo }}</td>
+                                            <td>{{ s.matricula_superintendente }}</td>
+                                            <td>{% if s.inativada_em %}Sim{% else %}-{% endif %}</td>
+                                            <td>{{ s.observacoes }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </form>
+                            <small class="text-muted mt-2 d-block"><i class="fas fa-info-circle"></i> Use os filtros no topo de cada coluna. Dê <b>duplo clique</b> na linha para editar.</small>
+                        </div>
+                    </div>
+                    
+                    <div id="form-super" style="display:none;">
+                        <div class="card border-top border-info shadow-sm mt-3" style="max-width:900px; margin:0 auto;">
+                            <div class="card-header bg-white"><h5 id="titulo-form-super">Novo Cadastro - Superintendência</h5></div>
+                            <div class="card-body">
+                                <form method="post">
+                                    {% csrf_token %} <input type="hidden" name="tipo_form" value="superintendencia">
+                                    <input type="hidden" name="item_id" id="super_id_hidden"> 
+                                    <div class="row g-3">
+                                        <div class="col-md-2"><label class="form-label">ID</label><input class="form-control bg-light" id="super_id_display" value="Novo" disabled></div>
+                                        <div class="col-md-3"><label class="form-label">CID Superintendência </label>{{ form_super.cid_superintendencia }}</div>
+                                        <div class="col-md-7"><label class="form-label">Superintendência</label>{{ form_super.superintendencia }}</div>
+                                        <div class="col-md-12"><label class="form-label">Nome completo da Superintendência</label>{{ form_super.nome_descritivo }}</div>
+                                        <div class="col-md-6"><label class="form-label">Matrícula Superintendente</label>{{ form_super.matricula_superintendente }}</div>
+                                        <div class="col-md-6"><label class="form-label">inativada em</label>{{ form_super.inativada_em }}</div>
+                                        <div class="col-12"><label class="form-label">Observações</label>{{ form_super.observacoes }}</div>
+                                    </div>
+                                    <div class="mt-4 text-end">
+                                        <button type="button" class="btn btn-light border" onclick="toggleForm('super', false)">Cancelar</button>
+                                        <button type="submit" class="btn btn-info text-white">Salvar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tela-agencia" style="display:none;"><div id="lista-agencia"><div class="d-flex justify-content-between align-items-center mb-3"><h4 class="m-0 text-danger">Agências</h4><div><button class="btn btn-light border me-1" onclick="voltarParaBotoes()">Voltar</button><button class="btn btn-danger text-white" onclick="toggleForm('agencia', true)">Novo</button></div></div><div class="tabela-container"><table class="table table-hover"><thead><tr><th>Ação</th><th>CID</th><th>Agência</th><th>Regional</th><th>Status</th></tr></thead><tbody>{% for a in agencias %}<tr><td><input type="checkbox" disabled></td><td>{{ a.cid_agencia }}</td><td>{{ a.agencia }}</td><td>{{ a.superintendencia }}</td><td>{% if a.inativada %}Inativa{% else %}Ativa{% endif %}</td></tr>{% endfor %}</tbody></table></div></div><div id="form-agencia" style="display:none;"><div class="card mt-3"><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="tipo_form" value="agencia"><div class="row g-3"><div class="col-12"><label>Nome</label>{{ form_agencia.agencia }}</div></div><div class="mt-3 text-end"><button class="btn btn-danger text-white">Salvar</button></div></form></div></div></div></div>
+                <div id="tela-produto" style="display:none;"><div id="lista-produto"><div class="d-flex justify-content-between align-items-center mb-3"><h4 class="m-0 text-success">Produtos</h4><div><button class="btn btn-light border me-1" onclick="voltarParaBotoes()">Voltar</button><button class="btn btn-success text-white" onclick="toggleForm('produto', true)">Novo</button></div></div><div class="tabela-container"><table class="table table-hover"><thead><tr><th>Ação</th><th>Produto</th><th>Agrupamento</th></tr></thead><tbody>{% for p in produtos %}<tr><td><input type="checkbox" disabled></td><td>{{ p.protudo }}</td><td>{{ p.agrupamento }}</td></tr>{% endfor %}</tbody></table></div></div><div id="form-produto" style="display:none;"><div class="card mt-3"><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="tipo_form" value="produto"><div class="row g-3"><div class="col-12"><label>Nome</label>{{ form_produto.protudo }}</div></div><div class="mt-3 text-end"><button class="btn btn-success">Salvar</button></div></form></div></div></div></div>
+                <div id="tela-meta" style="display:none;"><div id="lista-meta"><div class="d-flex justify-content-between align-items-center mb-3"><h4 class="m-0 text-warning">Metas</h4><div><button class="btn btn-light border me-1" onclick="voltarParaBotoes()">Voltar</button><button class="btn btn-warning" onclick="toggleForm('meta', true)">Novo</button></div></div><div class="tabela-container"><table class="table table-hover"><thead><tr><th>Ação</th><th>Mês</th><th>Agência</th><th>Valor</th></tr></thead><tbody>{% for m in metas %}<tr><td><input type="checkbox" disabled></td><td>{{ m.mes_de_referencia }}</td><td>{{ m.agencia }}</td><td>{{ m.meta }}</td></tr>{% endfor %}</tbody></table></div></div><div id="form-meta" style="display:none;"><div class="card mt-3"><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="tipo_form" value="meta"><div class="row g-3"><div class="col-6"><label>Mês</label>{{ form_meta.mes_de_referencia }}</div></div><div class="mt-3 text-end"><button class="btn btn-warning">Salvar</button></div></form></div></div></div></div>
+
+            </div>
+            
+            <div id="base-processamentos" class="screen-section"><div class="alert alert-info">Base > Processamentos...</div></div>
+            <div id="base-relatorios" class="screen-section"><div class="alert alert-secondary">Base > Relatórios...</div></div>
+            
+            <div id="producao-formularios" class="screen-section"><div class="alert alert-info"><i class="fas fa-tools"></i> Produção > Formulários: Em processamento...</div></div>
+            <div id="producao-vendas" class="screen-section"><div class="alert alert-success">Produção > Vendas...</div></div>
+            <div id="producao-processamentos" class="screen-section"><div class="alert alert-info">Produção > Processamentos...</div></div>
+            <div id="producao-relatorios" class="screen-section"><div class="alert alert-secondary">Produção > Relatórios...</div></div>
+
+            <div id="financeiro-formularios" class="screen-section"><div class="alert alert-info"><i class="fas fa-tools"></i> Financeiro > Formulários: Em processamento...</div></div>
+            <div id="financeiro-extratos" class="screen-section"><div class="alert alert-warning">Financeiro > Extratos...</div></div>
+            <div id="financeiro-processamentos" class="screen-section"><div class="alert alert-info">Financeiro > Processamentos...</div></div>
+            <div id="financeiro-relatorios" class="screen-section"><div class="alert alert-secondary">Financeiro > Relatórios...</div></div>
+
+            <div id="auditoria" class="screen-section"><div class="card"><div class="card-body">Logs...</div></div></div>
+            <div id="exportar" class="screen-section"><div class="card"><div class="card-body text-center">Exportar</div></div></div>
+
+        </div> 
+    </div> 
+</div> 
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    var currentFilterColumn = null;
+
+    $(document).ready(function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        var table = $('#tabela-super').DataTable({
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+            order: [[2, 'asc']], 
+            ordering: true, 
+            columnDefs: [ { orderable: false, targets: 0 } ],
+            
+            initComplete: function () {
+                var api = this.api();
+
+                api.columns().every(function () {
+                    var column = this;
+                    var header = $(column.header());
+                    if (header.index() === 0) return; 
+
+                    var title = header.text();
+                    header.html('');
+
+                    // Isso impede que o menu feche ao clicar dentro dele
+                    var dropdown = `
+                        <div class="dropdown" id="dropdown-${header.index()}">
+                            <button class="excel-header-btn" type="button" 
+                                    data-bs-toggle="dropdown" 
+                                    data-bs-auto-close="outside" 
+                                    aria-expanded="false" 
+                                    onclick="currentFilterColumn = ${header.index()}">
+                                ${title}
+                            </button>
+                            <div class="dropdown-menu excel-dropdown-menu">
+                                <a class="sort-option" onclick="ordenarColuna(${header.index()}, 'desc')">
+                                    <i class="fas fa-arrow-down-a-z text-muted me-2"></i> Classificar do Menor para o Maior
+                                </a>
+                                <a class="sort-option" onclick="ordenarColuna(${header.index()}, 'asc')">
+                                    <i class="fas fa-arrow-down-z-a text-muted me-2"></i> Classificar do Maior para o Menor
+                                </a>
+                                <hr class="dropdown-divider">
+                                <div class="px-2 pb-2">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Buscar na lista..." onkeyup="filtrarLista(this, ${header.index()})">
+                                </div>
+                                <div class="excel-list-container" id="list-${header.index()}">
+                                    </div>
+                                <div class="text-end pt-2 border-top mt-2">
+                                    <button type="button" class="btn btn-primary btn-sm px-3" onclick="aplicarFiltroEFechar(${header.index()})">OK</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    header.append(dropdown);
+                });
+
+                atualizarListasDeFiltro(api);
+            }
+        });
+
+        table.on('draw', function() {
+            atualizarListasDeFiltro(table);
+        });
+
+        function atualizarListasDeFiltro(api) {
+            api.columns().every(function () {
+                var column = this;
+                var colIndex = column.index();
+                if (colIndex === 0) return;
+                
+                // Se o usuário está com esse menu aberto, não reconstrua a lista (para não piscar ou perder scroll)
+                if (currentFilterColumn === colIndex) return;
+
+                var listContainer = $('#list-' + colIndex);
+                var currentSearch = column.search();
+                var activeFilters = [];
+                if(currentSearch) {
+                    var cleanSearch = currentSearch.replace(/^\^\(/, '').replace(/\)\$$/, '').replace(/^\^/, '').replace(/\$$/, '');
+                    activeFilters = cleanSearch.split('|').map(item => item.replace(/\\/g, ''));
+                }
+
+                var uniqueData;
+                if (activeFilters.length > 0) {
+                    uniqueData = column.data().unique().sort();
+                } else {
+                    uniqueData = api.column(colIndex, { search: 'applied' }).data().unique().sort();
+                }
+
+                listContainer.empty();
+                var allChecked = (activeFilters.length === 0);
+                
+                // add o (Selecionar Tudo)
+                listContainer.append(`
+                    <div class="excel-list-label border-bottom pb-1 mb-1" onclick="toggleAllClick(this, ${colIndex})">
+                        <input type="checkbox" ${allChecked ? 'checked' : ''}> (Selecionar Tudo)
+                    </div>
+                `);
+
+                uniqueData.each(function (d, j) {
+                    var text = d.replace(/<[^>]+>/g, '').trim();
+                    if(text) {
+                        var isChecked = allChecked || activeFilters.includes($.fn.dataTable.util.escapeRegex(text));
+                        var safeValue = text.replace(/"/g, '&quot;');
+                        
+                        listContainer.append(`
+                            <div class="excel-list-label" onclick="toggleItem(this, ${colIndex})">
+                                <input type="checkbox" class="chk-item" value="${safeValue}" ${isChecked ? 'checked' : ''}> ${text}
+                            </div>
+                        `);
+                    }
+                });
+            });
+        }
+
+        // Impede propagação extra, garantindo que só o botão feche
+        $(document).on('click', '.excel-dropdown-menu', function (e) { e.stopPropagation(); });
+
+        $(document).on('hidden.bs.dropdown', function () {
+            // Se fechou (clicando fora), aplicamos o filtro por garantia
+            if(currentFilterColumn !== null) {
+                aplicarFiltroEFechar(currentFilterColumn);
+            }
+        });
+
+        window.ordenarColuna = function(colIndex, dir) { table.order([colIndex, dir]).draw(); };
+
+        window.aplicarFiltroEFechar = function(colIndex) {
+            filtrarMultiplo(colIndex);
+            $('[data-bs-toggle="dropdown"]').dropdown('hide');
+            currentFilterColumn = null;
+        }
+
+        window.toggleAll = function(source, colIndex) {
+            var checkboxes = $('#list-' + colIndex + ' .chk-item');
+            checkboxes.prop('checked', source.checked);
+        };
+
+        window.filtrarMultiplo = function(colIndex) {
+            var checkboxes = $('#list-' + colIndex + ' .chk-item');
+            var checked = checkboxes.filter(':checked').map(function() {
+                return $.fn.dataTable.util.escapeRegex($(this).val());
+            }).get();
+
+            var searchStr = '';
+            if (checked.length === 0) { searchStr = '^$'; } 
+            else if (checked.length === checkboxes.length) { searchStr = ''; } 
+            else { searchStr = '^(' + checked.join('|') + ')$'; }
+            
+            table.column(colIndex).search(searchStr, true, false).draw();
+        }
+
+        window.limparFiltrosGeral = function() {
+            currentFilterColumn = null;
+            table.search('').columns().search('').draw();
+        }
+
+        window.filtrarLista = function(input, colIndex) {
+            var value = input.value.toLowerCase();
+            $('#list-' + colIndex + ' div:not(:first-child)').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        };
+        
+        // --- FUNÇÃO DE TOGGLE ATUALIZADA (SEM REDRAW, SEM FECHAR) ---
+        window.toggleItem = function(element, colIndex) {
+            // Previne que o clique suba para o dropdown
+            if(event) event.stopPropagation();
+
+            var checkbox = $(element).find('input[type="checkbox"]');
+            var novoEstado = !checkbox.prop('checked');
+            checkbox.prop('checked', novoEstado);
+            // Só muda o checkbox. O filtro ocorre apenas no OK.
+        };
+
+        window.toggleAllClick = function(element, colIndex) {
+            if(event) event.stopPropagation();
+            var checkbox = $(element).find('input[type="checkbox"]');
+            checkbox.prop('checked', !checkbox.prop('checked'));
+            toggleAll(checkbox[0], colIndex);
+        };
+    });
+
+    function toggleDeleteAll(source) {
+        var checkboxes = document.querySelectorAll('.chk-row');
+        for(var i=0; i<checkboxes.length; i++) { checkboxes[i].checked = source.checked; }
+    }
+
+    document.getElementById("menu-toggle").onclick = function () {
+        var sidebar = document.getElementById("sidebar-wrapper");
+        if (sidebar.style.marginLeft === "-230px") { sidebar.style.marginLeft = "0"; } else { sidebar.style.marginLeft = "-230px"; }
+    };
+
+    function toggleSubmenu(id, link) {
+        var menu = document.getElementById(id);
+        var arrow = link.querySelector('.arrow');
+        if (menu.classList.contains('show')) {
+            menu.classList.remove('show');
+            if(arrow) { arrow.classList.replace('fa-angle-down', 'fa-angle-left'); arrow.classList.remove('rotate'); }
+        } else {
+            menu.classList.add('show');
+            if(arrow) { arrow.classList.replace('fa-angle-left', 'fa-angle-down'); arrow.classList.add('rotate'); }
+        }
+    }
+
+    function navegarMenu(telaId, breadcrumbText, elementoLink, isSimpleMenu = false) {
+        let screens = document.querySelectorAll('.screen-section');
+        screens.forEach(s => s.classList.remove('active'));
+        let target = document.getElementById(telaId);
+        if(target) target.classList.add('active');
+        document.getElementById('page-title').innerHTML = `<i class="fas fa-home me-2"></i> ${breadcrumbText}`;
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active-menu'));
+        document.querySelectorAll('.submenu a').forEach(a => a.classList.remove('active-sub'));
+        if (isSimpleMenu) { elementoLink.closest('.nav-item').classList.add('active-menu'); } 
+        else { elementoLink.classList.add('active-sub'); elementoLink.closest('.nav-item').classList.add('active-menu'); }
+    }
+
+    function abrirSubTelaForm(tipo) {
+        document.getElementById('tela-botoes-form').style.display = 'none';
+        document.getElementById('tela-' + tipo).style.display = 'block';
+        document.getElementById('lista-' + tipo).style.display = 'block';
+        document.getElementById('form-' + tipo).style.display = 'none';
+    }
+
+    function voltarParaBotoes() {
+        ['super', 'agencia', 'produto', 'meta'].forEach(t => { document.getElementById('tela-' + t).style.display = 'none'; });
+        document.getElementById('tela-botoes-form').style.display = 'block';
+    }
+
+    function toggleForm(tipo, mostrar) {
+        if(mostrar) {
+            document.getElementById('lista-' + tipo).style.display = 'none';
+            document.getElementById('form-' + tipo).style.display = 'block';
+        } else {
+            document.getElementById('form-' + tipo).style.display = 'none';
+            document.getElementById('lista-' + tipo).style.display = 'block';
+        }
+    }
+
+    function editarSuper(row) {
+        var id = row.getAttribute('data-id');
+        document.getElementById('super_id_hidden').value = id;
+        document.getElementById('super_id_display').value = id;
+        document.getElementById('id_cid_superintendencia').value = row.getAttribute('data-cid');
+        document.getElementById('id_superintendencia').value = row.getAttribute('data-sigla');
+        document.getElementById('id_nome_descritivo').value = row.getAttribute('data-nome');
+        document.getElementById('id_matricula_superintendente').value = row.getAttribute('data-matricula');
+        document.getElementById('id_inativada_em').value = row.getAttribute('data-inativada');
+        document.getElementById('id_observacoes').value = row.getAttribute('data-obs');
+        document.getElementById('titulo-form-super').innerText = "Editar Superintendência #" + id;
+        toggleForm('super', true);
+    }
+
+    function limparFormSuper() {
+        document.getElementById('super_id_hidden').value = "";
+        document.getElementById('super_id_display').value = "Novo";
+        document.getElementById('titulo-form-super').innerText = "Novo Cadastro - Superintendência";
+        document.querySelector('#form-super form').reset();
+    }
+
+    function exportarCSV() {
+        var table = $('#tabela-super').DataTable();
+        var data = table.rows({ search: 'applied' }).data().toArray();
+        var csvContent = "\uFEFF"; 
+        var headers = ["ID", "CID Superintendência", "Superintendência", "Nome completo da Superintendência", "Matrícula Superintendente", "Inativa em", "Observações"];
+        csvContent += headers.map(h => `"${h}"`).join(";") + "\n";
+        data.forEach(function(row) {
+            var rowData = [];
+            for (var i = 1; i < row.length; i++) {
+                var cleanText = row[i].toString().replace(/<[^>]+>/g, '').trim();
+                cleanText = cleanText.replace(/"/g, '""');
+                rowData.push('"' + cleanText + '"');
+            }
+            csvContent += rowData.join(";") + "\n";
+        });
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement("a");
+        var url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "superintendencias_filtradas.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+</body>
+</html>

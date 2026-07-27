@@ -1,0 +1,68 @@
+{% extends 'core/layout.html' %}
+{% block title %}Lista Auditoria{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Home</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'auditoria' %}" class="text-primary text-decoration-none">Auditoria</a> 
+    </span>
+{% endblock %}
+
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h4 class="m-0"><i class="fa-solid fa-shield-alt"></i> Auditoria</h4>
+
+        <div>
+
+        <button class="btn btn-success me-1" onclick="exportarCSV('auditoria.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+
+        </div>
+
+    </div>
+</div>
+ 
+<div class="tabela-container">
+    <table class="table table-striped table-hover mb-0" id="tabela-auditoria" style="width:100%; font-size: 0.9rem;">
+        <thead class="table-light">
+            <tr>
+
+                <th style="display: none;"></th>
+
+                <th class="text-start">Usuário</th>
+                <th class="text-start">Ação</th>
+                <th class="text-start">Descrição</th>
+                <th class="text-start">Data e Hora</th>
+
+            </tr>
+        </thead>
+        <tbody>     
+            {% for log in lista_auditados %}
+            <tr>
+                
+                <td style="display: none;"></td>
+
+                <td class="text-start">{{ log.usuario|default:'-' }}</td>
+                <td class="text-start">{{ log.acao }}</td>
+                <td class="text-start">{{ log.detalhe }}</td>
+                <td class="text-start">{{ log.data_hora|date:'d/m/Y H:i'|default:'-'}}</td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() { 
+        iniciarTabelaExcel('tabela-auditoria'); 
+    });
+
+
+</script>
+{% endblock %}

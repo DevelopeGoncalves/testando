@@ -1,0 +1,46 @@
+<script>
+// Função auxiliar para pegar o CSRF Token dos cookies (Necessário para o POST no Django)
+    function obterCSRFToken() {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 10) === ('csrftoken=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Função global que você vai chamar dentro das suas funções de exportar CSV
+    function registrarAuditoria(acao, detalhe) {
+        const urlAuditoria = '/auditoria/exportacao/'; 
+
+        fetch(urlAuditoria, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': obterCSRFToken() 
+            },
+            // Alteramos o body para enviar as duas novas variáveis
+            body: JSON.stringify({
+                'acao': acao,
+                'detalhe': detalhe
+            })
+        })
+        .then(response => {
+            if (response.status === 204) {
+                console.log("Ação auditada com sucesso (204 No Content).");
+            } else if (!response.ok) {
+                console.error("Erro na resposta do servidor ao auditar.");
+            }
+        })
+        .catch(error => {
+            console.error("Falha na requisição de auditoria:", error);
+        });
+    }
+
+</script>

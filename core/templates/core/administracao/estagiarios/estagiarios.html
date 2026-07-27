@@ -1,0 +1,56 @@
+{% extends 'core/layout.html' %}
+{% block title %}Estagiarios{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Home</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <span class="text-primary text-decoration-none">Administração</span> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'estagiarios' %}" class="text-primary text-decoration-none">Estagiarios</a> 
+    </span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="text-secondary border-bottom pb-2"><i class="fas fa-user-tie text-black"></i> Gestão de Estagiarios</h4>
+        <p class="text-muted">Selecione uma tabela abaixo para abrir o seu painel de controle exclusivo.</p>
+    </div>
+</div>
+
+<div class="row">
+
+    <div class="col-lg-3 col-6">
+        <a href="{% url 'lista_estagiarios' %}" class="link-card">
+            <div class="card card-menu mb-4" style="border-top-color: #ffc107;">
+                <div class="card-body text-center p-4">
+                    <i class="fa-solid fa-graduation-cap fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title text-dark fw-bold">Lista estagiarios</h5>
+                    <p class="card-text text-muted small">Lista de estagiarios</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <a href="{% url 'ferias_estagiarios' %}" class="link-card">
+            <div class="card card-menu unidade mb-4" style="border-top-color: #6f42c1;">
+                <div class="card-body text-center p-4" >
+                    <i class="fa-solid fa-umbrella-beach fa-3x text-purple mb-3" style="color: #6f42c1;"> </i>
+                    <h5 class="card-title text-dark fw-bold">Ferias estagiarios</h5>
+                    <p class="card-text text-muted small">Ajustar as ferias dos estagiarios</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
+<!--
+
+--> 
+
+

@@ -1,0 +1,45 @@
+{% extends 'core/layout.html' %}
+{% block title %}Editar Usuário{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user-edit me-2"></i> Editando: {{ usuario_edit.username }}</span>
+                <a href="{% url 'criar_usuario' %}" class="btn btn-sm btn-light"><i class="fas fa-arrow-left"></i> Voltar</a>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <h5 class="text-primary border-bottom pb-2 mb-3">Dados de Acesso</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">{{ form.username.label_tag }} {{ form.username }}</div>
+                        <div class="col-md-4">{{ form.password.label_tag }} {{ form.password }}<small class="text-muted" style="font-size: 0.75rem;">Deixe vazio para não mudar</small></div>
+                        <div class="col-md-4">{{ form.nivel_acesso.label_tag }} {{ form.nivel_acesso }}</div>
+                    </div>
+
+                    <h5 class="text-primary border-bottom pb-2 mb-3 mt-4">Permissões</h5>
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <p class="fw-bold">{{ form.aba_base.label_tag }} {{ form.aba_base }}</p>
+                            <p class="ms-3">{{ form.sub_base_formularios.label_tag }} {{ form.sub_base_formularios }}</p>
+                            <p class="ms-3">{{ form.sub_base_processamentos.label_tag }} {{ form.sub_base_processamentos }}</p>
+                            <p class="ms-3">{{ form.sub_base_relatorios.label_tag }} {{ form.sub_base_relatorios }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="fw-bold">{{ form.aba_producao.label_tag }} {{ form.aba_producao }}</p>
+                            <p class="ms-3">{{ form.sub_prod_formularios.label_tag }} {{ form.sub_prod_formularios }}</p>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Atualizar Usuário</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
