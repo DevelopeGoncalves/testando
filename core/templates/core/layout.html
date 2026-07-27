@@ -532,36 +532,42 @@
                 api.columns(':visible').every(function () {
                     var column = this;
                     var header = $(column.header());
-                    
+                    // Índice REAL da coluna no DataTables. Não usar header.index() (posição
+                    // no DOM): o DataTables remove as colunas ocultas do DOM, então a posição
+                    // visível não bate com o índice real usado por aplicarFiltro/ordenarColuna/
+                    // atualizarListasDeFiltro - era isso que deixava os filtros "trocados"
+                    // (ex.: o filtro da coluna X mostrava os dados de outra coluna).
+                    var colIndex = column.index();
+
                     header.off('.DT');
 
-                    if (header.index() === 0 || header.text().trim() === "Ações") return;
+                    if (colIndex === 0 || header.text().trim() === "Ações") return;
 
                     var title = header.text();
-                    header.html(''); 
+                    header.html('');
 
                     var dropdown = `
                         <div class="dropdown">
-                            <button class="excel-header-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="window" aria-expanded="false" onclick="currentFilterColumn = ${header.index()}">
+                            <button class="excel-header-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="window" aria-expanded="false" onclick="currentFilterColumn = ${colIndex}">
                                 ${title}
                             </button>
                             <div class="dropdown-menu excel-dropdown-menu">
-                                <a class="sort-option" onclick="ordenarColuna(${header.index()}, 'asc')">
+                                <a class="sort-option" onclick="ordenarColuna(${colIndex}, 'asc')">
                                     <i class="fas fa-sort-alpha-down"></i> Classificar do Menor para o Maior
                                 </a>
-                                <a class="sort-option" onclick="ordenarColuna(${header.index()}, 'desc')">
+                                <a class="sort-option" onclick="ordenarColuna(${colIndex}, 'desc')">
                                     <i class="fas fa-sort-alpha-down-alt"></i> Classificar do Maior para o Menor
                                 </a>
-                                
+
                                 <div class="excel-search-box">
-                                    <input type="text" class="form-control form-control-sm" placeholder="Buscar na lista..." onkeyup="filtrarListaInterna(this, ${header.index()})">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Buscar na lista..." onkeyup="filtrarListaInterna(this, ${colIndex})">
                                 </div>
-                                
-                                <div class="excel-list-container" id="list-${header.index()}">
+
+                                <div class="excel-list-container" id="list-${colIndex}">
                                 </div>
-                                
+
                                 <div class="excel-footer">
-                                    <button type="button" class="btn btn-primary btn-sm px-3" onclick="aplicarFiltro(${header.index()})">OK</button>
+                                    <button type="button" class="btn btn-primary btn-sm px-3" onclick="aplicarFiltro(${colIndex})">OK</button>
                                 </div>
                             </div>
                         </div>`;
