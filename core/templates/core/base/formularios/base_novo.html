@@ -174,7 +174,17 @@
                             <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
-                            <td class="text-center">{{ i.ligacoes.all|length }}</td>
+                            <td class="text-center">
+                                {% if i.ligacoes.all %}
+                                <span class="badge bg-primary" style="cursor:pointer;" title="Ver histórico de ligações"
+                                      onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
+                                      data-cliente="{{ i.nome_cliente|default:''|escape }}">
+                                    {{ i.ligacoes.all|length }} <i class="fas fa-list-ul ms-1"></i>
+                                </span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
                             <td class="text-start">{{ i.observacoes|default:'-' }}</td>
                         </tr>
                         {% endfor %}
@@ -359,6 +369,23 @@
             </form>
         </div>
     </div>
+
+    <!-- Pop-up (só leitura) com o histórico de ligações/vendas de um registro.
+         Abre ao clicar no número da coluna "Ligações". -->
+    <div class="modal fade" id="modalHistoricoLigacoes" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title"><i class="fas fa-phone-alt"></i> Histórico de Ligações <span id="hist-cliente" class="fw-normal"></span></h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body" id="hist-corpo"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -376,6 +403,12 @@
     let algumaLigacaoSalva = false;   // já houve ao menos uma ligação confirmada nesta ficha?
     let blocosSnapshot = 1;           // qtd de blocos ao abrir o pop-up (usado pelo Cancelar)
 
+    let modalHistorico = null;        // pop-up (só leitura) do histórico de ligações
+    // Mapa id -> texto do motivo de não venda, para exibir o nome no histórico.
+    const MOTIVOS_NAO_VENDA = {
+        {% for m in motivos_nao_venda %}"{{ m.id }}": "{{ m.motivo|escapejs }}",{% endfor %}
+    };
+
     $(document).ready(function() {
 
         // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
@@ -385,6 +418,12 @@
         if (PODE_REGISTRAR_LIGACAO) {
             modalLigacao = new bootstrap.Modal(document.getElementById('modalLigacao'));
             atualizarResumoLigacoes();
+        }
+
+        // Pop-up do histórico de ligações (existe tanto no Novo quanto na Base Novo).
+        var elHist = document.getElementById('modalHistoricoLigacoes');
+        if (elHist) {
+            modalHistorico = new bootstrap.Modal(elHist);
         }
 
         {% if form_indicacao.errors %}
@@ -588,6 +627,73 @@
         resumo.innerHTML = (algumaLigacaoSalva && n > 0)
             ? '<i class="fas fa-check-circle"></i> ' + n + ' ligação(ões) registrada(s)'
             : '';
+    }
+
+    // --- HISTÓRICO DE LIGAÇÕES (pop-up só leitura, aberto pela coluna "Ligações") ---
+    function escHtml(s) {
+        return (s == null ? '' : String(s)).replace(/[&<>"]/g, function(c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+    }
+
+    // Converte "2026-05-07T01:29:00" (ou sem segundos) para "07/05/2026 01:29".
+    function formatarDataHora(iso) {
+        if (!iso) return '';
+        var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        return m ? (m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5]) : iso;
+    }
+
+    // Monta e abre o histórico de ligações do registro (lê os dados já embutidos na
+    // linha, na célula oculta .dados-ligacoes-extras). A mais recente aparece no topo,
+    // em destaque.
+    function abrirHistoricoLigacoes(el) {
+        if (!modalHistorico) return;
+        var tr = el.closest('tr');
+        var cliente = el.getAttribute('data-cliente') || '';
+        document.getElementById('hist-cliente').textContent = cliente ? '— ' + cliente : '';
+
+        var itens = tr ? tr.querySelectorAll('.dados-ligacoes-extras .extra-item-ligacao') : [];
+        // As ligações já vêm da mais recente para a mais antiga (ordering do model:
+        // ['-data_ligacao', '-id']), então o índice 0 é sempre a última ligação.
+        var arr = Array.prototype.slice.call(itens);
+        var total = arr.length;
+        var html = '';
+
+        arr.forEach(function(item, idx) {
+            var d = item.dataset;
+            var ehUltima = (idx === 0);
+            var canal = d.vendaCentral === '1' ? 'Vendas Central'
+                      : d.agn === '1' ? 'Vendas Agência'
+                      : (d.motivo ? 'Não venda' : 'Em aberto');
+            var motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
+            var premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
+            var numero = total - idx; // 1ª, 2ª... na ordem cronológica
+
+            html += ''
+              + '<div class="card mb-2 ' + (ehUltima ? 'border-primary' : '') + '">'
+              +   '<div class="card-header d-flex justify-content-between align-items-center py-2 ' + (ehUltima ? 'bg-primary text-white' : 'bg-light') + '">'
+              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação '
+              +       (ehUltima ? '<span class="badge bg-light text-primary ms-1">Mais recente</span>' : '') + '</span>'
+              +     '<small>' + escHtml(formatarDataHora(d.data)) + '</small>'
+              +   '</div>'
+              +   '<div class="card-body py-2" style="font-size:.9rem;">'
+              +     '<div class="row g-2">'
+              +       '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +       '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +       '<div class="col-md-4"><strong>Canal:</strong> ' + escHtml(canal) + '</div>'
+              +       '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +       '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +       '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +       '<div class="col-md-8"><strong>Observações:</strong> ' + (escHtml(d.obs) || '-') + '</div>'
+              +       '<div class="col-md-4"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        });
+
+        if (!html) html = '<div class="text-muted text-center py-3">Nenhuma ligação registrada.</div>';
+        document.getElementById('hist-corpo').innerHTML = html;
+        modalHistorico.show();
     }
 
     function resetarContainerLigacoes() {
