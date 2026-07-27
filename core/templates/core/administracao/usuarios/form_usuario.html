@@ -1,0 +1,417 @@
+{% extends 'core/layout.html' %}
+{% block title %}{% if usuario_edit %}Editar Usuário{% else %}Criar Novo Usuário{% endif %}{% endblock %}
+
+{% block breadcrumb %}  
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Home</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">Administração</span>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'listar_usuarios' %}" class="text-primary text-decoration-none">Usuários</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">{% if usuario_edit %}Editar{% else %}Criar{% endif %}</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos da barra de pesquisa / dropdown */
+    .input-container { position: relative; }
+    .lista-suspensa {
+        position: absolute; top: 100%; left: 0; width: 100%; max-height: 210px; overflow-y: auto;
+        background-color: #ffffff; border: 1px solid #ced4da; border-radius: 8px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2); z-index: 9999 !important;
+    }
+    .item-lista { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; color: #333; }
+    .item-lista:hover { background-color: #0d6efd; color: white; }
+    .item-lista:last-child { border-bottom: none; }
+    .lista-suspensa::-webkit-scrollbar { width: 8px; }
+    .lista-suspensa::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 10px; }
+</style>
+
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-10">
+        <div class="card shadow border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                <span>
+                    <i class="fas {% if usuario_edit %}fa-user-edit{% else %}fa-user-plus{% endif %} me-2"></i> 
+                    {% if usuario_edit %}Editando: {{ usuario_edit.username }}{% else %}Criar Novo Usuário{% endif %}
+                </span>
+                <a href="{% url 'listar_usuarios' %}" class="btn btn-sm btn-light text-primary "><i class="fas fa-arrow-left"></i> Voltar</a>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <h5 class="text-secondary border-bottom pb-2 mb-4"><i class="fas fa-id-card me-2"></i>Dados</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.matricula.label }}</label>
+                            <div class="input-container">
+                                {{ form.matricula }}
+                                <div id="dropdown-matricula" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.login.label }}</label>
+                            {{ form.login }}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label d-block">Usuário Ativo</label>
+                            <div class="form-check form-switch mt-2 fs-5">
+                                {{ form.is_active }}
+                                <label class="form-check-label ms-2 fs-6 mt-1" style="cursor: pointer;" for="{{ form.is_active.id_for_label }}"></label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">
+                                {{ form.password.label }}
+                                {% if usuario_edit %}
+                                    <small class="text-muted fw-normal" style="font-size: 0.75rem;">(deixe vazio para não mudar)</small>
+                                {% else %}
+                                    <small class="text-danger fw-normal" style="font-size: 0.75rem;">(senha obrigatória)</small>
+                                {% endif %}
+                            </label>
+                            {{ form.password }}
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.confirmar_senha.label }}</label>
+                            {{ form.confirmar_senha }}
+                            {% if form.confirmar_senha.errors %}
+                                <div class="text-danger small mt-1">{{ form.confirmar_senha.errors.0 }}</div>
+                            {% endif %}
+                        </div>  
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ form.nivel_acesso.label }}</label>
+                            {{ form.nivel_acesso }}
+                        </div>
+                    </div>      
+                    
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4 mt-4">
+                        <h5 class="text-secondary mb-0"><i class="fas fa-shield-alt me-2"></i>Permissões</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEspelho">
+                            <i class="fas fa-copy me-1"></i> Usuário Espelho
+                        </button>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <!-- MÓDULO BASE -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-database me-2"></i> Base</h6>
+                                    
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_base_formularios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_base_formularios.id_for_label }}">
+                                            Formulários
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_base_processamentos }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_base_processamentos.id_for_label }}">
+                                            Processamentos
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mt-2 fs-5">
+                                        {{ form.sub_base_relatorios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_base_relatorios.id_for_label }}">
+                                            Relatórios
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- MÓDULO PRODUÇÃO -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-industry me-2"></i> Produção</h6>
+                                    
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_prod_vendas }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_prod_vendas.id_for_label }}">
+                                            Vendas
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_prod_formularios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_prod_formularios.id_for_label }}">
+                                            Formulários
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_prod_processamentos }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_prod_processamentos.id_for_label }}">
+                                            Processamentos
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check form-switch mt-2 fs-5">
+                                        {{ form.sub_prod_relatorios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_prod_relatorios.id_for_label }}">
+                                            Relatórios
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MÓDULO FINANCEIRO -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-chart-line me-2"></i> Financeiro</h6>
+                                    
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_fin_formularios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_fin_formularios.id_for_label }}">
+                                            Formulários
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_fin_extratos }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_fin_extratos.id_for_label }}">
+                                            Extratos
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check form-switch mt-2 fs-5">
+                                        {{ form.sub_fin_relatorios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_fin_relatorios.id_for_label }}">
+                                            Relatórios
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ADMINISTRAÇÃO E AUDITORIA -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card h-100 border-0 shadow-sm bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-cogs me-2"></i> Administração</h6>
+                                    
+                                    <div class="form-check form-switch mt-2 fs-5 mb-2">
+                                        {{ form.sub_admin_criar }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_admin_criar.id_for_label }}">
+                                            Criar Usuários
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check form-switch mt-2 fs-5 mb-4">
+                                        {{ form.sub_admin_estagiarios }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_admin_estagiarios.id_for_label }}">
+                                            Gestão Estagiários
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="border-top pt-3">
+                                        <span class="d-block text-muted small mb-2 text-uppercase">Acesso Especial</span>
+                                        <div class="form-check form-switch mt-2 fs-5">
+                                            {{ form.aba_auditoria }}
+                                            <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.aba_auditoria.id_for_label }}">
+                                                Auditoria
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-5 border-top pt-4">
+                        <button type="submit" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm">
+                            <i class="fas fa-save me-2"></i> {% if usuario_edit %}Atualizar Usuário{% else %}Salvar Usuário{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL USUÁRIO ESPELHO -->
+<div class="modal fade" id="modalEspelho" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title text-secondary fw-bold"><i class="fas fa-users me-2"></i>Copiar Permissões de Usuário</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="form-label text-muted">Busque o usuário base:</label>
+                
+                <div class="input-container">
+                    <input type="text" id="input-busca-espelho" class="form-control" placeholder="Digite o login ou matrícula..." autocomplete="off">
+                    <div id="dropdown-espelho" class="lista-suspensa d-none"></div>
+                </div>
+                
+                <input type="hidden" id="hidden-perms-espelho" value="">
+
+                <div class="alert alert-info mt-3 mb-0" style="font-size: 0.85rem;">
+                    <i class="fas fa-info-circle me-1"></i> As permissões atuais serão substituídas pelas do usuário selecionado.
+                </div>
+            </div>
+            <div class="modal-footer border-top pt-3 pb-3">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-aplicar-espelho">Aplicar Permissões</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const currentUserId = {{ usuario_edit.id|default:"null" }};
+
+    const colaboradores = [
+        {% for c in colaboradores %}
+        { "matricula": "{{ c.matricula }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const perfisEspelho = [
+        {% for p in todos_perfis %}
+        {
+            "id": {{ p.usuario.id }},
+            "label": "{{ p.usuario.username }}{% if p.colaborador %} - {{ p.colaborador.matricula }}{% endif %}",
+            "perms": {
+                "id_sub_base_formularios": {{ p.sub_base_formularios|yesno:"true,false" }},
+                "id_sub_base_processamentos": {{ p.sub_base_processamentos|yesno:"true,false" }},
+                "id_sub_base_relatorios": {{ p.sub_base_relatorios|yesno:"true,false" }},
+                "id_sub_prod_vendas": {{ p.sub_prod_vendas|yesno:"true,false" }},
+                "id_sub_prod_formularios": {{ p.sub_prod_formularios|yesno:"true,false" }},
+                "id_sub_prod_processamentos": {{ p.sub_prod_processamentos|yesno:"true,false" }},
+                "id_sub_prod_relatorios": {{ p.sub_prod_relatorios|yesno:"true,false" }},
+                "id_sub_fin_formularios": {{ p.sub_fin_formularios|yesno:"true,false" }},
+                "id_sub_fin_extratos": {{ p.sub_fin_extratos|yesno:"true,false" }},
+                "id_sub_fin_relatorios": {{ p.sub_fin_relatorios|yesno:"true,false" }},
+                "id_sub_admin_criar": {{ p.sub_admin_criar|yesno:"true,false" }},
+                "id_sub_admin_estagiarios": {{ p.sub_admin_estagiarios|yesno:"true,false" }},
+                "id_aba_auditoria": {{ p.aba_auditoria|yesno:"true,false" }}
+            }
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function abrirListaDropdown(inputId, dropdownId) {
+        let valorDigitado = $('#' + inputId).val().toLowerCase().trim();
+        let $dropdown = $('#' + dropdownId);
+        $dropdown.empty();
+
+        let filtrados = colaboradores.filter(c => c.matricula.toLowerCase().includes(valorDigitado));
+        filtrados.sort((a, b) => a.matricula.localeCompare(b.matricula, undefined, { numeric: true }));
+
+        if (filtrados.length > 0) {
+            filtrados.forEach(c => {
+                let $item = $('<div>').addClass('item-lista').text(c.matricula);
+                $item.on('click', function(event) {
+                    event.stopPropagation();
+                    $('#' + inputId).val(c.matricula);
+                    $dropdown.addClass('d-none');
+                });
+                $dropdown.append($item);
+            });
+            $dropdown.removeClass('d-none');
+        } else {
+            $dropdown.addClass('d-none');
+        }
+    }
+
+    function abrirDropdownEspelho() {
+        let valorDigitado = $('#input-busca-espelho').val().toLowerCase().trim();
+        let $dropdown = $('#dropdown-espelho');
+        $dropdown.empty();
+
+        let filtrados = perfisEspelho.filter(p => 
+            p.label.toLowerCase().includes(valorDigitado) && 
+            p.id !== currentUserId
+        );
+        filtrados.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
+        if (filtrados.length > 0) {
+            filtrados.forEach(p => {
+                let $item = $('<div>').addClass('item-lista').text(p.label);
+                
+                $item.on('click', function(event) {
+                    event.stopPropagation();
+                    $('#input-busca-espelho').val(p.label);
+
+                    let dadosParaSalvar = {
+                        perms: p.perms,
+                    };
+
+                    $('#hidden-perms-espelho').val(JSON.stringify(dadosParaSalvar));
+                    $dropdown.addClass('d-none');
+                });
+
+                $dropdown.append($item);
+            });
+            $dropdown.removeClass('d-none');
+        } else {
+            $dropdown.addClass('d-none');
+        }
+    }
+
+    $(document).ready(function() {
+        $('#input-matricula').on('input click', function() {
+            abrirListaDropdown('input-matricula', 'dropdown-matricula');
+        });
+
+        $('#input-busca-espelho').on('input click', function() {
+            abrirDropdownEspelho();
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.input-container').length) {
+                $('.lista-suspensa').addClass('d-none');
+            }
+        });
+
+        $('#modalEspelho').on('hidden.bs.modal', function () {
+            $('#input-busca-espelho').val('');
+            $('#hidden-perms-espelho').val('');
+            $('#dropdown-espelho').addClass('d-none');
+        });
+
+        $('#btn-aplicar-espelho').on('click', function() {
+            let permsData = $('#hidden-perms-espelho').val();
+            
+            if (!permsData) {
+                alert('Por favor, pesquise e clique em um usuário da lista.');
+                return;
+            }
+
+            let dadosGerais = JSON.parse(permsData);
+            let perms = dadosGerais.perms;
+
+            if ($('#id_nivel_acesso').length > 0 && dadosGerais.nivel_acesso !== undefined) {
+                $('#id_nivel_acesso').val(dadosGerais.nivel_acesso);
+            }
+
+            $.each(perms, function(inputId, shouldBeChecked) {
+                let $checkbox = $('#' + inputId);
+                if ($checkbox.length > 0) {
+                    $checkbox.prop('checked', shouldBeChecked);
+                }
+            });
+
+            let modalEl = document.getElementById('modalEspelho');
+            let modalInstance = bootstrap.Modal.getInstance(modalEl);
+            modalInstance.hide();
+        });
+    });
+</script>
+{% endblock %}

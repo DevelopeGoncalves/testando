@@ -1,0 +1,86 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Vendas{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <span class="text-primary">Produção</span> / <span class="text-primary">Vendas</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid pt-3">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="text-secondary border-bottom pb-2"><i class="fas fa-hand-holding-usd text-success"></i> Gestão de Vendas</h4>
+        </div>
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-4 col-6">
+            <a href="{% url 'vendas_novo_negocio' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #28a745;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-plus-circle fa-3x text-success mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Novo</h5>
+                        <p class="card-text text-muted small">Registrar nova venda</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'lista_base_novo' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #17a2b8;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-file-signature fa-3x text-info mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Base Novo</h5>
+                        <p class="card-text text-muted small">Gerenciar base de novos negócios</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-4 col-6">
+            <a href="{% url 'vendas_nova_renovacao' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #fd7e14;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-redo fa-3x mb-3" style="color: #fd7e14;"></i>
+                        <h5 class="card-title text-dark fw-bold">Renovação</h5>
+                        <p class="card-text text-muted small">Registrar nova renovação</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'vendas_renovacao' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #ffc107;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-sync-alt fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Base Renovação</h5>
+                        <p class="card-text text-muted small">Gerenciar base de renovação</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-4 col-6">
+            <a href="{% url 'vendas_novo_endosso' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #343a40;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-file-medical fa-3x text-dark mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Endosso</h5>
+                        <p class="card-text text-muted small">Registrar novo endosso</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'vendas_endosso' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #6c757d;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-edit fa-3x text-secondary mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Base Endosso</h5>
+                        <p class="card-text text-muted small">Gerenciar base de endossos</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

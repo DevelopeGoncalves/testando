@@ -1,0 +1,143 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Agrupamentos{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Base</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'base_formularios' %}" class="text-primary text-decoration-none">Formulários</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <span class="text-primary text-decoration-none">Agrupamentos</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div id="tela-agrupamentos">
+    <div id="lista-agrupamentos">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0"><i class="fas fa-layer-group text-primary"></i> Agrupamentos</h4>
+            <div>
+                <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
+                    <i class="fas fa-filter"></i> Limpar Filtros
+                </button>
+                <button class="btn btn-success me-1" onclick="exportarCSV('agrupamentos.csv')"><i class="fas fa-file-csv"></i> Exportar</button> 
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-agrupamentos')"><i class="fas fa-trash-alt"></i></button>
+                <button class="btn btn-primary" onclick="toggleFormLocal('agrupamentos', true)"><i class="fas fa-plus"></i> Novo</button>
+            </div>
+        </div>
+        
+        <div class="tabela-container">
+            <form id="form-delete-agrupamentos" method="post" action="{% url 'excluir_em_massa' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_massa" value="agrupamento">
+                <table class="table table-striped table-hover mb-0" id="tabela-agrupamentos" style="width:100%; font-size: 0.9rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
+                            <th class="text-start">Agrupamento</th>
+                            <th class="text-center">Inativo</th>
+                            <th class="text-center">Ordem Apresentação</th>
+                            <th class="text-start">Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in agrupamentos %}
+                        <tr class="tr-clickable" ondblclick="editarAgrupamento(this)" 
+                            data-id="{{ a.id }}" 
+                            data-agrupamento="{{ a.agrupamento|default:'' }}"
+                            data-inativo="{{ a.inativo|yesno:'true,false' }}"
+                            data-ordem="{{ a.ordem_apresentacao|default:'' }}"
+                            data-obs="{{ a.observacoes|default:'' }}">
+                            
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" name="ids_excluir" value="{{ a.id }}" class="chk-delete chk-row">
+                            </td>
+                            <td class="text-start">{{ a.agrupamento }}</td>
+                            <td class="text-center">{{ a.inativo|yesno:'Sim,Não' }}</td>
+                            <td class="text-center">{{ a.ordem_apresentacao|default:'-' }}</td>
+                            <td class="text-start">{{ a.observacoes|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+    
+    <div id="form-agrupamentos" style="display:none;">
+        <div class="card shadow-sm mt-3" style="max-width:900px; margin:0 auto; border-top: 4px solid #0d6efd;">
+            <div class="card-header bg-white"><h5 id="titulo-form-agrupamento">Cadastro de Agrupamento</h5></div>
+            <div class="card-body">
+
+                {% if form_agrupamento.errors %}
+                <div class="alert alert-danger shadow-sm">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Ops, não foi possível salvar!</strong><br>
+                    Já existe um <b>Agrupamento</b> com este nome cadastrado no sistema. Por favor, verifique e tente um nome diferente.
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %} 
+                    <input type="hidden" name="item_id" id="agrupamento_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+                    
+                    <div class="row">
+                        {{ form_agrupamento.as_p }}
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-light border" onclick="toggleFormLocal('agrupamentos', false)">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() { 
+        iniciarTabelaExcel('tabela-agrupamentos'); 
+        
+        // Se houve erro de validação, essa rotina abre o formulário sozinho
+        {% if form_agrupamento.errors %}
+            toggleFormLocal('agrupamentos', true);
+        {% endif %}
+    });
+
+    function toggleFormLocal(tipo, mostrar) {
+        if(mostrar) { 
+            $('#lista-' + tipo).hide(); 
+            $('#form-' + tipo).show(); 
+            
+            // Só limpa o formulário se NÃO houver erros na tela e for um formulário novo
+            if(!$('#agrupamento_id_hidden').val() && {{ form_agrupamento.errors|yesno:"false,true" }}) {
+                $('form')[1].reset(); 
+                $('#titulo-form-agrupamento').text("Novo Cadastro de Agrupamento");
+            }
+        } else { 
+            $('#form-' + tipo).hide(); 
+            $('#lista-' + tipo).show(); 
+            $('#agrupamento_id_hidden').val(''); 
+            
+            // Oculta a mensagem de erro se o usuário clicar em "Cancelar"
+            $('.alert-danger').hide();
+        }
+    }
+
+    function editarAgrupamento(row) {
+        var id = row.getAttribute('data-id');
+        $('#agrupamento_id_hidden').val(id);
+        
+        // Povoando os campos na MESMA ORDEM
+        $('#id_agrupamento').val(row.getAttribute('data-agrupamento'));
+        $('#id_inativo').prop('checked', row.getAttribute('data-inativo') === 'true');
+        $('#id_ordem_apresentacao').val(row.getAttribute('data-ordem'));
+        $('#id_observacoes').val(row.getAttribute('data-obs'));
+
+        $('#titulo-form-agrupamento').text("Editar Agrupamento #" + id);
+        toggleFormLocal('agrupamentos', true);
+    }
+</script>
+{% endblock %}

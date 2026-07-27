@@ -1,0 +1,404 @@
+from django import forms
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao
+from . import lib_eib
+
+# Estilo padrão para todos os inputs
+class BootstrapMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs['class'] = 'form-check-input'
+            else:
+                field.widget.attrs['class'] = 'form-control'
+
+
+# --- 2. AGRUPAMENTO (NOVO) ---
+class AgrupamentoForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Agrupamento
+        fields = [
+            'agrupamento',
+            'inativo',
+            'ordem_apresentacao',
+            'observacoes'
+        ]
+        widgets = {
+            'observacoes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    # NOVA TRAVA INTELIGENTE CONTRA DUPLICIDADE
+    def clean_agrupamento(self):
+        nome = self.cleaned_data.get('agrupamento')
+        # Verifica se já existe outro igual (ignorando maiúsculas e minúsculas)
+        if Agrupamento.objects.filter(agrupamento__iexact=nome).exclude(id=self.instance.id).exists():
+            raise forms.ValidationError("Já existe um Agrupamento com este nome.")
+        return nome
+
+# --- UNIDADES (Antiga Agência) ---
+class UnidadeForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Unidade
+        fields = [
+            'superintendencia',
+            'cid_unidade',
+            'unidade_original',
+            'unidade',
+            'grupo',
+            'matricula_gg',
+            'matricula_superintendente',
+            'inativada',
+            'inatualizavel',
+            'observacoes'
+        ]
+        labels = {
+            'superintendencia': 'Superintendência',
+            'cid_unidade': 'CID da Unidade',
+            'unidade_original': 'Unidade original',
+            'unidade': 'Unidade',
+            'grupo': 'Grupo',
+            'matricula_gg': 'Matrícula do Gerente da agência',
+            'matricula_superintendente': 'Matrícula do superintendente regional',
+            'inativada': 'Inativada',
+            'inatualizavel': 'Não atualizar automaticamente',
+            'observacoes': 'Observações'
+        }
+        widgets = {
+            'observacoes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def clean_cid_unidade(self):
+        cid = self.cleaned_data.get('cid_unidade')
+        if cid:
+            # Formata para ter 4 dígitos, completando com zeros à esquerda
+            return str(cid).strip().zfill(4)
+        return cid
+        
+# --- 4. PRODUTO ---
+class ProdutoForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Produto
+        fields = [
+            'agrupamento', 
+            'produto', 
+            'inativo',
+            'divulgacao_ativa', 
+            'prioridade_divulgacao', 
+            'mes_producao_em_aberto', 
+            'mes_folha_pagamento_em_aberto',
+            'observacoes'
+        ]
+        labels = {
+            'inativo': 'Inativo',
+            'divulgacao_ativa': 'Divulgação Ativa',
+            'mes_producao_em_aberto': 'Mês Produção em Aberto',
+            'mes_folha_pagamento_em_aberto': 'Mês Folha Pgto em Aberto',
+        }
+        widgets = {
+            'mes_producao_em_aberto': forms.DateInput(attrs={'type': 'date'}),
+            'mes_folha_pagamento_em_aberto': forms.DateInput(attrs={'type': 'date'}),
+            'observacoes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+# --- 5. RAMO ---
+class RamoForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Ramo
+        fields = [
+            'produto',
+            'cod_grupo',
+            'grupo',
+            'cod_ramo',
+            'ramo',
+            'cod_ppo_volume',
+            'cod_ppo_rateio',
+            'verba_repasse_folha',
+            'verba_estorno_folha',
+            'grupo_e_ramo',
+            'inativo',
+            'observacoes'
+        ]
+        widgets = {
+            'observacoes': forms.Textarea(attrs={'rows': 3}),
+            'grupo_e_ramo': forms.TextInput(attrs={'readonly': 'readonly', 'placeholder': 'Gerado automaticamente ao salvar'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'produto' in self.fields:
+            self.fields['produto'].queryset = Produto.objects.filter(inativo=False).order_by('produto')
+
+    def clean_cod_ramo(self):
+        cod = self.cleaned_data.get('cod_ramo')
+        if cod is not None:
+            if Ramo.objects.filter(cod_ramo=cod).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este Cód. Ramo já está cadastrado no sistema.")
+        return cod
+
+    def clean_ramo(self):
+        nome = self.cleaned_data.get('ramo')
+        if nome:
+            if Ramo.objects.filter(ramo__iexact=nome).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este Nome de Ramo já está cadastrado.")
+        return nome
+
+# --- 6. META MENSAL ---
+class MetaMensalForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = MetaMensal
+        fields = '__all__'
+        widgets = {
+            'mes_referencia': forms.DateInput(attrs={'type': 'date'}),
+            'observacoes': forms.Textarea(attrs={'rows': 2}),
+        }
+        
+
+class ColaboradorForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Colaborador
+        fields = '__all__'
+        widgets = {
+            'observacoes': forms.Textarea(attrs={'rows': 3}), 
+        }
+
+class ContratadoForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Contratado
+        fields = [
+            'tipo_pessoa', 'cpf_cnpj', 'contratado', 'matricula', 'numero_dependente',
+            'celular', 'telefone', 'email', 'banco', 'unidade', 'conta_corrente',
+            'celebrado_em', 'observacoes'
+        ]
+        widgets = {
+            'celebrado_em': forms.DateInput(attrs={'type': 'date'}),
+            'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 50 caracteres...'}),
+            'cpf_cnpj': forms.TextInput(attrs={'placeholder': 'Apenas números...'}),
+        }
+
+    def clean_cpf_cnpj(self):
+        doc = self.cleaned_data.get('cpf_cnpj')
+        if doc:
+            if Contratado.objects.filter(cpf_cnpj=doc).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este CPF/CNPJ já está cadastrado para outro Contratado.")
+        return doc
+
+class SeguradoraForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Seguradora
+        fields = ['cod_seguradora', 'seguradora', 'cnpj', 'observacoes']
+        widgets = {
+            'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 80 caracteres...'}),
+        }
+
+    def clean_cod_seguradora(self):
+        cod = self.cleaned_data.get('cod_seguradora')
+        if cod:
+            if Seguradora.objects.filter(cod_seguradora__iexact=cod).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este Cód. Seguradora já está cadastrado.")
+        return cod
+
+    def clean_seguradora(self):
+        nome = self.cleaned_data.get('seguradora')
+        if nome:
+            if Seguradora.objects.filter(seguradora__iexact=nome).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Esta Seguradora já está cadastrada.")
+        return nome
+
+class TipoDocumentoForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = TipoDocumento
+        fields = ['tipo_documento', 'observacoes']
+        widgets = {
+            #só 50 caracteres, uma linha de texto simples é melhor
+            'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 50 caracteres...'}),
+        }
+    # TRAVA INTELIGENTE CONTRA DUPLICIDADE
+    def clean_tipo_documento(self):
+        nome = self.cleaned_data.get('tipo_documento')
+        if nome:
+            if TipoDocumento.objects.filter(tipo_documento__iexact=nome).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este Tipo de Documento já está cadastrado no sistema.")
+        return nome
+
+class ClienteForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = [
+            'tipo_pessoa', 
+            'cpf_cnpj', 
+            'nome', 
+            'nome_social', 
+            'celular', 
+            'telefone', 
+            'email', 
+            'observacoes'
+        ]
+        widgets = {
+            'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 80 caracteres...'}),
+            'cpf_cnpj': forms.TextInput(attrs={'placeholder': 'Apenas números...'}),
+        }
+
+    # TRAVA INTELIGENTE: Evita CPFs/CNPJs duplicados no cadastro manual
+    def clean_cpf_cnpj(self):
+        doc = self.cleaned_data.get('cpf_cnpj')
+        if doc:
+            if Cliente.objects.filter(cpf_cnpj=doc).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este CPF/CNPJ já está cadastrado no sistema.")
+        return doc     
+    
+class ApoliceForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Apolice
+        # excluir esses dois porque o sistema vai preencher automaticamente por trás dos panos
+        exclude = ['categoria', 'tipo_negocio']
+        widgets = {
+            'dt_venc': forms.DateInput(attrs={'type': 'date'}),
+        }
+        
+        
+
+# --- BASE NOVO (Indicação de Seguridade) ---
+class IndicacaoForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Indicacao
+        fields = [
+            'carimbo_data_hora',
+            'email',
+            'email_indicador_outro',
+            'matricula_indicador',
+            'nome_indicador',
+            'cid_agencia',
+            'telefone_indicador',
+            'enviar_orcamento_para',
+            'origem_informacao',
+            'nome_cliente',
+            'telefone_cliente',
+            'cpf_cliente',
+            'email_cliente',
+            'produto',
+            'dados_veiculo',
+            'possui_seguro',
+            'seguradora',
+            'ramo',
+            'tipo_documento',
+            'numero_contrato',
+            'numero_endosso',
+            'observacoes',
+        ]
+        widgets = {
+            'carimbo_data_hora': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'observacoes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, ficha_somente_leitura=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['seguradora'].queryset = Seguradora.objects.all().order_by('seguradora')
+        self.fields['ramo'].queryset = Ramo.objects.all().order_by('grupo_e_ramo')
+        self.fields['ramo'].label_from_instance = lambda obj: obj.grupo_e_ramo or f"{obj.grupo} - {obj.ramo}"
+        self.fields['tipo_documento'].queryset = TipoDocumento.objects.all().order_by('tipo_documento')
+        for campo in ('seguradora', 'ramo', 'tipo_documento'):
+            self.fields[campo].empty_label = '-- Selecione --'
+
+        # Card "Novo": os blocos Apólice / Indicador / Cliente ficam só leitura;
+        # o usuário apenas registra a ligação. Com disabled=True o Django ignora
+        # qualquer valor vindo do POST e mantém o valor original do banco - ou
+        # seja, os dados travados não se perdem nem podem ser alterados.
+        # 'observacoes' (Observações da Ficha) fica fora por estar fora do bloco.
+        if ficha_somente_leitura:
+            for nome, campo in self.fields.items():
+                if nome != 'observacoes':
+                    campo.disabled = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        chave = Indicacao.montar_chave_unica(
+            cleaned_data.get('seguradora').id if cleaned_data.get('seguradora') else None,
+            cleaned_data.get('ramo').id if cleaned_data.get('ramo') else None,
+            cleaned_data.get('tipo_documento').id if cleaned_data.get('tipo_documento') else None,
+            cleaned_data.get('numero_contrato'),
+            cleaned_data.get('numero_endosso'),
+        )
+        # só bloqueia duplicidade quando a chave tem algo além dos separadores
+        # (evita travar quando nenhum dado de apólice foi preenchido ainda)
+        if chave.strip('&') and Indicacao.objects.filter(chave_unica=chave).exclude(id=self.instance.id).exists():
+            raise forms.ValidationError(
+                "Já existe uma indicação cadastrada com essa Seguradora, Ramo, Tipo de Documento, "
+                "Número do Contrato e Endosso. Verifique se não é uma ligação duplicada."
+            )
+        return cleaned_data
+
+
+class NovoUsuarioForm(BootstrapMixin, forms.Form):
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('label_suffix', '')
+        super().__init__(*args, **kwargs)
+                         
+    matricula = forms.CharField(
+        label="Matrícula do Colaborador", 
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'id': 'input-matricula',
+            'autocomplete': 'off',
+            'placeholder': 'Buscar...'
+        })
+    )
+    login = forms.CharField(label="Usuário", max_length=150)
+    
+    password = forms.CharField(
+        label="Senha", 
+        widget=forms.PasswordInput, 
+        required=False
+    )
+    
+    confirmar_senha = forms.CharField(
+        label="Confirmar Senha", 
+        widget=forms.PasswordInput, 
+        required=False
+    )
+
+    nivel_acesso = forms.ChoiceField(label="Nível de Acesso", choices=lib_eib.NIVEIS_ACESSO)
+    
+    is_active = forms.BooleanField(label="Usuário Ativo", required=False,widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    # Base
+    aba_base = forms.BooleanField(label="Acessar Aba Base", required=False)
+    sub_base_formularios = forms.BooleanField(label="↳ Base - Formulários", required=False)
+    sub_base_processamentos = forms.BooleanField(label="↳ Base - Processamentos", required=False)
+    sub_base_relatorios = forms.BooleanField(label="↳ Base - Relatórios", required=False)
+
+    # Producao
+    aba_producao = forms.BooleanField(label="Acessar Aba Produção", required=False)
+    sub_prod_vendas = forms.BooleanField(label="↳ Vendas", required=False)
+    sub_prod_formularios = forms.BooleanField(label="↳ Formulários", required=False)
+    sub_prod_processamentos = forms.BooleanField(label="↳ Processamentos", required=False)
+    sub_prod_relatorios = forms.BooleanField(label="↳ Relatórios", required=False)
+
+    # Financeiro
+    aba_financeiro = forms.BooleanField(label="Acessar Aba Financeiro", required=False)
+    sub_fin_formularios = forms.BooleanField(label="↳ Formulários", required=False)
+    sub_fin_extratos = forms.BooleanField(label="↳ Extratos", required=False)
+    sub_fin_relatorios = forms.BooleanField(label="↳ Relatórios", required=False)
+
+    # Administração
+    aba_admin = forms.BooleanField(label="Acessar Aba Administração", required=False)
+    sub_admin_criar = forms.BooleanField(label="↳ Criar Usuários", required=False)
+    sub_admin_estagiarios = forms.BooleanField(label="↳ Gestão Estagiários", required=False)
+
+    # Auditoria
+    aba_auditoria = forms.BooleanField(label="Acessar Aba Auditoria", required=False)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        senha = cleaned_data.get("password")
+        confirmar = cleaned_data.get("confirmar_senha")
+
+        if senha and senha != confirmar:
+            self.add_error('confirmar_senha', "As senhas não coincidem. Tente novamente.")
+            
+        return cleaned_data
+
+
+    
+       
+"""                             HENRIQUE                                                                    """
