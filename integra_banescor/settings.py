@@ -125,7 +125,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- CONFIGURAÇÕES DE LOGIN ---
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'base_processamentos' # Para onde vai após logar
+LOGIN_REDIRECT_URL = '/' # Para onde vai após logar
 LOGOUT_REDIRECT_URL = 'login'
 
 # --- CONFIGURAÇÃO DE UPLOAD E FORMULÁRIOS ---

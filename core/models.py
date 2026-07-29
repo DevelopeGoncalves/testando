@@ -405,7 +405,7 @@ class PerfilUsuario(models.Model):
 
     # Permissões Financeiro
     sub_fin_formularios = models.BooleanField('↳ Financeiro - Formulários', default=False)
-    sub_fin_extratos = models.BooleanField('↳ Financeiro - Extratos', default=False)
+    sub_fin_processamentos = models.BooleanField('↳ Financeiro - Processamentos', default=False)
     sub_fin_relatorios = models.BooleanField('↳ Financeiro - Relatórios', default=False)
 
     # Permissões Administração
@@ -505,7 +505,7 @@ class RegistroProducao(models.Model):
 class EndossoAdicional(models.Model):
     registro_pai = models.ForeignKey(RegistroProducao, on_delete=models.CASCADE, related_name='endossos_extras')
     mes_producao = models.CharField('Mês da produção', max_length=20, null=True, blank=True)
-    endosso = models.CharField('Endosso', max_length=100, null=True, blank=True)
+    endosso = models.CharField('Endosso', max_length=8, null=False, blank=True)
     motivo_endosso = models.CharField('Motivo do endosso', max_length=150, null=True, blank=True)
     inicio_vigencia = models.DateField('Início de vigência', null=True, blank=True)
     fim_vigencia = models.DateField('Fim de vigência', null=True, blank=True)
@@ -524,6 +524,14 @@ class EndossoAdicional(models.Model):
     gerente_agencia = models.CharField('Gerente da agência', max_length=150, null=True, blank=True)
     superintendente = models.CharField('Superintendente', max_length=150, null=True, blank=True)
     data_cadastro = models.DateTimeField('Adicionado em', auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['registro_pai', 'endosso'],
+                name='unique_registro_pai_endosso'
+            )
+        ]
 
     def __str__(self):
         return f"Endosso Extra: {self.endosso} (Ref: {self.registro_pai.cliente})"
@@ -589,3 +597,13 @@ class AuditoriaExportacao(models.Model):
 
     def __str__(self):
         return f"{self.usuario} exportou {self.nome_arquivo} em {self.data_hora}"
+
+class FinanceiroHabitacional(models.Model):
+
+    registro_producao = models.ForeignKey('RegistroProducao', on_delete=models.CASCADE, verbose_name="Registro de Produção (Endosso)",related_name="financeiro_habitacional")
+    matricula_colaborador = models.CharField("Matrícula do Colaborador", max_length=150, null=True, blank=True)
+    data_processamento = models.CharField("Mês/Ano de Processamento", max_length=7, null=True, blank=True)
+    valor = models.DecimalField("Valor", max_digits=15, decimal_places=2, default=100.00)
+
+    def __str__(self):
+        return f"{self.registro_producao.chave_unica} - {self.data_processamento or 'Não Processado'}"

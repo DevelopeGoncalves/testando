@@ -2,7 +2,6 @@ from django import forms
 from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao
 from . import lib_eib
 
-# Estilo padrão para todos os inputs
 class BootstrapMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -212,7 +211,7 @@ class TipoDocumentoForm(BootstrapMixin, forms.ModelForm):
             #só 50 caracteres, uma linha de texto simples é melhor
             'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 50 caracteres...'}),
         }
-    # TRAVA INTELIGENTE CONTRA DUPLICIDADE
+    # TRAVA  CONTRA DUPLICIDADE
     def clean_tipo_documento(self):
         nome = self.cleaned_data.get('tipo_documento')
         if nome:
@@ -238,7 +237,7 @@ class ClienteForm(BootstrapMixin, forms.ModelForm):
             'cpf_cnpj': forms.TextInput(attrs={'placeholder': 'Apenas números...'}),
         }
 
-    # TRAVA INTELIGENTE: Evita CPFs/CNPJs duplicados no cadastro manual
+    # Evita CPFs/CNPJs duplicados no cadastro manual
     def clean_cpf_cnpj(self):
         doc = self.cleaned_data.get('cpf_cnpj')
         if doc:
@@ -299,11 +298,6 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
         for campo in ('seguradora', 'ramo', 'tipo_documento'):
             self.fields[campo].empty_label = '-- Selecione --'
 
-        # Card "Novo": os blocos Apólice / Indicador / Cliente ficam só leitura;
-        # o usuário apenas registra a ligação. Com disabled=True o Django ignora
-        # qualquer valor vindo do POST e mantém o valor original do banco - ou
-        # seja, os dados travados não se perdem nem podem ser alterados.
-        # 'observacoes' (Observações da Ficha) fica fora por estar fora do bloco.
         if ficha_somente_leitura:
             for nome, campo in self.fields.items():
                 if nome != 'observacoes':
@@ -319,7 +313,6 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             cleaned_data.get('numero_endosso'),
         )
         # só bloqueia duplicidade quando a chave tem algo além dos separadores
-        # (evita travar quando nenhum dado de apólice foi preenchido ainda)
         if chave.strip('&') and Indicacao.objects.filter(chave_unica=chave).exclude(id=self.instance.id).exists():
             raise forms.ValidationError(
                 "Já existe uma indicação cadastrada com essa Seguradora, Ramo, Tipo de Documento, "
@@ -359,7 +352,7 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
 
     nivel_acesso = forms.ChoiceField(label="Nível de Acesso", choices=lib_eib.NIVEIS_ACESSO)
     
-    is_active = forms.BooleanField(label="Usuário Ativo", required=False,widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+    is_active = forms.BooleanField(label="Usuário ativo", required=False,widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
     # Base
     aba_base = forms.BooleanField(label="Acessar Aba Base", required=False)
@@ -377,7 +370,7 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
     # Financeiro
     aba_financeiro = forms.BooleanField(label="Acessar Aba Financeiro", required=False)
     sub_fin_formularios = forms.BooleanField(label="↳ Formulários", required=False)
-    sub_fin_extratos = forms.BooleanField(label="↳ Extratos", required=False)
+    sub_fin_processamentos = forms.BooleanField(label="↳ Processamentos", required=False)
     sub_fin_relatorios = forms.BooleanField(label="↳ Relatórios", required=False)
 
     # Administração

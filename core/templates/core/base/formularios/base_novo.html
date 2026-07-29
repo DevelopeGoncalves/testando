@@ -50,6 +50,60 @@
     .dropdown-menu {
         text-align: left !important;
     }
+
+    /* Dropdowns pesquisáveis para campos de relacionamento */
+    .input-container {
+        position: relative;
+    }
+
+    .lista-suspensa {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        max-height: 210px;
+        overflow-y: auto;
+        background-color: #ffffff;
+        border: 1px solid #ced4da;
+        border-radius: 12px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        z-index: 9999 !important;
+    }
+
+    .item-lista {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    .item-lista:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .item-lista:last-child {
+        border-bottom: none;
+    }
+
+    .lista-suspensa::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-thumb {
+        background: #adb5bd;
+        border-radius: 10px;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-thumb:hover {
+        background: #6c757d;
+    }
+
 </style>
 
 <div id="tela-base-novo">
@@ -224,9 +278,30 @@
 
                     <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
                     <div class="row g-3">
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Seguradora</label>{{ form_indicacao.seguradora }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Grupo/Ramo</label>{{ form_indicacao.ramo }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Tipo Documento</label>{{ form_indicacao.tipo_documento }}</div>
+                        <div class="col-md-3">
+                            <label class="fw-bold small mb-1">Seguradora</label>
+                            <div class="input-container">
+                                <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
+                                <input type="text" id="base_novo_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_seguradora" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="fw-bold small mb-1">Grupo/Ramo</label>
+                            <div class="input-container">
+                                <input type="hidden" name="ramo" id="base_novo_ramo_val">
+                                <input type="text" id="base_novo_ramo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_ramo" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="fw-bold small mb-1">Tipo Documento</label>
+                            <div class="input-container">
+                                <input type="hidden" name="tipo_documento" id="base_novo_tipo_documento_val">
+                                <input type="text" id="base_novo_tipo_documento_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_tipo_documento" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
                         <div class="col-md-3"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
                     </div>
@@ -271,10 +346,7 @@
                         </button>
                     </div>
 
-                    <!-- POP-UP para registrar a ligação. Fica DENTRO do <form> para os campos
-                         serem enviados no Salvar da ficha. Não fecha clicando fora nem com ESC
-                         (backdrop static / keyboard false) e não tem "X": só sai por
-                         "Salvar Ligação" ou "Cancelar". -->
+                    <!-- POP-UP para registrar a ligação. -->
                     <div class="modal fade" id="modalLigacao" tabindex="-1" aria-labelledby="modalLigacaoLabel"
                          data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
                       <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -289,41 +361,41 @@
                                         <div class="row g-2">
 
                                             <div class="col-md-3">
-                                                <label class="fw-bold small mb-1">Data/Hora da Ligação</label>
+                                                <label class="fw- small mb-1">Data/Hora da Ligação</label>
                                                 <input type="datetime-local" step="1" class="form-control form-control-sm" name="ligacao_data" id="edit_ligacao_data">
                                             </div>
 
                                             <div class="col-md-2">
-                                                <label class="fw-bold small mb-1">Protocolo</label>
+                                                <label class="fw small mb-1">Protocolo</label>
                                                 <input type="text" class="form-control form-control-sm bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(automático)">
                                             </div>
 
                                             <div class="col-md-2">
-                                                <label class="fw-bold small mb-1">Ramal</label>
+                                                <label class="fw small mb-1">Ramal</label>
                                                 <input type="text" class="form-control form-control-sm" name="ligacao_ramal" id="edit_ligacao_ramal">
                                             </div>
 
                                             <div class="col-md-1 d-flex flex-column">
-                                                <label class="fw-bold small mb-1">Vendas Central</label>
+                                                <label class="fw small mb-1">Vendas Central</label>
                                                 <div class="form-check mt-1">
                                                     <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
                                                 </div>
                                             </div>
 
                                             <div class="col-md-1 d-flex flex-column">
-                                                <label class="fw-bold small mb-1">Vendas Agência</label>
+                                                <label class="fw small mb-1">Vendas Agência</label>
                                                 <div class="form-check mt-1">
                                                     <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
                                                 </div>
                                             </div>
 
                                             <div class="col-md-3">
-                                                <label class="fw-bold small mb-1">Prêmio Total</label>
+                                                <label class="fw small mb-1">Prêmio Total</label>
                                                 <input type="text" inputmode="numeric" class="form-control form-control-sm campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
                                             </div>
 
                                             <div class="col-md-3">
-                                                <label class="fw-bold small mb-1">Motivo Não Venda</label>
+                                                <label class="fw small mb-1">Motivo Não Venda</label>
                                                 <select class="form-select form-select-sm" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
                                                     <option value="">-- Selecione --</option>
                                                     {% for m in motivos_nao_venda %}
@@ -333,17 +405,17 @@
                                             </div>
 
                                             <div class="col-md-3">
-                                                <label class="fw-bold small mb-1">Próximo contato</label>
+                                                <label class="fw small mb-1">Próximo contato</label>
                                                 <input type="datetime-local" step="1" class="form-control form-control-sm campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
                                             </div>
 
                                             <div class="col-md-4">
-                                                <label class="fw-bold small mb-1">Observações</label>
+                                                <label class="fw small mb-1">Observações</label>
                                                 <textarea class="form-control form-control-sm" name="ligacao_obs" id="edit_ligacao_obs" rows="1"></textarea>
                                             </div>
 
                                             <div class="col-md-2">
-                                                <label class="fw-bold small mb-1">Cadastrado por</label>
+                                                <label class="fw small mb-1">Cadastrado por</label>
                                                 <input type="text" class="form-control form-control-sm bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
                                             </div>
 
@@ -411,6 +483,121 @@
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
 
+    // ================================================================
+    // RELACIONAMENTOS PESQUISÁVEIS
+    // Adaptado da lista_fase.html: o texto fica visível para pesquisa
+    // e o ID do relacionamento continua sendo enviado no POST.
+    // ================================================================
+    const listaBaseNovoSeguradoras = [
+        {% for s in form_indicacao.seguradora.field.queryset %}
+        { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const listaBaseNovoRamos = [
+        {% for r in form_indicacao.ramo.field.queryset %}
+        { id: "{{ r.id }}", texto: "{{ r.grupo_e_ramo|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const listaBaseNovoTiposDocumento = [
+        {% for t in form_indicacao.tipo_documento.field.queryset %}
+        { id: "{{ t.id }}", texto: "{{ t.tipo_documento|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function inicializarDropdownRelacionamento(inputId, hiddenId, dropdownId, listaDeDados) {
+        const $input = $('#' + inputId);
+        const $hidden = $('#' + hiddenId);
+        const $dropdown = $('#' + dropdownId);
+
+        if (!$input.length || !$hidden.length || !$dropdown.length) return;
+
+        $input.off('.relacionamentoPesquisa');
+
+        function mostrarLista() {
+            const valorDigitado = ($input.val() || '').toLowerCase().trim();
+            $dropdown.empty();
+
+            const filtrados = listaDeDados.filter(function(item) {
+                return (item.texto || '').toLowerCase().includes(valorDigitado);
+            });
+
+            if (filtrados.length > 0) {
+                filtrados.forEach(function(item) {
+                    const $item = $('<div>')
+                        .addClass('item-lista')
+                        .text(item.texto);
+
+                    $item.on('mousedown', function(evt) {
+                        evt.preventDefault();
+                        $input.val(item.texto);
+                        $hidden.val(item.id);
+                        $dropdown.addClass('d-none');
+                    });
+
+                    $dropdown.append($item);
+                });
+            } else {
+                $dropdown.append(
+                    $('<div>').addClass('item-lista text-muted').text('Nada encontrado')
+                );
+            }
+
+            $dropdown.removeClass('d-none');
+        }
+
+        $input.on('focus.relacionamentoPesquisa click.relacionamentoPesquisa', mostrarLista);
+
+        $input.on('input.relacionamentoPesquisa', function() {
+            // Ao editar o texto manualmente, invalida o ID anterior.
+            $hidden.val('');
+            mostrarLista();
+        });
+    }
+
+    function definirRelacionamentoPesquisavel(hiddenId, inputId, valor, listaDeDados) {
+        const $hidden = $('#' + hiddenId);
+        const $input = $('#' + inputId);
+
+        $hidden.val(valor || '');
+
+        if (!valor) {
+            $input.val('');
+            return;
+        }
+
+        const item = listaDeDados.find(function(i) {
+            return String(i.id) === String(valor) ||
+                   String(i.texto).trim() === String(valor).trim();
+        });
+
+        $input.val(item ? item.texto : '');
+    }
+
+    function limparRelacionamentosPesquisaveis() {
+        definirRelacionamentoPesquisavel(
+            'base_novo_seguradora_val',
+            'base_novo_seguradora_texto',
+            '',
+            listaBaseNovoSeguradoras
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_ramo_val',
+            'base_novo_ramo_texto',
+            '',
+            listaBaseNovoRamos
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_tipo_documento_val',
+            'base_novo_tipo_documento_texto',
+            '',
+            listaBaseNovoTiposDocumento
+        );
+        $('.lista-suspensa').addClass('d-none');
+    }
+
+
     let modalLigacao = null;          // instância do pop-up (segunda tela) de ligação
     let algumaLigacaoSalva = false;   // já houve ao menos uma ligação confirmada nesta ficha?
     let blocosSnapshot = 1;           // qtd de blocos ao abrir o pop-up (usado pelo Cancelar)
@@ -422,6 +609,32 @@
     };
 
     $(document).ready(function() {
+
+        // Relacionamentos pesquisáveis, seguindo o padrão de lista_fase.html.
+        inicializarDropdownRelacionamento(
+            'base_novo_seguradora_texto',
+            'base_novo_seguradora_val',
+            'base_novo_dropdown_seguradora',
+            listaBaseNovoSeguradoras
+        );
+        inicializarDropdownRelacionamento(
+            'base_novo_ramo_texto',
+            'base_novo_ramo_val',
+            'base_novo_dropdown_ramo',
+            listaBaseNovoRamos
+        );
+        inicializarDropdownRelacionamento(
+            'base_novo_tipo_documento_texto',
+            'base_novo_tipo_documento_val',
+            'base_novo_dropdown_tipo_documento',
+            listaBaseNovoTiposDocumento
+        );
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.input-container').length) {
+                $('.lista-suspensa').addClass('d-none');
+            }
+        });
 
         // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
         // Na tela "Novo", ordena por padrão pela coluna "Próxima ligação" (índice 22)
@@ -814,6 +1027,7 @@
             $('#form-' + tipo).show();
             if(document.getElementById('base_novo_id_hidden').value === "") {
                 $('form')[1].reset();
+                limparRelacionamentosPesquisaveis();
                 resetarContainerLigacoes();
                 prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
@@ -849,9 +1063,24 @@
         $('#id_produto').val(row.getAttribute('data-produto'));
         $('#id_dados_veiculo').val(row.getAttribute('data-veiculo'));
         $('#id_possui_seguro').val(row.getAttribute('data-possui-seguro'));
-        $('#id_seguradora').val(row.getAttribute('data-seguradora'));
-        $('#id_ramo').val(row.getAttribute('data-ramo'));
-        $('#id_tipo_documento').val(row.getAttribute('data-tipo-documento'));
+        definirRelacionamentoPesquisavel(
+            'base_novo_seguradora_val',
+            'base_novo_seguradora_texto',
+            row.getAttribute('data-seguradora'),
+            listaBaseNovoSeguradoras
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_ramo_val',
+            'base_novo_ramo_texto',
+            row.getAttribute('data-ramo'),
+            listaBaseNovoRamos
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_tipo_documento_val',
+            'base_novo_tipo_documento_texto',
+            row.getAttribute('data-tipo-documento'),
+            listaBaseNovoTiposDocumento
+        );
         $('#id_numero_contrato').val(row.getAttribute('data-contrato'));
         $('#id_numero_endosso').val(row.getAttribute('data-endosso'));
         $('#id_observacoes').val(row.getAttribute('data-obs'));
