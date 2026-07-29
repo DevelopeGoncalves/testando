@@ -740,6 +740,18 @@ def vendas_novo_negocio(request):
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
     ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento').prefetch_related('ligacoes__motivo_nao_venda')
 
+    # Para a tela "Novo" a lista mostra, no lugar do E-mail e da contagem de ligações:
+    #  - responsavel: quem atendeu a última ligação (cadastrado_por da mais recente);
+    #  - proxima_ligacao: o "próximo contato" agendado na última ligação.
+    # As ligações já vêm ordenadas da mais recente para a mais antiga (Meta ordering
+    # do model: -data_ligacao, -id), então a primeira é sempre a última ligação.
+    indicacoes = list(indicacoes)
+    for ind in indicacoes:
+        ligacoes = list(ind.ligacoes.all())
+        ultima = ligacoes[0] if ligacoes else None
+        ind.responsavel = ultima.cadastrado_por if ultima else ''
+        ind.proxima_ligacao = ultima.proximo_contato if ultima else None
+
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
         'form_indicacao': form,
