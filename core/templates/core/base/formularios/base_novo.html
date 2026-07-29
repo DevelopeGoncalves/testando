@@ -556,6 +556,67 @@
         });
     }
 
+    //trava ligacao 
+    function ultimoBlocoConcluido() {
+    let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+    if (blocos.length === 0) return true;
+    
+    let ultimoBloco = blocos[blocos.length - 1];
+    let central = ultimoBloco.querySelector('input[name^="ligacao_venda_central"]').checked;
+    let agencia = ultimoBloco.querySelector('input[name^="ligacao_agn"]').checked;
+    let premio = ultimoBloco.querySelector('input[name^="ligacao_premio_total"]').value.trim() !== '';
+    
+    // O encerramento real da ligação SÓ acontece com a Venda: Canal (Central ou Agência) + Prêmio Total.
+    // Preencher "Motivo Não Venda" ou agendar "Próximo Contato" NÃO finaliza a ligação: ela continua em
+    // aberto e, da próxima vez que for aberta, retoma exatamente essa mesma ligação (não cria uma nova).
+    let vendaFechada = (central || agencia) && premio;
+    
+    return vendaFechada;
+}
+
+function atualizarEstadoLigacoes() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        
+        blocos.forEach((bloco, index) => {
+            let isUltimo = (index === blocos.length - 1);
+            let campos = bloco.querySelectorAll('input, select, textarea');
+            let btnRemover = bloco.querySelector('.btn-outline-danger');
+            let titulo = bloco.querySelector('.titulo-ligacao');
+
+            campos.forEach(c => {
+                // Trava os campos das ligações anteriores
+                c.disabled = !isUltimo; 
+            });
+
+            // Oculta o botão de remover das ligações que já estão travadas
+            if (btnRemover) {
+                btnRemover.style.display = isUltimo ? 'inline-block' : 'none';
+            }
+
+            // --- DESTAQUE VISUAL PARA A ÚLTIMA LIGAÇÃO ---
+            if (isUltimo) {
+                // Destaca a ativa
+                bloco.style.opacity = '1';
+                bloco.classList.add('p-3', 'border', 'border-2', 'border-primary', 'rounded', 'bg-white', 'shadow-sm');
+                bloco.classList.remove('border-bottom', 'pb-3', 'mb-3');
+                if (titulo) {
+                    titulo.classList.add('text-primary');
+                    titulo.classList.remove('text-muted');
+                }
+                sincronizarExclusividadeVenda(bloco); // Reaplica as regras de bloqueio de Venda vs Motivo
+            } else {
+                // Tira o destaque e escurece as anteriores
+                bloco.style.opacity = '0.6';
+                bloco.classList.remove('p-3', 'border', 'border-2', 'border-primary', 'rounded', 'bg-white', 'shadow-sm');
+                bloco.classList.add('border-bottom', 'pb-3', 'mb-3');
+                if (titulo) {
+                    titulo.classList.remove('text-primary');
+                    titulo.classList.add('text-muted');
+                }
+            }
+        });
+    }
+
     function definirRelacionamentoPesquisavel(hiddenId, inputId, valor, listaDeDados) {
         const $hidden = $('#' + hiddenId);
         const $input = $('#' + inputId);
@@ -715,10 +776,15 @@
                     faltando = true;
                 }
             });
+            
             if (faltando) {
                 e.preventDefault();
                 avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
+                return; // Garante que a execução pare aqui em caso de erro
             }
+
+            // CRÍTICO: Reativa todos os campos para que o Django receba as ligações anteriores no POST
+            $('#container-ligacoes .bloco-ligacao').find('input, select, textarea').prop('disabled', false);
         });
     });
 
@@ -780,14 +846,30 @@
     //  - primeira=false -> "Registrar outra Ligação": abre e adiciona um novo bloco.
     function abrirModalLigacao(primeira) {
         if (!modalLigacao) return;
+
         $('#ligacao-1').show();
-        // guarda quantos blocos existiam antes; o Cancelar remove os criados nesta sessão.
         blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
+        
+        // Se você clicou no botão "Registrar outra Ligação" lá fora na ficha...
         if (!primeira) {
-            adicionarLigacao();
+            // ... e a última ligação já tiver um desfecho (ex: Próximo Contato marcado),
+            // o sistema CRIA UM NOVO BLOCO SOZINHO automaticamente.
+            if (ultimoBlocoConcluido()) {
+                adicionarLigacao(true);
+            }
         }
+        
         ativarBloqueioSaida();
         modalLigacao.show();
+
+        // Rola a tela do pop-up automaticamente para baixo, 
+        // focando direto no card da nova ligação que acabou de ser criado
+        setTimeout(() => {
+            let modalBody = document.querySelector('#modalLigacao .modal-body');
+            if (modalBody) {
+                modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: 'smooth' });
+            }
+        }, 200);
     }
 
     // "Salvar Ligação": valida e fecha o pop-up mantendo os dados na ficha (os campos vão
@@ -1087,7 +1169,11 @@
 
         if (PODE_REGISTRAR_LIGACAO) {
         resetarContainerLigacoes();
-        let itensLigacoes = row.querySelectorAll('.extra-item-ligacao');
+        
+        let itensLigacoesNode = row.querySelectorAll('.extra-item-ligacao');
+        // INVERTE A ORDEM: A ligação mais antiga vira a 1ª (topo) e a mais recente vai para o final.
+        let itensLigacoes = Array.from(itensLigacoesNode).reverse();
+        
         itensLigacoes.forEach(function(item, index) {
             if(index === 0) {
                 document.getElementById('edit_ligacao_protocolo').value = item.dataset.protocolo || '';
@@ -1102,7 +1188,7 @@
                 document.getElementById('edit_ligacao_motivo_nao_venda').value = item.dataset.motivo || '';
                 document.getElementById('edit_ligacao_cadastrado_por').value = item.dataset.cadastradoPor || '';
             } else {
-                adicionarLigacao();
+                adicionarLigacao(true);
                 let c = contadorLigacoes;
                 document.getElementById('edit_ligacao_protocolo_' + c).value = item.dataset.protocolo || '';
                 document.getElementById('edit_ligacao_data_' + c).value = item.dataset.data || '';
@@ -1133,14 +1219,18 @@
         toggleFormLocal('base-novo', true);
     }
 
-    function adicionarLigacao() {
+    function adicionarLigacao(forcar = false) {
+        // A validação impede o acréscimo a menos que seja forçado (histórico) ou concluído
+        if (!forcar && !ultimoBlocoConcluido()) {
+            avisoElegante('Só é possível registrar uma nova ligação após finalizar a venda da ligação atual (marque "Vendas Central" ou "Vendas Agência" e informe o Prêmio Total).', 'Ação não permitida');
+            return;
+        }
+
         contadorLigacoes++;
 
         let blocoOriginal = document.getElementById('ligacao-1');
         let novoBloco = blocoOriginal.cloneNode(true);
         novoBloco.id = 'ligacao-' + contadorLigacoes;
-        // O template (ligacao-1) pode estar oculto (display:none) até o usuário clicar em
-        // "Iniciar Ligação"; o clone é sempre uma ligação nova e deve aparecer imediatamente.
         novoBloco.style.display = '';
 
         let titulo = novoBloco.querySelector('.titulo-ligacao');
@@ -1171,10 +1261,12 @@
                 campo.setAttribute('id', idOriginal + '_' + contadorLigacoes);
             }
         });
-        sincronizarExclusividadeVenda(novoBloco);
-
+        
         document.getElementById('container-ligacoes').appendChild(novoBloco);
         prepararNovaLigacao('edit_ligacao_protocolo_' + contadorLigacoes, 'edit_ligacao_cadastrado_por_' + contadorLigacoes);
+        
+        // Atualiza o estado: trava as anteriores e libera a nova
+        atualizarEstadoLigacoes();
     }
 
     function removerLigacao(botao) {
