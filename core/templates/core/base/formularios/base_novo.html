@@ -83,7 +83,7 @@
                             <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
                             <th style="display:none;"></th>
                             <th class="text-center">Carimbo de data/hora</th>
-                            <th class="text-center">E-mail</th>
+                            <th class="text-center">{% if apenas_pendentes %}Responsável{% else %}E-mail{% endif %}</th>
                             <th class="text-center">E-mail do indicador (outro)</th>
                             <th class="text-center">Matrícula do indicador</th>
                             <th class="text-center">Nome do indicador</th>
@@ -102,7 +102,7 @@
                             <th class="text-center">Tipo Documento</th>
                             <th class="text-center">Nº Contrato</th>
                             <th class="text-center">Nº Endosso</th>
-                            <th class="text-center">Ligações</th>
+                            <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th>
                             <th class="text-start">Observações</th>
                         </tr>
                     </thead>
@@ -155,7 +155,7 @@
                             </td>
 
                             <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
-                            <td class="text-center">{{ i.email|default:'-' }}</td>
+                            <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
                             <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
                             <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
                             <td class="text-center">{{ i.nome_indicador|default:'-' }}</td>
@@ -174,15 +174,27 @@
                             <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
-                            <td class="text-center">
-                                {% if i.ligacoes.all %}
-                                <span class="badge bg-primary" style="cursor:pointer;" title="Ver histórico de ligações"
-                                      onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
-                                      data-cliente="{{ i.nome_cliente|default:''|escape }}">
-                                    {{ i.ligacoes.all|length }} <i class="fas fa-list-ul ms-1"></i>
-                                </span>
+                            <td class="text-center" data-order="{% if apenas_pendentes %}{{ i.proxima_ligacao|date:'Y-m-d\TH:i'|default:'' }}{% endif %}">
+                                {% if apenas_pendentes %}
+                                    {% if i.ligacoes.all %}
+                                    <span class="badge {% if i.proxima_ligacao %}bg-info{% else %}bg-secondary{% endif %}" style="cursor:pointer;" title="Ver histórico de ligações"
+                                          onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
+                                          data-cliente="{{ i.nome_cliente|default:''|escape }}">
+                                        {% if i.proxima_ligacao %}{{ i.proxima_ligacao|date:'d/m/Y H:i' }}{% else %}sem próxima{% endif %}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
                                 {% else %}
-                                <span class="text-muted">0</span>
+                                    {% if i.ligacoes.all %}
+                                    <span class="badge bg-primary" style="cursor:pointer;" title="Ver histórico de ligações"
+                                          onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
+                                          data-cliente="{{ i.nome_cliente|default:''|escape }}">
+                                        {{ i.ligacoes.all|length }} <i class="fas fa-list-ul ms-1"></i>
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="text-start">{{ i.observacoes|default:'-' }}</td>
@@ -412,7 +424,9 @@
     $(document).ready(function() {
 
         // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
-        iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19]);
+        // Na tela "Novo", ordena por padrão pela coluna "Próxima ligação" (índice 22)
+        // em ordem decrescente. Na Base Novo mantém sem ordenação inicial.
+        iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
 
         // Prepara o pop-up de ligação (só existe na tela do card "Novo").
         if (PODE_REGISTRAR_LIGACAO) {
