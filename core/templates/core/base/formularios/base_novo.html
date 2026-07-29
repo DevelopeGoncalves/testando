@@ -286,21 +286,21 @@
                                 <div id="container-ligacoes">
                                     <div class="bloco-ligacao" id="ligacao-1">
                                         <h5 class="text-primary border-bottom pb-2 mb-3 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
-                                        <div class="row g-3">
+                                        <div class="row g-2">
 
                                             <div class="col-md-3">
                                                 <label class="fw-bold small mb-1">Data/Hora da Ligação</label>
-                                                <input type="datetime-local" step="1" class="form-control" name="ligacao_data" id="edit_ligacao_data">
+                                                <input type="datetime-local" step="1" class="form-control form-control-sm" name="ligacao_data" id="edit_ligacao_data">
                                             </div>
 
                                             <div class="col-md-2">
                                                 <label class="fw-bold small mb-1">Protocolo</label>
-                                                <input type="text" class="form-control bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(gerado automaticamente)">
+                                                <input type="text" class="form-control form-control-sm bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(automático)">
                                             </div>
 
                                             <div class="col-md-2">
                                                 <label class="fw-bold small mb-1">Ramal</label>
-                                                <input type="text" class="form-control" name="ligacao_ramal" id="edit_ligacao_ramal">
+                                                <input type="text" class="form-control form-control-sm" name="ligacao_ramal" id="edit_ligacao_ramal">
                                             </div>
 
                                             <div class="col-md-1 d-flex flex-column">
@@ -317,14 +317,14 @@
                                                 </div>
                                             </div>
 
-                                            <div class="col-md-2">
+                                            <div class="col-md-3">
                                                 <label class="fw-bold small mb-1">Prêmio Total</label>
-                                                <input type="text" inputmode="numeric" class="form-control campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
+                                                <input type="text" inputmode="numeric" class="form-control form-control-sm campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
                                             </div>
 
                                             <div class="col-md-3">
                                                 <label class="fw-bold small mb-1">Motivo Não Venda</label>
-                                                <select class="form-select" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
+                                                <select class="form-select form-select-sm" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
                                                     <option value="">-- Selecione --</option>
                                                     {% for m in motivos_nao_venda %}
                                                     <option value="{{ m.id }}">{{ m.motivo }}</option>
@@ -334,17 +334,17 @@
 
                                             <div class="col-md-3">
                                                 <label class="fw-bold small mb-1">Próximo contato</label>
-                                                <input type="datetime-local" step="1" class="form-control campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
+                                                <input type="datetime-local" step="1" class="form-control form-control-sm campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
                                             </div>
 
-                                            <div class="col-md-5">
+                                            <div class="col-md-4">
                                                 <label class="fw-bold small mb-1">Observações</label>
-                                                <textarea class="form-control" name="ligacao_obs" id="edit_ligacao_obs" rows="2"></textarea>
+                                                <textarea class="form-control form-control-sm" name="ligacao_obs" id="edit_ligacao_obs" rows="1"></textarea>
                                             </div>
 
                                             <div class="col-md-2">
-                                                <label class="fw-bold small mb-1">Cadastrado/tratado por</label>
-                                                <input type="text" class="form-control bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
+                                                <label class="fw-bold small mb-1">Cadastrado por</label>
+                                                <input type="text" class="form-control form-control-sm bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
                                             </div>
 
                                         </div>
