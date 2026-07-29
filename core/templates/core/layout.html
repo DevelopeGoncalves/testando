@@ -308,7 +308,7 @@
             {% endif %}
 
             <!-- Financeiro -->
-            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_formularios or request.user.perfil.sub_fin_extratos or request.user.perfil.sub_fin_relatorios %}
+            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_formularios or request.user.perfil.sub_fin_processamentos or request.user.perfil.sub_fin_relatorios %}
             <li class="nav-item" id="nav-financeiro">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuFin', this)">
                     <i class="fas fa-file-invoice-dollar icon-main"></i><span>Financeiro</span>
@@ -321,8 +321,8 @@
                     <li><a href="{% url 'financeiro_formularios' %}"><i class="far fa-circle"></i> Formulários</a></li>
                     {% endif %}
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_extratos %}
-                    <li><a href="{% url 'financeiro_extratos' %}"><i class="far fa-circle"></i> Extratos</a></li>
+                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_processamentos %}
+                    <li><a href="{% url 'financeiro_processamentos' %}"><i class="far fa-circle"></i> Processamentos</a></li>
                     {% endif %}
 
                     {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_relatorios %}
@@ -504,7 +504,7 @@
             .closest('.tabela-container').find('.tabela-loading').remove();
     }
 
-    function iniciarTabelaExcel(tabelaId, colunasOcultasPorPadrao, ordemInicial) {
+    function iniciarTabelaExcel(tabelaId, colunasOcultasPorPadrao) {
         // Failsafe: revela a tabela mesmo que o DataTables falhe ao inicializar,
         // evitando que ela fique oculta para sempre (ex.: CDN indisponível).
         setTimeout(function () { revelarTabela(tabelaId); }, 5000);
@@ -517,7 +517,7 @@
         tableInstance = $('#' + tabelaId).DataTable({
             language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
             ordering: true,
-            order: ordemInicial || [],
+            order: [],
             columnDefs: columnDefs,
 
             // --- Aumentar o numero de linha por pagina para 50 ---

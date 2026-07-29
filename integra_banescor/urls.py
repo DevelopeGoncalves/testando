@@ -106,7 +106,7 @@ urlpatterns = [
 
     path('producao/relatorios', views.producao_relatorios, name='producao_relatorios'),
     
-    path('financeiro/extratos', views.financeiro_extratos, name='financeiro_extratos'),
+    path('financeiro/processamentos', views.financeiro_processamentos, name='financeiro_processamentos'),
     path('financeiro/formularios', views.financeiro_formularios, name='financeiro_formularios'),
     path('financeiro/relatorios', views.financeiro_relatorios, name='financeiro_relatorios'),
 
@@ -115,5 +115,8 @@ urlpatterns = [
     path('administracao/usuarios/editar/<int:id>/', views.form_usuario, name='form_usuario_editar'),
     path('administracao/usuarios/excluir/', views.excluir_usuarios, name='excluir_usuarios'),
 
+    path('financeiro/processamentos/habitacional', views.financeiro_habitacional, name='financeiro_habitacional'),
+    path('financeiro/habitacional/exportar-txt/', views.exportar_txt_habitacional, name='exportar_txt_habitacional'),
+    path('financeiro/habitacional/processar/', views.processar_mensal_habitacional, name='processar_mensal_habitacional'),
 ]
 

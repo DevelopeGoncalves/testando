@@ -12,7 +12,7 @@ from .models import (
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.db import transaction
@@ -606,9 +606,7 @@ def producao_habitacional_import(request):
                                     dados_salvar[campo_banco] = ''
                             else:
                                 if campo_banco in ['premio_bruto', 'premio_liquido', 'perc_comissao']:
-                                    valor_limpo = valor.replace('R$', '').replace('%', '').replace('.', '').replace(',', '.').strip()
-                                    try: dados_salvar[campo_banco] = float(valor_limpo)
-                                    except: dados_salvar[campo_banco] = None
+                                    dados_salvar[campo_banco] = _parse_float(valor)
                                 elif campo_banco == 'qtd_parcelas':
                                     try: dados_salvar[campo_banco] = int(float(valor))
                                     except: dados_salvar[campo_banco] = None
@@ -717,11 +715,6 @@ def vendas_endosso(request):
 
 @login_required
 def vendas_novo_negocio(request):
-    """Card 'Novo': reaproveita a mesma ficha/tabela da Base Novo, mas mostra
-    somente as indicações ainda pendentes (não cadastra indicação nova - isso
-    continua exclusivo da Base Novo). Uma indicação é pendente quando não tem
-    nenhuma ligação ainda, ou quando a última ligação registrada não marcou
-    "Vendas Central", "Vendas Agência" nem um "Motivo Não Venda"."""
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request)
         if form is None:
@@ -740,11 +733,6 @@ def vendas_novo_negocio(request):
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
     ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento').prefetch_related('ligacoes__motivo_nao_venda')
 
-    # Para a tela "Novo" a lista mostra, no lugar do E-mail e da contagem de ligações:
-    #  - responsavel: quem atendeu a última ligação (cadastrado_por da mais recente);
-    #  - proxima_ligacao: o "próximo contato" agendado na última ligação.
-    # As ligações já vêm ordenadas da mais recente para a mais antiga (Meta ordering
-    # do model: -data_ligacao, -id), então a primeira é sempre a última ligação.
     indicacoes = list(indicacoes)
     for ind in indicacoes:
         ligacoes = list(ind.ligacoes.all())
@@ -785,19 +773,45 @@ def agora_servidor_ligacao(request):
     return JsonResponse({'datahora': agora.strftime('%Y-%m-%dT%H:%M:%S')})
 
 def _parse_valor_moeda_brl(valor_str):
-    """Converte um valor no formato brasileiro ('1.234,56') em Decimal.
-    Retorna None quando vazio ou inválido."""
-    if not valor_str:
-        return None
+    if not valor_str: return None
     limpo = str(valor_str).strip().replace('R$', '').replace(' ', '')
-    if not limpo:
-        return None
-    # remove separador de milhar (.) e troca a vírgula decimal por ponto
-    limpo = limpo.replace('.', '').replace(',', '.')
+    if not limpo: return None
+    if '.' in limpo and ',' in limpo:
+        limpo = limpo.replace('.', '').replace(',', '.')
+    elif ',' in limpo:
+        limpo = limpo.replace(',', '.')
+    try: return Decimal(limpo)
+    except (InvalidOperation, ValueError): return None
+
+def _parse_float(valor_str):
+    if not valor_str: return None
+    val = str(valor_str).replace('R$', '').replace('%', '').strip()
+    if not val or val.lower() == 'nan': return None
+    if '.' in val and ',' in val:
+        val = val.replace('.', '').replace(',', '.')
+    elif ',' in val:
+        val = val.replace(',', '.')
+    try: 
+        f = float(val)
+        if f != f or f == float('inf') or f == float('-inf'): return None
+        return f
+    except ValueError: return None
+
+def _parse_int(valor_str):
+    if not valor_str: return None
+    val = str(valor_str).strip()
+    if not val or val.lower() == 'nan': return None
+    try: return int(float(val))
+    except ValueError: return None
+
+def _parse_date(valor_str):
+    val = str(valor_str).strip() if valor_str else ''
+    if not val or val.lower() == 'nan': return None
     try:
-        return Decimal(limpo)
-    except (InvalidOperation, ValueError):
-        return None
+        dt = datetime.strptime(val, '%Y-%m-%d')
+        if dt.year > 9999 or dt.year < 1900: return None
+        return val
+    except ValueError: return None
 
 
 def _falta_premio_total_venda_central(request):
@@ -826,7 +840,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
     cada gravação feita por lá (o POST chega sem os campos e nada é recriado)."""
     item_id = request.POST.get('item_id')
     instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
-    # O card "Novo" (processar_ligacoes=True) trava a ficha em só leitura; a
+
     # Base Novo (False) continua editando a ficha normalmente.
     form = IndicacaoForm(request.POST, instance=instancia, ficha_somente_leitura=processar_ligacoes)
 
@@ -1048,9 +1062,6 @@ def importar_base_novo(request):
 
                 email = str(row.get('Endereço de e-mail', '')).strip()
 
-                # Essa indicação (mesmo carimbo + e-mail) já foi apagada manualmente da
-                # Base Novo antes - não recria, senão a exclusão nunca "pega" numa
-                # planilha que continua tendo a linha.
                 if IndicacaoExcluida.objects.filter(carimbo_data_hora=carimbo, email=email).exists():
                     contador_excluidos_pulados += 1
                     continue
@@ -1072,7 +1083,7 @@ def importar_base_novo(request):
                     'observacoes': str(row.get('Observações', '')).strip(),
                 }
 
-                # Considera duplicada a mesma resposta (mesmo carimbo de data/hora + e-mail do indicador)
+                # Considera duplicada a mesma resposta
                 indicacao, criada = Indicacao.objects.update_or_create(
                     carimbo_data_hora=carimbo,
                     email=email,
@@ -1215,7 +1226,7 @@ def importar_usuarios(request):
         arquivo = request.FILES['arquivo']
         cadastrados = 0
         ignorados = 0
-        nao_encontrados = 0 # NOVO: Contador para matrículas que não existem em Colaborador
+        nao_encontrados = 0 # Contador para matrículas que não existem em Colaborador
         
         try:
             linhas_dados = [] 
@@ -1286,7 +1297,7 @@ def importar_usuarios(request):
 # SAIR DO SISTEMA (LOGOUT CUSTOMIZADO)
 def sair_do_sistema(request):
     logout(request) # Apaga a sessão do usuário
-    return redirect('login') # Manda de volta para a vitrine
+    return redirect('login') 
 
 
 # --- NOVO CARD DE TIPOS DE PESSOA ---
@@ -1322,8 +1333,7 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
     for reg in registros:
         chaves_deste_registro = [reg.chave_unica]
 
-        # Ao emitir, cada endosso adicional vira um registo próprio com sua própria
-        # chave (mesma apólice, endosso diferente) - também precisam ser conferidos
+        # Ao emitir, cada endosso adicional vira um registo próprio
         if fase_origem.upper() == 'PENDENTES':
             for extra in reg.endossos_extras.all():
                 chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
@@ -1350,9 +1360,6 @@ def producao_lista_fase(request, agrupamento_id, fase):
     if request.method == 'POST':
         acao = request.POST.get('acao')
         if acao == 'editar':
-            # O formulário envia via fetch/AJAX (ver lista_fase.html) para poder mostrar
-            # o erro sem sair da ficha; o fallback com messages+redirect cobre o caso de
-            # a página estar com uma versão antiga do JS (sem o fetch) ainda carregada.
             is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             registro_id = request.POST.get('registro_id')
             if registro_id:
@@ -1368,8 +1375,6 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 reg.cliente = request.POST.get('cliente')
                 reg.cpf_cnpj = request.POST.get('cpf_cnpj')
                 
-
-                #  TODOS OS RELACIONAMENTOS SENDO BUSCADOS POR ID 
                 seg_input = request.POST.get('seguradora')
                 reg.seguradora = Seguradora.objects.filter(id=seg_input).first() if seg_input else None
 
@@ -1382,14 +1387,18 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 ramo_input = request.POST.get('grupo_ramo')
                 reg.grupo_ramo = Ramo.objects.filter(id=ramo_input).first() if ramo_input else None
 
-                reg.tipo_pessoa = request.POST.get('tipo_pessoa') # Texto solto
-                # ========================================================
-
+                reg.tipo_pessoa = request.POST.get('tipo_pessoa') 
                 reg.documento = request.POST.get('documento')
-                reg.endosso = request.POST.get('endosso')
+                
+                endosso_principal_input = request.POST.get('endosso')
+                if not endosso_principal_input or not endosso_principal_input.strip():
+                    msg_erro = "O número do endosso principal não pode ficar vazio."
+                    if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                    messages.error(request, msg_erro)
+                    return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                
+                reg.endosso = endosso_principal_input.strip()
 
-                # Impede que a edição crie uma chave (Seguradora + Grupo/Ramo + Tipo de
-                # Documento + Documento + Endosso) já usada por outro registo em Pendentes
                 if reg.fase.upper() == 'PENDENTES':
                     nova_chave = RegistroProducao.montar_chave_unica(
                         reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
@@ -1424,19 +1433,76 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 reg.observacoes = request.POST.get('observacoes')
                 reg.motivo_endosso = request.POST.get('motivo_endosso')
                 reg.renovacao_propria = request.POST.get('renovacao_propria')
-                reg.grupo = request.POST.get('grupo')
+                reg.grupo = request.POST.get('grupo')   
 
-                try: reg.premio_bruto = float(request.POST.get('premio_bruto', '').replace('R$', '').replace('.', '').replace(',', '.').strip())
-                except: reg.premio_bruto = None
-                try: reg.premio_liquido = float(request.POST.get('premio_liquido', '').replace('R$', '').replace('.', '').replace(',', '.').strip())
-                except: reg.premio_liquido = None
-                try: reg.perc_comissao = float(request.POST.get('perc_comissao', '').replace('%', '').replace(',', '.').strip())
-                except: reg.perc_comissao = None
-                try: reg.qtd_parcelas = int(request.POST.get('qtd_parcelas'))
-                except: reg.qtd_parcelas = None
+                def valida_limites(p_com, p_bruto, p_liq):
+                    if p_com and (p_com > 999.99 or p_com < -999.99): 
+                        return "O campo '% de comissão' não pode exceder 999,99%."
+                    if p_bruto and (p_bruto > 9999999999999.99 or p_bruto < -9999999999999.99): 
+                        return "O valor do 'Prêmio Bruto' excedeu o limite permitido."
+                    if p_liq and (p_liq > 9999999999999.99 or p_liq < -9999999999999.99): 
+                        return "O valor do 'Prêmio Líquido' excedeu o limite permitido."
+                    return None
 
-                reg.inicio_vigencia = request.POST.get('inicio_vigencia') or None
-                reg.fim_vigencia = request.POST.get('fim_vigencia') or None
+                p_bruto_val = _parse_float(request.POST.get('premio_bruto'))
+                p_liq_val = _parse_float(request.POST.get('premio_liquido'))
+                p_com_val = _parse_float(request.POST.get('perc_comissao'))
+                
+                erro_limite = valida_limites(p_com_val, p_bruto_val, p_liq_val)
+                if erro_limite:
+                    if is_ajax: return JsonResponse({'sucesso': False, 'erro': erro_limite}, status=400)
+                    messages.error(request, erro_limite)
+                    return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
+                endossos_enviados = [reg.endosso] # Já inicia com o endosso principal para checar conflitos
+                
+                contador_check = 2
+                while True:
+                    mes_check = request.POST.get(f'mes_producao_{contador_check}')
+                    endosso_ext = request.POST.get(f'endosso_{contador_check}')
+                    
+                    # Se o formulário não enviou essas chaves no POST, acabou a lista
+                    if mes_check is None and endosso_ext is None: 
+                        break
+                    
+                    # Se o card foi adicionado no HTML, mas deixaram o número do endosso em branco
+                    if not endosso_ext or not endosso_ext.strip():
+                        msg_erro = f"O número do {contador_check}º endosso está vazio. Preencha-o ou clique em 'Remover'."
+                        if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                        messages.error(request, msg_erro)
+                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
+                    endosso_ext = endosso_ext.strip()
+                    
+                    # Checagem de Endossos Repetidos
+                    if endosso_ext in endossos_enviados:
+                        msg_erro = f"O endosso '{endosso_ext}' foi preenchido repetidamente no formulário. Corrija para salvar."
+                        if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                        messages.error(request, msg_erro)
+                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                    
+                    endossos_enviados.append(endosso_ext)
+
+                    p_bruto_ext = _parse_float(request.POST.get(f'premio_bruto_{contador_check}'))
+                    p_liq_ext = _parse_float(request.POST.get(f'premio_liquido_{contador_check}'))
+                    p_com_ext = _parse_float(request.POST.get(f'perc_comissao_{contador_check}'))
+                    
+                    erro_limite_ext = valida_limites(p_com_ext, p_bruto_ext, p_liq_ext)
+                    if erro_limite_ext:
+                        msg_erro = f"Endosso {contador_check - 1}: {erro_limite_ext}"
+                        if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                        messages.error(request, msg_erro)
+                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                    
+                    contador_check += 1
+
+                reg.premio_bruto = p_bruto_val
+                reg.premio_liquido = p_liq_val
+                reg.perc_comissao = p_com_val
+                reg.qtd_parcelas = _parse_int(request.POST.get('qtd_parcelas'))
+
+                reg.inicio_vigencia = _parse_date(request.POST.get('inicio_vigencia'))
+                reg.fim_vigencia = _parse_date(request.POST.get('fim_vigencia'))
                 reg.save() 
                 
                 reg.endossos_extras.all().delete()
@@ -1446,25 +1512,19 @@ def producao_lista_fase(request, agrupamento_id, fase):
                     endosso_extra = request.POST.get(f'endosso_{contador}')
                     if mes_extra is None and endosso_extra is None: break
                     
-                    p_bruto = request.POST.get(f'premio_bruto_{contador}', '').replace('R$', '').replace('.', '').replace(',', '.').strip()
-                    p_liq = request.POST.get(f'premio_liquido_{contador}', '').replace('R$', '').replace('.', '').replace(',', '.').strip()
-                    p_com = request.POST.get(f'perc_comissao_{contador}', '').replace('%', '').replace(',', '.').strip()
-                    q_parc = request.POST.get(f'qtd_parcelas_{contador}')
-                    
-                    # 🌟 Tratamento da Unidade Extra por ID
                     unidade_extra_input = request.POST.get(f'unidade_{contador}')
                     unidade_extra_inst = Unidade.objects.filter(id=unidade_extra_input).first() if unidade_extra_input else None
 
                     EndossoAdicional.objects.create(
-                        registro_pai=reg, mes_producao=mes_extra, endosso=endosso_extra,
+                        registro_pai=reg, mes_producao=mes_extra, endosso=endosso_extra.strip(),
                         motivo_endosso=request.POST.get(f'motivo_endosso_{contador}'),
-                        inicio_vigencia=request.POST.get(f'inicio_vigencia_{contador}') or None,
-                        fim_vigencia=request.POST.get(f'fim_vigencia_{contador}') or None,
-                        qtd_parcelas=int(q_parc) if q_parc else None,
+                        inicio_vigencia=_parse_date(request.POST.get(f'inicio_vigencia_{contador}')),
+                        fim_vigencia=_parse_date(request.POST.get(f'fim_vigencia_{contador}')),
+                        qtd_parcelas=_parse_int(request.POST.get(f'qtd_parcelas_{contador}')),
                         renovacao_propria=request.POST.get(f'renovacao_propria_{contador}'),
-                        premio_bruto=float(p_bruto) if p_bruto else None,
-                        premio_liquido=float(p_liq) if p_liq else None,
-                        perc_comissao=float(p_com) if p_com else None,
+                        premio_bruto=_parse_float(request.POST.get(f'premio_bruto_{contador}')),
+                        premio_liquido=_parse_float(request.POST.get(f'premio_liquido_{contador}')),
+                        perc_comissao=_parse_float(request.POST.get(f'perc_comissao_{contador}')),
                         realizado=request.POST.get(f'realizado_{contador}'),
                         unidade=unidade_extra_inst.cid_unidade if unidade_extra_inst else None,
                         nome_unidade=request.POST.get(f'nome_unidade_{contador}') or (unidade_extra_inst.unidade if unidade_extra_inst else None),
@@ -1485,7 +1545,6 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
         elif acao == 'validar':
-            # IMPORTADOS -> PENDENTES: valida todos os registos do agrupamento de uma vez, sem precisar selecionar
             ids_duplicados = _ids_duplicados_no_lote('IMPORTADOS', agrupamento)
             if ids_duplicados:
                 ids_str = ','.join(str(i) for i in ids_duplicados)
@@ -1501,9 +1560,6 @@ def producao_lista_fase(request, agrupamento_id, fase):
             return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
 
         elif acao == 'emitir':
-            # PENDENTES -> EMITIDOS: envia os registos não duplicados do agrupamento, sem precisar selecionar.
-            # Os duplicados permanecem em Pendentes (destacados) até serem corrigidos/apagados.
-            # Cada endosso vira um registo independente (sem relacionamento)
             ids_duplicados = _ids_duplicados_no_lote('PENDENTES', agrupamento)
 
             campos_identificacao = [
@@ -1544,16 +1600,10 @@ def producao_lista_fase(request, agrupamento_id, fase):
                         novo.gerente_agencia = end.gerente_agencia
                         novo.superintendente = end.superintendente
 
-                        # O vínculo com a Unidade é quebrado ao emitir; superintendência,
-                        # grupo, nome_unidade etc. já ficam gravados como texto (snapshot)
                         novo.unidade = None
-
                         novo.save()
                         total_emitidos += 1
 
-                    # Depois de "promover" os endossos a registos próprios, o principal
-                    # também perde o vínculo com a Unidade (os demais relacionamentos,
-                    # como Seguradora, continuam normalmente)
                     reg.endossos_extras.all().delete()
                     reg.unidade = None
                     reg.fase = 'EMITIDOS'
@@ -1589,10 +1639,6 @@ def producao_lista_fase(request, agrupamento_id, fase):
     produto_hab = Produto.objects.filter(agrupamento=agrupamento).first()
     ramos_hab = Ramo.objects.filter(produto=produto_hab).order_by('cod_ramo') if produto_hab else Ramo.objects.none()
 
-    # Duplicados são recalculados sempre que a lista de Importados/Pendentes é aberta,
-    # para que o botão de filtro "Duplicados" funcione a qualquer momento - não só
-    # logo após um "Validar"/"Emitir" bloqueado (cujos ids também chegam via querystring
-    # no redirect e são somados aqui por garantia).
     if fase_banco in ('IMPORTADOS', 'PENDENTES'):
         ids_duplicados = _ids_duplicados_no_lote(fase_banco, agrupamento)
     else:
@@ -1652,13 +1698,14 @@ def tipo_pessoa_lista(request):
 
 
 """                             HENRIQUE                                                                    """
-from .models import FeriasEstagiario, AuditoriaExportacao
+from .models import FeriasEstagiario, AuditoriaExportacao, FinanceiroHabitacional
 from django.urls import reverse
 
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 import json
 import logging
+import calendar
 
 @login_required
 def estagiarios(request):
@@ -1794,8 +1841,8 @@ def producao_relatorios(request):
     return render(request, 'core/producao/relatorios/index.html')
 
 @login_required
-def financeiro_extratos(request):
-    return render(request, 'core/financeiro/extratos/index.html')
+def financeiro_processamentos(request):
+    return render(request, 'core/financeiro/processamentos/index.html')
 
 @login_required
 def financeiro_formularios(request):
@@ -1883,7 +1930,7 @@ def form_usuario(request, id=None):
                     perfil.sub_prod_relatorios = form.cleaned_data['sub_prod_relatorios']
 
                     perfil.sub_fin_formularios = form.cleaned_data['sub_fin_formularios']
-                    perfil.sub_fin_extratos = form.cleaned_data['sub_fin_extratos']
+                    perfil.sub_fin_processamentos = form.cleaned_data['sub_fin_processamentos']
                     perfil.sub_fin_relatorios = form.cleaned_data['sub_fin_relatorios']
 
                     perfil.sub_admin_criar = form.cleaned_data['sub_admin_criar']
@@ -1920,7 +1967,7 @@ def form_usuario(request, id=None):
                     sub_prod_relatorios=form.cleaned_data['sub_prod_relatorios'],
 
                     sub_fin_formularios=form.cleaned_data['sub_fin_formularios'],
-                    sub_fin_extratos=form.cleaned_data['sub_fin_extratos'],
+                    sub_fin_processamentos=form.cleaned_data['sub_fin_processamentos'],
                     sub_fin_relatorios=form.cleaned_data['sub_fin_relatorios'],
 
                     sub_admin_criar=form.cleaned_data['sub_admin_criar'],
@@ -1951,7 +1998,7 @@ def form_usuario(request, id=None):
                 'sub_prod_relatorios': perfil.sub_prod_relatorios if perfil else False,
 
                 'sub_fin_formularios': perfil.sub_fin_formularios if perfil else False,
-                'sub_fin_extratos': perfil.sub_fin_extratos if perfil else False,
+                'sub_fin_processamentos': perfil.sub_fin_processamentos if perfil else False,
                 'sub_fin_relatorios': perfil.sub_fin_relatorios if perfil else False,
 
                 'sub_admin_criar': perfil.sub_admin_criar if perfil else False,
@@ -1992,3 +2039,131 @@ def excluir_usuarios(request):
                 messages.warning(request, 'Nenhum usuário foi excluído.')
 
     return redirect('listar_usuarios')
+
+@login_required
+def financeiro_habitacional(request):
+    # Pega apenas os meses que JÁ FORAM PROCESSADOS (ignora os nulos/vazios) para popular o Modal
+    meses_disponiveis = FinanceiroHabitacional.objects.exclude(
+        Q(data_processamento__isnull=True) | Q(data_processamento__exact='')
+    ).values_list('data_processamento', flat=True).distinct()
+    
+    # Ordena os meses para o Modal do mais recente para o mais antigo
+    def sort_key(m):
+        if m and '/' in m:
+            mes, ano = m.split('/')
+            return (int(ano), int(mes))
+        return (0, 0)
+
+    meses_disponiveis = sorted(list(meses_disponiveis), key=sort_key, reverse=True)
+
+    return render(request, 'core/financeiro/processamentos/habitacional.html', {
+        'meses_disponiveis': meses_disponiveis
+    })
+
+
+@login_required
+def processar_mensal_habitacional(request):
+    agora = timezone.localtime(timezone.now())
+    mes_ano_atual = agora.strftime('%m/%Y')
+    mes_str = agora.strftime('%m')
+    ano_str = agora.strftime('%Y')
+
+    aguardando = FinanceiroHabitacional.objects.filter(
+        Q(data_processamento__isnull=True) | Q(data_processamento__exact='')
+    )
+
+    if not aguardando.exists():
+        messages.warning(request, "Atenção: Não há registros aguardando processamento.")
+        return redirect('financeiro_habitacional')
+    
+    aguardando.update(data_processamento=mes_ano_atual)
+
+    produto_hab = Produto.objects.filter(agrupamento__agrupamento__icontains='Habitacional').first()
+    
+    if produto_hab and produto_hab.mes_folha_pagamento_em_aberto:
+        data_atual = produto_hab.mes_folha_pagamento_em_aberto
+        novo_mes = data_atual.month + 1
+        novo_ano = data_atual.year
+        
+        if novo_mes > 12:
+            novo_mes = 1
+            novo_ano += 1
+            
+        ultimo_dia_novo_mes = calendar.monthrange(novo_ano, novo_mes)[1]
+        novo_dia = min(data_atual.day, ultimo_dia_novo_mes)
+        
+        produto_hab.mes_folha_pagamento_em_aberto = data_atual.replace(year=novo_ano, month=novo_mes, day=novo_dia)
+        produto_hab.save()
+
+    agrupados = FinanceiroHabitacional.objects.filter(
+        data_processamento=mes_ano_atual
+    ).exclude(
+        Q(registro_producao__premio_bruto=0) | Q(registro_producao__premio_bruto__isnull=True)
+    ).values('matricula_colaborador').annotate(total_valor=Sum('valor'))
+
+    linhas_txt = []
+    for item in agrupados:
+        matricula = (item['matricula_colaborador'] or "").strip()
+        if not matricula:
+            continue
+
+        m = str(matricula).zfill(9) 
+        mat_formatada = f"{m[:2]} {m[2:-1]} {m[-1]}" if len(m) >= 3 else m
+        
+        valor_centavos = int(item['total_valor'] * 100)
+        valor_formatado = str(valor_centavos).zfill(11)
+        
+        linha = f"{mat_formatada} {mes_str} {ano_str} 000087 {valor_formatado} 001      "
+        linhas_txt.append(linha)
+
+    conteudo = "\n".join(linhas_txt) + "\n"
+
+    nome_arquivo = f"processamento_habitacional_{mes_str}-{ano_str}.txt"
+    response = HttpResponse(conteudo, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
+    return response
+
+
+@login_required 
+def exportar_txt_habitacional(request):
+    mes_escolhido = request.GET.get('mes')
+
+    if not mes_escolhido:
+        messages.error(request, "Selecione um mês para exportar.")
+        return redirect('financeiro_habitacional')
+
+    registros = FinanceiroHabitacional.objects.filter(
+        data_processamento=mes_escolhido
+    ).exclude(
+        Q(registro_producao__premio_bruto=0) | Q(registro_producao__premio_bruto__isnull=True)
+    )
+
+    if not registros.exists():
+        messages.warning(request, f"Nenhum registro válido para exportação no mês {mes_escolhido}.")
+        return redirect('financeiro_habitacional')
+
+    mes_str, ano_str = mes_escolhido.split('/')
+
+    agrupados = registros.values('matricula_colaborador').annotate(total_valor=Sum('valor'))
+
+    linhas_txt = []
+    for item in agrupados:
+        matricula = (item['matricula_colaborador'] or "").strip()
+        if not matricula:
+            continue
+
+        m = str(matricula).zfill(9) 
+        mat_formatada = f"{m[:2]} {m[2:-1]} {m[-1]}" if len(m) >= 3 else m
+        
+        valor_centavos = int(item['total_valor'] * 100)
+        valor_formatado = str(valor_centavos).zfill(11)
+        
+        linha = f"{mat_formatada} {mes_str} {ano_str} 000087 {valor_formatado} 001      "
+        linhas_txt.append(linha)
+
+    conteudo = "\n".join(linhas_txt) + "\n"
+    
+    nome_arquivo = f"exportacao_habitacional_{mes_str}-{ano_str}.txt"
+    response = HttpResponse(conteudo, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
+    return response

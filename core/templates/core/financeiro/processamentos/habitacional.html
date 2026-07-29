@@ -1,0 +1,71 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Processamentos - Habitacional{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Financeiro</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'financeiro_processamentos' %}" class="text-primary text-decoration-none">Processamentos</a> 
+        <span class="text-primary text-decoration-none">/</span> 
+        <a href="{% url 'financeiro_habitacional' %}" class="text-primary text-decoration-none">Habitacional</a> 
+    </span>
+{% endblock %}   
+
+{% block content %}
+<div id="menu-seguradoras" class="row mt-2">
+
+    <div class="col-md-3 mb-4">
+        <a href="{% url 'processar_mensal_habitacional' %}" class="text-decoration-none" onclick="setTimeout(()=>location.reload(), 2000)">
+            <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #198754;">
+                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                    <i class="fa-solid fa-wallet fa-3x mb-3" style="color: #198754;"></i>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Processar Mensal</h6>
+                    <small class="text-muted mt-1">Fechar e atualizar mês</small>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalExportar">
+            <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #198754;">
+                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                    <i class="fa-solid fa-wallet fa-3x mb-3" style="color: #198754;"></i>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Exportar TXT</h6>
+                    <small class="text-muted mt-1">Livre escolha</small>
+                </div>
+            </div>
+        </a>
+    </div>
+
+</div>
+
+<div class="modal fade" id="modalExportar" tabindex="-1" aria-labelledby="modalExportarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalExportarLabel"><i class="fa-solid fa-calendar-days text-success"></i> Selecionar Mês</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'exportar_txt_habitacional' %}" method="GET">
+          <div class="modal-body">
+              <label class="fw-bold mb-1">Mês da Produção a Exportar:</label>
+              <select name="mes" class="form-select" required>
+                  <option value="">-- Selecione o Mês --</option>
+                  {% for mes in meses_disponiveis %}
+                      <option value="{{ mes }}">{{ mes }}</option>
+                  {% empty %}
+                      <option value="" disabled>Nenhum mês emitido encontrado</option>
+                  {% endfor %}
+              </select>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success"><i class="fa-solid fa-download"></i> Baixar Arquivo</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

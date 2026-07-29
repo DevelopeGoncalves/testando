@@ -1,6 +1,6 @@
 {% extends 'core/layout.html' %}
 
-{% block title %}{% endblock %}
+{% block title %}Produção - Formulários{% endblock %}
 
 {% block breadcrumb %}
     <span style="font-size: 1rem; font-weight: normal;">
@@ -15,6 +15,61 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* CSS DO DROPDOWN PESQUISÁVEL DO ESTAGIÁRIO */
+    .input-container {
+        position: relative;
+    }
+
+    .lista-suspensa {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        max-height: 210px;
+        overflow-y: auto;   
+        background-color: #ffffff;
+        border: 1px solid #ced4da;
+        border-radius: 12px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        z-index: 9999 !important; 
+    }
+
+    .item-lista {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: #333;
+    }  
+
+    .item-lista:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .item-lista:last-child {
+        border-bottom: none;
+    }
+
+    .lista-suspensa::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-track {
+        background: transparent; 
+    }
+
+    .lista-suspensa::-webkit-scrollbar-thumb {
+        background: #adb5bd;
+        border-radius: 10px;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-thumb:hover {
+        background: #6c757d;
+    }
+</style>
+
 <div id="tela-fase" style="min-width: 0; width: 100%; overflow: hidden;">
     
     <div id="lista-fase">
@@ -75,7 +130,8 @@
                                 data-iniciovig="{{ reg.inicio_vigencia|date:'Y-m-d'|default:'' }}" 
                                 data-fimvig="{{ reg.fim_vigencia|date:'Y-m-d'|default:'' }}"
                                 data-renovacao_propria="{{ reg.renovacao_propria|default:'' }}"
-                                data-tipopessoa="{{ reg.tipo_pessoa|default:'' }}"                                data-cpfcnpj="{{ reg.cpf_cnpj|default:'' }}"
+                                data-tipopessoa="{{ reg.tipo_pessoa|default:'' }}"                                
+                                data-cpfcnpj="{{ reg.cpf_cnpj|default:'' }}"
                                 data-cliente="{{ reg.cliente|default:'' }}"
                                 data-nomesocial="{{ reg.nome_social|default:'' }}"
                                 data-celular="{{ reg.celular|default:'' }}"
@@ -87,7 +143,6 @@
                                 data-nomeunidade="{{ reg.nome_unidade|default:'' }}"
                                 data-grupo="{{ reg.grupo|default:'' }}"
                                 data-colaborador="{{ reg.colaborador|default:'' }}"
-                                data-nomecolaborador="{{ reg.nome_colaborador|default:'' }}"
                                 data-gerente="{{ reg.gerente_agencia|default:'' }}"
                                 data-superintendente="{{ reg.superintendente|default:'' }}"
                                 
@@ -121,7 +176,6 @@
                                           data-nomeunidade="{{ exp.nome_unidade|default:'' }}"
                                           data-grupo="{{ exp.grupo|default:'' }}"
                                           data-colaborador="{{ exp.colaborador|default:'' }}"
-                                          data-nomecolaborador="{{ exp.nome_colaborador|default:'' }}"
                                           data-gerente="{{ exp.gerente_agencia|default:'' }}"
                                           data-superintendente="{{ exp.superintendente|default:'' }}">
                                     </span>
@@ -159,56 +213,68 @@
                 <div class="card-body p-4" style="font-size: 0.95rem;">
                     <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-file-contract"></i> Bloco Apólice</h5>
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        
+                        <!-- LINHA 1 (4 campos) -->
+                        <div class="col-md-3">
                             <label class="fw-bold small mb-1">Seguradora</label>
-                            <select class="form-select" name="seguradora" id="edit_seguradora">
-                                <option value="">-- Selecione a Seguradora --</option>
-                                {% for s in seguradoras_base %}
-                                    <option value="{{ s.id }}">{{ s.seguradora }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="input-container"> 
+                                <input type="hidden" name="seguradora" id="edit_seguradora_val">
+                                <input type="text" id="edit_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="dropdown_seguradora" class="lista-suspensa d-none"></div>
+                            </div>
                         </div>
-                        
-                        <div class="col-md-4">
-                            <label class="fw-bold small mb-1">Grupo/Ramo</label>
-                            <select class="form-select" name="grupo_ramo" id="edit_gruporamo">
-                                <option value="">-- Selecione o Ramo --</option>
-                                {% for r in ramos_hab %}
-                                    <option value="{{ r.id }}">{{ r.grupo_e_ramo }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <label class="fw-bold small mb-1">Tipo Documento</label>
-                            <select class="form-select" name="tipo_documento" id="edit_tipodoc">
-                                <option value="">-- Selecione o Tipo --</option>
-                                {% for t in tipos_doc %}
-                                    <option value="{{ t.id }}">{{ t.tipo_documento }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-4"><label class="fw-bold small mb-1">Documento</label><input type="text" class="form-control" name="documento" id="edit_documento"></div>
                         
                         <div class="col-md-3">
+                            <label class="fw-bold small mb-1">Grupo/Ramo</label>
+                            <div class="input-container"> 
+                                <input type="hidden" name="grupo_ramo" id="edit_gruporamo_val">
+                                <input type="text" id="edit_gruporamo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="dropdown_gruporamo" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="fw-bold small mb-1">Tipo Documento</label>
+                            <div class="input-container"> 
+                                <input type="hidden" name="tipo_documento" id="edit_tipodoc_val">
+                                <input type="text" id="edit_tipodoc_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="dropdown_tipodoc" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Documento</label><input type="text" class="form-control" name="documento" id="edit_documento"></div>
+                        
+                        <!-- LINHA 2 (4 campos) -->
+                        <div class="col-md-3">
                             <label class="fw-bold small mb-1">Tipo de Pessoa</label>
-                            <select class="form-select" name="tipo_pessoa" id="edit_tipopessoa">
-                                <option value="">-- Selecione o Tipo --</option>
-                                {% for tp in tipos_pessoa %}
-                                    <option value="{{ tp.tipo_pessoa }}">{{ tp.tipo_pessoa }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="input-container"> 
+                                <input type="hidden" name="tipo_pessoa" id="edit_tipopessoa_val">
+                                <input type="text" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off">
+                                <div id="dropdown_tipopessoa" class="lista-suspensa d-none"></div>
+                            </div>
                         </div>
                         
                         <div class="col-md-3"><label class="fw-bold small mb-1">CPF / CNPJ</label><input type="text" class="form-control" name="cpf_cnpj" id="edit_cpfcnpj"></div>
-                        <div class="col-md-6"><label class="fw-bold small mb-1">Cliente</label><input type="text" class="form-control" name="cliente" id="edit_cliente"></div>
-                        <div class="col-md-4"><label class="fw-bold small mb-1">Nome Social</label><input type="text" class="form-control" name="nome_social" id="edit_nomesocial"></div>
-                        <div class="col-md-6"><label class="fw-bold small mb-1">Celular</label><input type="text" class="form-control" name="celular" id="edit_celular"></div>
-                        <div class="col-md-6"><label class="fw-bold small mb-1">Telefone</label><input type="text" class="form-control" name="telefone" id="edit_telefone"></div>
-                        <div class="col-md-4"><label class="fw-bold small mb-1">E-mail</label><input type="email" class="form-control" name="email" id="edit_email"></div>                                                                                                                        
-                    </div>
+                        
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Cliente</label><input type="text" class="form-control" name="cliente" id="edit_cliente"></div>
+                        
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome Social</label><input type="text" class="form-control" name="nome_social" id="edit_nomesocial"></div>
+                        
+                        <!-- LINHA 3 (4 campos) -->
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Celular</label><input type="text" class="form-control" name="celular" id="edit_celular"></div>
+                        
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Telefone</label><input type="text" class="form-control" name="telefone" id="edit_telefone"></div>
+                        
+                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail</label><input type="email" class="form-control" name="email" id="edit_email"></div>
 
+                        <div class="col-md-3">
+                            <label class="fw-bold small mb-1">Matrícula do Colaborador</label>
+                            <div class="input-container"> 
+                                <input type="hidden" name="colaborador" id="edit_colaborador_val">
+                                <input type="text" id="edit_colaborador_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="dropdown_colaborador" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>                                                                          
                     </div>
 
                     <div id="container-endossos">
@@ -223,7 +289,7 @@
 
                                 <div class="col-md-3">
                                     <label class="fw-bold small mb-1 text-primary">Endosso</label>
-                                    <input type="text" class="form-control border-primary text-primary fw-bold" style="background-color: #f8f9fc; font-size: 1.05rem;" name="endosso" id="edit_endosso">
+                                    <input type="number" min="0" class="form-control text-primary fw-bold" style="background-color: #f8f9fc; font-size: 1.05rem;" name="endosso" id="edit_endosso">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="fw-bold small mb-1">Motivo do Endosso</label>
@@ -236,35 +302,33 @@
                                 
                                 <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Superintendência</label><input type="text" class="form-control bg-light" name="superintendencia" id="edit_superintendencia" readonly tabindex="-1"></div>
                                 <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Grupo</label><input type="text" class="form-control bg-light" name="grupo" id="edit_grupo" readonly tabindex="-1"></div>                                
-                                <div class="col-md-3">
+                                
+                                <div class="col-md-6">
                                     <label class="fw-bold small mb-1">Unidade</label>
-                                    <select class="form-select border-primary" name="unidade" id="edit_unidade" onchange="autoPreencherUnidadeEdicao(this)">
-                                        <option value="">-- Selecione a Unidade --</option>
-                                        {% for u in unidades %}
-                                            <option value="{{ u.id }}" data-sup="{{ u.superintendencia|default:'' }}" data-grupo="{{ u.grupo|default:'' }}" data-nome="{{ u.unidade|default:'' }}" data-mat-ger="{{ u.matricula_gg|default:'' }}" data-mat-sup="{{ u.matricula_superintendente|default:'' }}">{{ u.cid_unidade }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <div class="input-container"> 
+                                        <input type="hidden" name="unidade" id="edit_unidade_val">
+                                        <input type="text" id="edit_unidade_texto" class="form-control" placeholder="Pesquisar unidade/nome..." autocomplete="off">
+                                        <div id="dropdown_unidade" class="lista-suspensa d-none"></div>
+                                    </div>
                                 </div>
-                                <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Nome da Unidade</label><input type="text" class="form-control bg-light" name="nome_unidade" id="edit_nomeunidade" readonly tabindex="-1"></div>
 
-                                <div class="col-md-6"><label class="fw-bold small mb-1 text-muted">Matrícula do Superintendente</label><input type="text" class="form-control bg-light" name="superintendente" id="edit_superintendente" readonly tabindex="-1"></div>
-                                <div class="col-md-6"><label class="fw-bold small mb-1 text-muted">Matrícula do Gerente da Agência</label><input type="text" class="form-control bg-light" name="gerente_agencia" id="edit_gerente" readonly tabindex="-1"></div>
-                                <div class="col-md-3">
+                                <div class="col-md-4"><label class="fw-bold small mb-1 text-muted">Superintendente</label><input type="text" class="form-control bg-light" name="superintendente" id="edit_superintendente" readonly tabindex="-1"></div>
+                                <div class="col-md-4"><label class="fw-bold small mb-1 text-muted">Gerente da Agência</label><input type="text" class="form-control bg-light" name="gerente_agencia" id="edit_gerente" readonly tabindex="-1"></div>
+                                
+                                <div class="col-md-4">
                                     <label class="fw-bold small mb-1">Matrícula do Colaborador</label>
-                                    <select class="form-select border-primary" name="colaborador" id="edit_colaborador" onchange="autoPreencherColaboradorEdicao(this)">
-                                        <option value="">-- Selecione o Colaborador --</option>
-                                        {% for c in colaboradores %}
-                                            <option value="{{ c.matricula }}" data-nome="{{ c.colaborador|default:'' }}">{{ c.matricula }} - {{ c.colaborador }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <div class="input-container"> 
+                                        <input type="hidden" name="colaborador" id="edit_colaborador_endosso_val">
+                                        <input type="text" id="edit_colaborador_endosso_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                        <div id="dropdown_colaborador_endosso" class="lista-suspensa d-none"></div>
+                                    </div>
                                 </div>
-                                <div class="col-md-3"><label class="fw-bold small mb-1 text-muted">Nome do Colaborador</label><input type="text" class="form-control bg-light" name="nome_colaborador" id="edit_nomecolaborador" readonly tabindex="-1"></div>
 
                                 <div class="col-md-3"><label class="fw-bold small mb-1">% Comissão</label><input type="number" step="0.01" class="form-control" name="perc_comissao" id="edit_comissao"></div>
                                 <div class="col-md-3"><label class="fw-bold small mb-1">Prêmio Líquido (R$)</label><input type="number" step="0.01" class="form-control" name="premio_liquido" id="edit_premio_liquido"></div>
-                                <div class="col-md-3"><label class="fw-bold small mb-1">Prêmio Bruto / Parcela (R$)</label><input type="number" step="0.01" class="form-control text-success fw-bold" name="premio_bruto" id="edit_premio"></div>
+                                <div class="col-md-3"><label class="fw-bold small mb-1">Prêmio Bruto (R$)</label><input type="number" step="0.01" class="form-control text-success fw-bold" name="premio_bruto" id="edit_premio"></div>
                                 <div class="col-md-3"><label class="fw-bold small mb-1">Realizado</label><input type="text" class="form-control" name="realizado" id="edit_realizado"></div>
-                                                              
+                                                                              
                             </div>
                         </div>
                     </div>
@@ -298,158 +362,133 @@
     let contadorEndossos = 1;
     const FASE_ATUAL = "{{ fase_nome }}";
 
-    $(document).ready(function() {
-        if (typeof iniciarTabelaExcel === 'function') {
-            iniciarTabelaExcel('tabela-fase');
+    // ================================================================
+    // DADOS PARA OS DROPDOWNS CUSTOMIZADOS DO DJANGO PARA O JS
+    // ================================================================
+    const listaSeguradoras = [
+        {% for s in seguradoras_base %} { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
+    ];
+    const listaGrupoRamo = [
+        {% for r in ramos_hab %} { id: "{{ r.id }}", texto: "{{ r.grupo_e_ramo|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
+    ];
+    const listaTipoDoc = [
+        {% for t in tipos_doc %} { id: "{{ t.id }}", texto: "{{ t.tipo_documento|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
+    ];
+    const listaTipoPessoa = [
+        {% for tp in tipos_pessoa %} { id: "{{ tp.tipo_pessoa }}", texto: "{{ tp.tipo_pessoa|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
+    ];
+    const listaColaboradores = [
+        {% for c in colaboradores %} { id: "{{ c.matricula }}", texto: "{{ c.matricula }} - {{ c.colaborador|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
+    ];
+    
+    const listaUnidades = [
+        {% for u in unidades %}
+        {
+            id: "{{ u.id }}",
+            texto: "{{ u.cid_unidade|escapejs }} - {{ u.unidade|default:''|escapejs }}",
+            sup: "{{ u.superintendencia|default:''|escapejs }}",
+            grupo: "{{ u.grupo|default:''|escapejs }}",
+            matGer: "{{ u.matricula_gg|default:''|escapejs }}",
+            matSup: "{{ u.matricula_superintendente|default:''|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // ================================================================
+    // FUNÇÃO PRINCIPAL DO DROPDOWN PESQUISÁVEL
+    // ================================================================
+    function inicializarDropdownPesquisa(inputId, hiddenId, dropdownId, listaDeDados, callbackOnSelect = null) {
+        let $input = $('#' + inputId);
+        let $hidden = $('#' + hiddenId);
+        let $dropdown = $('#' + dropdownId);
+
+        $input.off('click input focus');
+
+        function mostrarLista() {
+            let valorDigitado = $input.val().toLowerCase().trim();
+            $dropdown.empty(); 
+            
+            let filtrados = listaDeDados.filter(item => item.texto.toLowerCase().includes(valorDigitado));
+
+            if (filtrados.length > 0) {
+                filtrados.forEach(item => {
+                    let $item = $('<div>').addClass('item-lista').text(item.texto);
+                    
+                    $item.on('mousedown', function(evt) {
+                        evt.preventDefault();
+                        $input.val(item.texto);
+                        $hidden.val(item.id);
+                        $dropdown.addClass('d-none');
+                        if (callbackOnSelect) callbackOnSelect(item);
+                    });
+
+                    $dropdown.append($item);
+                });
+            } else {
+                $dropdown.append($('<div>').addClass('item-lista text-muted').text('Nada encontrado'));
+            }
+            $dropdown.removeClass('d-none');
         }
+
+        $input.on('click focus', function() {
+            mostrarLista();
+        });
+
+        $input.on('input', function() {
+            $hidden.val('');
+            if (callbackOnSelect) callbackOnSelect(null);
+            mostrarLista();
+        });
+    }
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.input-container').length) {
+            $('.lista-suspensa').addClass('d-none');
+        }
+    });
+
+    // ================================================================
+    // AUTO-PREENCHIMENTO DEPENDENTE DA UNIDADE
+    // ================================================================
+    function autoPreencherUnidadeDrop(itemUnidade, sufixo = '') {
+        if (itemUnidade) {
+            $('#edit_superintendencia' + sufixo).val(itemUnidade.sup);
+            $('#edit_grupo' + sufixo).val(itemUnidade.grupo);
+            $('#edit_gerente' + sufixo).val(itemUnidade.matGer);
+            $('#edit_superintendente' + sufixo).val(itemUnidade.matSup);
+        } else {
+            $('#edit_superintendencia' + sufixo).val('');
+            $('#edit_grupo' + sufixo).val('');
+            $('#edit_gerente' + sufixo).val('');
+            $('#edit_superintendente' + sufixo).val('');
+        }
+    }
+
+    $(document).ready(function() {
+        if (typeof iniciarTabelaExcel === 'function') iniciarTabelaExcel('tabela-fase');
         avisarDuplicadosDaUrl();
         configurarSubmissaoEdicao();
+
+        // Ativando Dropdowns Pesquisáveis - Bloco Apólice
+        inicializarDropdownPesquisa('edit_seguradora_texto', 'edit_seguradora_val', 'dropdown_seguradora', listaSeguradoras);
+        inicializarDropdownPesquisa('edit_gruporamo_texto', 'edit_gruporamo_val', 'dropdown_gruporamo', listaGrupoRamo);
+        inicializarDropdownPesquisa('edit_tipodoc_texto', 'edit_tipodoc_val', 'dropdown_tipodoc', listaTipoDoc);
+        inicializarDropdownPesquisa('edit_tipopessoa_texto', 'edit_tipopessoa_val', 'dropdown_tipopessoa', listaTipoPessoa);
+        inicializarDropdownPesquisa('edit_colaborador_texto', 'edit_colaborador_val', 'dropdown_colaborador', listaColaboradores);
+
+        // Ativando Dropdowns Pesquisáveis - Bloco 1º Endosso
+        inicializarDropdownPesquisa('edit_unidade_texto', 'edit_unidade_val', 'dropdown_unidade', listaUnidades, function(item) { autoPreencherUnidadeDrop(item, ''); });
+        inicializarDropdownPesquisa('edit_colaborador_endosso_texto', 'edit_colaborador_endosso_val', 'dropdown_colaborador_endosso', listaColaboradores);
     });
 
-    // --- FILTRO "SOMENTE DUPLICADOS" ---
-    // As linhas duplicadas já chegam do servidor marcadas com a classe "table-danger"
-    // (ver ids_duplicados no views.py). Este filtro apenas esconde, via DataTables,
-    // as linhas que não têm essa marcação - evita ter que procurar manualmente entre
-    // centenas/milhares de registos espalhados por várias páginas.
-    let filtroDuplicadosAtivo = false;
-
-    $.fn.dataTable.ext.search.push(function(settings, searchData, dataIndex) {
-        if (settings.nTable.id !== 'tabela-fase' || !filtroDuplicadosAtivo) return true;
-        const linha = settings.aoData[dataIndex].nTr;
-        return $(linha).hasClass('table-danger');
-    });
-
-    function toggleFiltroDuplicados() {
-        const btn = document.getElementById('btn-filtro-duplicados');
-        // Importante: não usar querySelectorAll direto na tabela - o DataTables só
-        // mantém no DOM as linhas da página atual (paginação client-side). Para contar
-        // em TODAS as páginas é preciso passar pela API do DataTables (rows().nodes()),
-        // que devolve os <tr> de todos os registos, estejam eles na página exibida ou não.
-        const totalDuplicados = tableInstance
-            ? tableInstance.rows().nodes().to$().filter('.table-danger').length
-            : 0;
-
-        if (!filtroDuplicadosAtivo && totalDuplicados === 0) {
-            avisoElegante('Nenhum registo duplicado encontrado nesta lista.');
-            return;
+    function setCustomDropdownValue(hiddenId, textInputId, valor, arrayDados) {
+        $('#' + hiddenId).val(valor || '');
+        if (valor) {
+            let item = arrayDados.find(i => String(i.id) === String(valor) || String(i.texto).trim() === String(valor).trim());
+            $('#' + textInputId).val(item ? item.texto : valor);
+        } else {
+            $('#' + textInputId).val('');
         }
-
-        filtroDuplicadosAtivo = !filtroDuplicadosAtivo;
-        btn.classList.toggle('btn-outline-danger', !filtroDuplicadosAtivo);
-        btn.classList.toggle('btn-danger', filtroDuplicadosAtivo);
-        btn.classList.toggle('text-white', filtroDuplicadosAtivo);
-        btn.innerHTML = filtroDuplicadosAtivo
-            ? '<i class="fas fa-filter-circle-xmark"></i> Ver Todos'
-            : `<i class="fas fa-filter"></i> Duplicados${totalDuplicados ? ' (' + totalDuplicados + ')' : ''}`;
-
-        tableInstance.draw();
-    }
-
-    // Se a última tentativa de Validar/Emitir foi barrada por duplicidade, o servidor
-    // redireciona para cá com ?duplicados=1,2,3&bloqueio=validar|emitir. Mostra o aviso
-    // padrão (mesma caixa amarela usada no resto do sistema) explicando o motivo.
-    function avisarDuplicadosDaUrl() {
-        const params = new URLSearchParams(window.location.search);
-        const duplicados = params.get('duplicados');
-        const bloqueio = params.get('bloqueio');
-        if (!duplicados) return;
-
-        const qtd = duplicados.split(',').filter(Boolean).length;
-        let mensagem = '';
-        if (bloqueio === 'validar') {
-            mensagem = `Existem ${qtd} registo(s) duplicado(s) em Importados. Apague ou edite os registos destacados em vermelho antes de validar.`;
-        } else if (bloqueio === 'emitir') {
-            mensagem = `Os registos não duplicados já foram enviados para Emitidos. ${qtd} registo(s) duplicado(s) permaneceram em Pendentes (destacados em vermelho) — apague ou edite-os antes de tentar emitir novamente.`;
-        }
-        if (mensagem) {
-            avisoElegante(mensagem, 'Duplicidade encontrada');
-        }
-    }
-
-    function toggleDeleteAll(source) {
-        let checkboxes = document.getElementsByClassName('chk-row');
-        for(let i=0; i<checkboxes.length; i++) {
-            checkboxes[i].checked = source.checked;
-        }
-    }
-
-    function processarAcaoEmLote(acao, mensagemConfirmacao) {
-        const marcados = document.querySelectorAll('.chk-row:checked');
-        if (marcados.length === 0) {
-            avisoElegante('Selecione ao menos um registo.');
-            return;
-        }
-
-        confirmarElegante(mensagemConfirmacao, function() {
-            const form = document.getElementById('form-delete-fase');
-            form.querySelector('input[name="acao"]').value = acao;
-            form.submit();
-        });
-    }
-
-    // Validar e Enviar para Emitidos agem sobre todos os registos da fase,
-    // não é necessário marcar os checkboxes.
-    function processarAcaoTodos(acao, mensagemConfirmacao) {
-        confirmarElegante(mensagemConfirmacao, function() {
-            const form = document.getElementById('form-delete-fase');
-            form.querySelector('input[name="acao"]').value = acao;
-            form.submit();
-        });
-    }
-
-    function validarSelecionados() {
-        processarAcaoTodos('validar', 'Validar todos os registos e enviá-los para Pendentes?');
-    }
-
-    function enviarParaEmitidos() {
-        processarAcaoTodos('emitir', 'Enviar todos os registos para Emitidos? Depois de emitidos não será mais possível editá-los.');
-    }
-
-    // Preenche hierarquia automaticamente ao trocar a unidade
-    function autoPreencherUnidadeEdicao(selectEl) {
-        const option = selectEl.options[selectEl.selectedIndex];
-        if(option && option.value !== "") {
-            const bloco = selectEl.closest('.row');
-
-            const inputSup = bloco.querySelector('input[name^="superintendencia"]');
-            if(inputSup) inputSup.value = option.getAttribute('data-sup') || '';
-
-            const inputGrupo = bloco.querySelector('input[name^="grupo"]');
-            if(inputGrupo) inputGrupo.value = option.getAttribute('data-grupo') || '';
-
-            const inputNomeUnidade = bloco.querySelector('input[name^="nome_unidade"]');
-            if(inputNomeUnidade) inputNomeUnidade.value = option.getAttribute('data-nome') || '';
-
-            const inputMatGer = bloco.querySelector('input[name^="gerente_agencia"]');
-            if(inputMatGer) inputMatGer.value = option.getAttribute('data-mat-ger') || '';
-
-            const inputMatSup = bloco.querySelector('input[name^="superintendente"]');
-            if(inputMatSup) inputMatSup.value = option.getAttribute('data-mat-sup') || '';
-        }
-    }
-
-    // Busca o colaborador na datalist pela matrícula digitada e preenche o nome
-    // Preenche o nome do colaborador automaticamente ao selecionar a matrícula (mesmo padrão da Unidade)
-    function autoPreencherColaboradorEdicao(selectEl) {
-        const option = selectEl.options[selectEl.selectedIndex];
-        const bloco = selectEl.closest('.row');
-        const inputNome = bloco ? bloco.querySelector('input[name^="nome_colaborador"]') : null;
-        if (!inputNome) return;
-
-        inputNome.value = (option && option.value !== "") ? (option.getAttribute('data-nome') || '') : '';
-    }
-
-    // Seleciona no <select> de Unidade a opção cujo CID (texto exibido) bate com o valor salvo
-    function selecionarUnidadePorCid(selectEl, cid) {
-        if (!selectEl) return;
-        if (!cid) { selectEl.value = ''; return; }
-        for (const opt of selectEl.options) {
-            if (opt.textContent.trim() === cid.trim()) {
-                selectEl.value = opt.value;
-                return;
-            }
-        }
-        selectEl.value = '';
     }
 
     function abrirDetalhes(row) {
@@ -462,6 +501,7 @@
             container.removeChild(container.lastChild);
         }
 
+        // Campos Texto Convencionais
         document.getElementById('edit_id').value = dados.id || '';
         document.getElementById('edit_cliente').value = dados.cliente || '';
         document.getElementById('edit_cpfcnpj').value = dados.cpfcnpj || '';
@@ -478,36 +518,29 @@
         document.getElementById('edit_fimvig').value = dados.fimvig || '';
         document.getElementById('edit_qtdparcelas').value = dados.qtdparcelas || '';
         document.getElementById('edit_renovacao_propria').value = dados.renovacao_propria || '';
-        
         document.getElementById('edit_premio').value = dados.premio ? parseFloat(dados.premio.replace(',','.')).toFixed(2) : '';
         document.getElementById('edit_premio_liquido').value = dados.premio_liquido ? parseFloat(dados.premio_liquido.replace(',','.')).toFixed(2) : '';
         document.getElementById('edit_comissao').value = dados.comissao ? parseFloat(dados.comissao.replace(',','.')).toFixed(2) : '';
         document.getElementById('edit_realizado').value = dados.realizado || '';
-        
         document.getElementById('edit_superintendencia').value = dados.superintendencia || '';
-        document.getElementById('edit_nomeunidade').value = dados.nomeunidade || '';
         document.getElementById('edit_grupo').value = dados.grupo || '';
-        document.getElementById('edit_colaborador').value = dados.colaborador || '';
-        document.getElementById('edit_nomecolaborador').value = dados.nomecolaborador || '';
         document.getElementById('edit_gerente').value = dados.gerente || '';
         document.getElementById('edit_superintendente').value = dados.superintendente || '';
         document.getElementById('edit_observacoes').value = dados.observacoes || '';
 
-        // =========================================================================
-        //  MARCAÇÃO AUTOMÁTICA DOS DROPDOWNS VIA ID RELACIONAL
-        // =========================================================================
+        // Preenche os Dropdowns Customizados Principais
+        setCustomDropdownValue('edit_seguradora_val', 'edit_seguradora_texto', dados.seguradora, listaSeguradoras);
+        setCustomDropdownValue('edit_gruporamo_val', 'edit_gruporamo_texto', dados.gruporamo, listaGrupoRamo);
+        setCustomDropdownValue('edit_tipodoc_val', 'edit_tipodoc_texto', dados.tipodoc, listaTipoDoc);
+        setCustomDropdownValue('edit_tipopessoa_val', 'edit_tipopessoa_texto', dados.tipopessoa, listaTipoPessoa);
+        setCustomDropdownValue('edit_colaborador_val', 'edit_colaborador_texto', dados.colaborador, listaColaboradores);
         
-        $('#edit_seguradora').val(dados.seguradora || '');
-        $('#edit_tipodoc').val(dados.tipodoc || '');
-        $('#edit_tipopessoa').val(dados.tipopessoa || '');
-        $('#edit_unidade').val(dados.unidade || '');
-        $('#edit_gruporamo').val(dados.gruporamo || '');
-
-        // =========================================================================
+        setCustomDropdownValue('edit_unidade_val', 'edit_unidade_texto', dados.unidade, listaUnidades);
+        setCustomDropdownValue('edit_colaborador_endosso_val', 'edit_colaborador_endosso_texto', dados.colaborador, listaColaboradores);
 
         let itensExtras = row.querySelectorAll('.extra-item');
         itensExtras.forEach(item => {
-            adicionarEndosso();
+            adicionarEndosso(); 
             let c = contadorEndossos; 
             
             document.getElementById('edit_mes_' + c).value = item.dataset.mes || '';
@@ -517,21 +550,17 @@
             document.getElementById('edit_fimvig_' + c).value = item.dataset.fimvig || '';
             document.getElementById('edit_qtdparcelas_' + c).value = item.dataset.qtdparcelas || '';
             document.getElementById('edit_renovacao_propria_' + c).value = item.dataset.renovacao || '';
-            
             document.getElementById('edit_premio_' + c).value = item.dataset.premio ? parseFloat(item.dataset.premio).toFixed(2) : '';
             document.getElementById('edit_premio_liquido_' + c).value = item.dataset.premioliquido ? parseFloat(item.dataset.premioliquido).toFixed(2) : '';
             document.getElementById('edit_comissao_' + c).value = item.dataset.comissao ? parseFloat(item.dataset.comissao).toFixed(2) : '';
             document.getElementById('edit_realizado_' + c).value = item.dataset.realizado || '';
-            
-            selecionarUnidadePorCid(document.getElementById('edit_unidade_' + c), item.dataset.unidade);
-
             document.getElementById('edit_superintendencia_' + c).value = item.dataset.superintendencia || '';
-            document.getElementById('edit_nomeunidade_' + c).value = item.dataset.nomeunidade || '';
             document.getElementById('edit_grupo_' + c).value = item.dataset.grupo || '';
-            document.getElementById('edit_colaborador_' + c).value = item.dataset.colaborador || '';
-            document.getElementById('edit_nomecolaborador_' + c).value = item.dataset.nomecolaborador || '';
             document.getElementById('edit_gerente_' + c).value = item.dataset.gerente || '';
             document.getElementById('edit_superintendente_' + c).value = item.dataset.superintendente || '';
+
+            setCustomDropdownValue('edit_unidade_val_' + c, 'edit_unidade_texto_' + c, item.dataset.unidade, listaUnidades);
+            setCustomDropdownValue('edit_colaborador_endosso_val_' + c, 'edit_colaborador_endosso_texto_' + c, item.dataset.colaborador, listaColaboradores);
         });
 
         aplicarModoSomenteLeitura();
@@ -541,27 +570,11 @@
         });
     }
 
-    function aplicarModoSomenteLeitura() {
-        const somenteLeitura = (FASE_ATUAL === 'Emitidos');
-        const form = document.querySelector('#form-fase form');
-
-        form.querySelectorAll('input, select, textarea').forEach(campo => campo.disabled = somenteLeitura);
-
-        const btnSalvar = form.querySelector('button[type="submit"]');
-        if (btnSalvar) btnSalvar.style.display = somenteLeitura ? 'none' : '';
-
-        document.querySelectorAll('#container-endossos .btn-outline-danger').forEach(btn => btn.style.display = somenteLeitura ? 'none' : '');
-
-        const btnAdicionarEndosso = document.querySelector('button[onclick="adicionarEndosso()"]');
-        if (btnAdicionarEndosso) btnAdicionarEndosso.style.display = somenteLeitura ? 'none' : '';
-    }
-
     function adicionarEndosso() {
         contadorEndossos++;
         
         let blocoOriginal = document.getElementById('endosso-1');
         let novoBloco = blocoOriginal.cloneNode(true);
-        
         novoBloco.id = 'endosso-' + contadorEndossos;
         
         let titulo = novoBloco.querySelector('.titulo-endosso');
@@ -572,31 +585,28 @@
             </button>
         `;
         
-        let inputs = novoBloco.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.value = ''; 
-            
-            let nomeOriginal = input.getAttribute('name');
-            if(nomeOriginal) {
-                nomeOriginal = nomeOriginal.replace(/_\d+$/, ''); 
-                input.setAttribute('name', nomeOriginal + '_' + contadorEndossos);
+        let inputsEdivs = novoBloco.querySelectorAll('input, div.lista-suspensa');
+        inputsEdivs.forEach(el => {
+            if(el.tagName === 'INPUT') {
+                el.value = ''; 
+                let nomeOriginal = el.getAttribute('name');
+                if(nomeOriginal) {
+                    nomeOriginal = nomeOriginal.replace(/_\d+$/, ''); 
+                    el.setAttribute('name', nomeOriginal + '_' + contadorEndossos);
+                }
             }
-            
-            let idOriginal = input.getAttribute('id');
+            let idOriginal = el.getAttribute('id');
             if(idOriginal) {
                 idOriginal = idOriginal.replace(/_\d+$/, '');
-                input.setAttribute('id', idOriginal + '_' + contadorEndossos);
+                el.setAttribute('id', idOriginal + '_' + contadorEndossos);
             }
         });
         
         document.getElementById('container-endossos').appendChild(novoBloco);
-    }
 
-    function removerEndosso(botao) {
-        confirmarElegante('Tem a certeza que deseja remover este endosso da ficha?', function() {
-            botao.closest('.bloco-endosso').remove();
-            reorganizarEndossos();
-        }, { titulo: 'Remover endosso', textoConfirmar: 'Sim, remover', corBotao: 'danger' });
+        let p = '_' + contadorEndossos;
+        inicializarDropdownPesquisa('edit_unidade_texto' + p, 'edit_unidade_val' + p, 'dropdown_unidade' + p, listaUnidades, function(item){ autoPreencherUnidadeDrop(item, p); });
+        inicializarDropdownPesquisa('edit_colaborador_endosso_texto' + p, 'edit_colaborador_endosso_val' + p, 'dropdown_colaborador_endosso' + p, listaColaboradores);
     }
 
     function reorganizarEndossos() {
@@ -606,7 +616,6 @@
         for(let i = 1; i < blocos.length; i++) {
             contadorEndossos++;
             let bloco = blocos[i];
-            
             bloco.id = 'endosso-' + contadorEndossos;
             
             let titulo = bloco.querySelector('.titulo-endosso');
@@ -619,21 +628,48 @@
                 `;
             }
             
-            let inputs = bloco.querySelectorAll('input, select');
-            inputs.forEach(input => {
-                let nomeOriginal = input.getAttribute('name');
-                if(nomeOriginal) {
-                    nomeOriginal = nomeOriginal.replace(/_\d+$/, ''); 
-                    input.setAttribute('name', nomeOriginal + '_' + contadorEndossos);
+            let inputsEdivs = bloco.querySelectorAll('input, div.lista-suspensa');
+            inputsEdivs.forEach(el => {
+                if(el.tagName === 'INPUT') {
+                    let nomeOriginal = el.getAttribute('name');
+                    if(nomeOriginal) {
+                        nomeOriginal = nomeOriginal.replace(/_\d+$/, ''); 
+                        el.setAttribute('name', nomeOriginal + '_' + contadorEndossos);
+                    }
                 }
-                
-                let idOriginal = input.getAttribute('id');
+                let idOriginal = el.getAttribute('id');
                 if(idOriginal) {
                     idOriginal = idOriginal.replace(/_\d+$/, '');
-                    input.setAttribute('id', idOriginal + '_' + contadorEndossos);
+                    el.setAttribute('id', idOriginal + '_' + contadorEndossos);
                 }
             });
+
+            let p = '_' + contadorEndossos;
+            inicializarDropdownPesquisa('edit_unidade_texto' + p, 'edit_unidade_val' + p, 'dropdown_unidade' + p, listaUnidades, function(item){ autoPreencherUnidadeDrop(item, p); });
+            inicializarDropdownPesquisa('edit_colaborador_endosso_texto' + p, 'edit_colaborador_endosso_val' + p, 'dropdown_colaborador_endosso' + p, listaColaboradores);
         }
+    }
+
+    function removerEndosso(botao) {
+        confirmarElegante('Tem a certeza que deseja remover este endosso da ficha?', function() {
+            botao.closest('.bloco-endosso').remove();
+            reorganizarEndossos();
+        }, { titulo: 'Remover endosso', textoConfirmar: 'Sim, remover', corBotao: 'danger' });
+    }
+
+    function aplicarModoSomenteLeitura() {
+        const somenteLeitura = (FASE_ATUAL === 'Emitidos');
+        const form = document.querySelector('#form-fase form');
+
+        form.querySelectorAll('input, textarea').forEach(campo => campo.disabled = somenteLeitura);
+
+        const btnSalvar = form.querySelector('button[type="submit"]');
+        if (btnSalvar) btnSalvar.style.display = somenteLeitura ? 'none' : '';
+
+        document.querySelectorAll('#container-endossos .btn-outline-danger').forEach(btn => btn.style.display = somenteLeitura ? 'none' : '');
+
+        const btnAdicionarEndosso = document.querySelector('button[onclick="adicionarEndosso()"]');
+        if (btnAdicionarEndosso) btnAdicionarEndosso.style.display = somenteLeitura ? 'none' : '';
     }
 
     function fecharDetalhes() {
@@ -643,13 +679,10 @@
         });
     }
 
-    // Mapa campo-do-servidor -> id do input/select na ficha, usado para marcar
-    // visualmente qual(is) campo(s) formam a chave duplicada (Seguradora + Grupo/Ramo +
-    // Tipo de Documento + Documento + Endosso)
     const MAPA_CAMPOS_CHAVE = {
-        seguradora: 'edit_seguradora',
-        grupo_ramo: 'edit_gruporamo',
-        tipo_documento: 'edit_tipodoc',
+        seguradora: 'edit_seguradora_texto',
+        grupo_ramo: 'edit_gruporamo_texto',
+        tipo_documento: 'edit_tipodoc_texto',
         documento: 'edit_documento',
         endosso: 'edit_endosso',
     };
@@ -668,10 +701,7 @@
         });
     }
 
-    // Envia a ficha de edição via AJAX: se o servidor recusar (ex.: chave duplicada
-    // em Pendentes), o aviso aparece na hora e a ficha continua aberta com os dados
-    // tal como foram digitados - um redirect/reload normal perderia tudo isso.
-    function configurarSubmissaoEdicao() {
+function configurarSubmissaoEdicao() {
         const formEditar = document.querySelector('#form-fase form');
         if (!formEditar) return;
 
@@ -679,24 +709,89 @@
             event.preventDefault();
             limparMarcacaoDuplicados();
 
+            let formData = new FormData(formEditar);
+
+            for (let [key, value] of formData.entries()) {
+                if ((key.startsWith('premio_bruto') || key.startsWith('premio_liquido') || key.startsWith('perc_comissao')) && value) {
+                    formData.set(key, value.replace('.', ','));
+                }
+            }
+
             fetch(formEditar.action, {
                 method: 'POST',
-                body: new FormData(formEditar),
+                body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             })
-                .then(resp => resp.json())
-                .then(resposta => {
-                    if (resposta.sucesso) {
-                        window.location.href = formEditar.action;
-                    } else {
-                        marcarCamposDuplicados(resposta.campos_duplicados);
-                        avisoElegante(resposta.erro || 'Não foi possível guardar as alterações.', 'Não foi possível guardar');
-                    }
-                })
-                .catch(function() {
-                    avisoElegante('Erro de comunicação com o servidor. Tente novamente.', 'Erro');
-                });
+            .then(resp => resp.json())
+            .then(resposta => {
+                if (resposta.sucesso) {
+                    window.location.href = formEditar.action;
+                } else {
+                    marcarCamposDuplicados(resposta.campos_duplicados);
+                    avisoElegante(resposta.erro || 'Não foi possível guardar as alterações.', 'Não foi possível guardar');
+                }
+            })
+            .catch(function() {
+                avisoElegante('Erro de comunicação com o servidor. Tente novamente.', 'Erro');
+            });
         });
     }
+
+    let filtroDuplicadosAtivo = false;
+    $.fn.dataTable.ext.search.push(function(settings, searchData, dataIndex) {
+        if (settings.nTable.id !== 'tabela-fase' || !filtroDuplicadosAtivo) return true;
+        const linha = settings.aoData[dataIndex].nTr;
+        return $(linha).hasClass('table-danger');
+    });
+
+    function toggleFiltroDuplicados() {
+        const btn = document.getElementById('btn-filtro-duplicados');
+        const totalDuplicados = tableInstance ? tableInstance.rows().nodes().to$().filter('.table-danger').length : 0;
+        if (!filtroDuplicadosAtivo && totalDuplicados === 0) {
+            avisoElegante('Nenhum registo duplicado encontrado nesta lista.');
+            return;
+        }
+        filtroDuplicadosAtivo = !filtroDuplicadosAtivo;
+        btn.classList.toggle('btn-outline-danger', !filtroDuplicadosAtivo);
+        btn.classList.toggle('btn-danger', filtroDuplicadosAtivo);
+        btn.classList.toggle('text-white', filtroDuplicadosAtivo);
+        btn.innerHTML = filtroDuplicadosAtivo
+            ? '<i class="fas fa-filter-circle-xmark"></i> Ver Todos'
+            : `<i class="fas fa-filter"></i> Duplicados${totalDuplicados ? ' (' + totalDuplicados + ')' : ''}`;
+        tableInstance.draw();
+    }
+
+    function avisarDuplicadosDaUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const duplicados = params.get('duplicados');
+        const bloqueio = params.get('bloqueio');
+        if (!duplicados) return;
+
+        const qtd = duplicados.split(',').filter(Boolean).length;
+        let mensagem = '';
+        if (bloqueio === 'validar') {
+            mensagem = `Existem ${qtd} registo(s) duplicado(s) em Importados. Apague ou edite os registos destacados em vermelho antes de validar.`;
+        } else if (bloqueio === 'emitir') {
+            mensagem = `Os registos não duplicados já foram enviados para Emitidos. ${qtd} registo(s) duplicado(s) permaneceram em Pendentes (destacados em vermelho) — apague ou edite-os antes de tentar emitir novamente.`;
+        }
+        if (mensagem) avisoElegante(mensagem, 'Duplicidade encontrada');
+    }
+
+    function toggleDeleteAll(source) {
+        let checkboxes = document.getElementsByClassName('chk-row');
+        for(let i=0; i<checkboxes.length; i++) checkboxes[i].checked = source.checked;
+    }
+
+    function processarAcaoTodos(acao, mensagemConfirmacao) {
+        confirmarElegante(mensagemConfirmacao, function() {
+            const form = document.getElementById('form-delete-fase');
+            form.querySelector('input[name="acao"]').value = acao;
+            form.submit();
+        });
+    }
+
+    function validarSelecionados() { processarAcaoTodos('validar', 'Validar todos os registos e enviá-los para Pendentes?'); }
+    function enviarParaEmitidos() { processarAcaoTodos('emitir', 'Enviar todos os registos para Emitidos? Depois de emitidos não será mais possível editá-los.'); }
+
 </script>
 {% endblock %}

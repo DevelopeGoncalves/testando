@@ -58,7 +58,7 @@
                         </div>
                         
                         <div class="col-md-4 mb-3">
-                            <label class="form-label d-block">Usuário Ativo</label>
+                            <label class="form-label d-block">Usuário ativo</label>
                             <div class="form-check form-switch mt-2 fs-5">
                                 {{ form.is_active }}
                                 <label class="form-check-label ms-2 fs-6 mt-1" style="cursor: pointer;" for="{{ form.is_active.id_for_label }}"></label>
@@ -92,7 +92,7 @@
                     </div>      
                     
                     <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4 mt-4">
-                        <h5 class="text-secondary mb-0"><i class="fas fa-shield-alt me-2"></i>Permissões</h5>
+                        <h5 class="text-secondary mb-0"><i class="fas fa-shield-alt me-2"></i>Páginas disponíveis</h5>
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEspelho">
                             <i class="fas fa-copy me-1"></i> Usuário Espelho
                         </button>
@@ -180,9 +180,9 @@
                                     </div>
 
                                     <div class="form-check form-switch mt-2 fs-5 mb-2">
-                                        {{ form.sub_fin_extratos }}
-                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_fin_extratos.id_for_label }}">
-                                            Extratos
+                                        {{ form.sub_fin_processamentos }}
+                                        <label class="form-check-label ms-2 fs-6 mt-1 text-secondary" style="cursor: pointer;" for="{{ form.sub_fin_processamentos.id_for_label }}">
+                                            Processamentos
                                         </label>
                                     </div>
 
@@ -246,11 +246,11 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light">
-                <h6 class="modal-title text-secondary fw-bold"><i class="fas fa-users me-2"></i>Copiar Permissões de Usuário</h6>
+                <h6 class="modal-title text-secondary"><i class="fas fa-users me-2"></i>Espelhar usuário</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <label class="form-label text-muted">Busque o usuário base:</label>
+                <label class="form-label text-muted">Selecionar o usuário base</label>
                 
                 <div class="input-container">
                     <input type="text" id="input-busca-espelho" class="form-control" placeholder="Digite o login ou matrícula..." autocomplete="off">
@@ -296,7 +296,7 @@
                 "id_sub_prod_processamentos": {{ p.sub_prod_processamentos|yesno:"true,false" }},
                 "id_sub_prod_relatorios": {{ p.sub_prod_relatorios|yesno:"true,false" }},
                 "id_sub_fin_formularios": {{ p.sub_fin_formularios|yesno:"true,false" }},
-                "id_sub_fin_extratos": {{ p.sub_fin_extratos|yesno:"true,false" }},
+                "id_sub_fin_processamentos": {{ p.sub_fin_processamentos|yesno:"true,false" }},
                 "id_sub_fin_relatorios": {{ p.sub_fin_relatorios|yesno:"true,false" }},
                 "id_sub_admin_criar": {{ p.sub_admin_criar|yesno:"true,false" }},
                 "id_sub_admin_estagiarios": {{ p.sub_admin_estagiarios|yesno:"true,false" }},
