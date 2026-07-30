@@ -557,6 +557,10 @@
     }
 
     //trava ligacao 
+    // ALEX: função-chave do bloqueio. Decide se a ÚLTIMA ligação já está "concluída" (venda
+    // fechada) ou se ainda está "em aberto" (ex: só com Próximo contato preenchido).
+    // É essa decisão que outras funções (abrirModalLigacao, adicionarLigacao) usam para
+    // impedir a criação de uma ligação nova enquanto a atual não for finalizada.
     function ultimoBlocoConcluido() {
     let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
     if (blocos.length === 0) return true;
@@ -574,6 +578,9 @@
     return vendaFechada;
 }
 
+// ALEX: função que TRAVA (disabled) todos os blocos de ligação anteriores, deixando
+// editável apenas o último bloco (a ligação atual/ativa). É chamada sempre que um bloco
+// novo é adicionado (adicionarLigacao) ou removido (reorganizarLigacoes/removerLigacao).
 function atualizarEstadoLigacoes() {
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
         
@@ -584,7 +591,7 @@ function atualizarEstadoLigacoes() {
             let titulo = bloco.querySelector('.titulo-ligacao');
 
             campos.forEach(c => {
-                // Trava os campos das ligações anteriores
+                // ALEX: trava (disabled=true) TODOS os campos das ligações que não são a última.
                 c.disabled = !isUltimo; 
             });
 
@@ -834,6 +841,9 @@ function atualizarEstadoLigacoes() {
     // Chamada ao ABRIR uma ficha que já tem ligações salvas (modo edição): não abre o
     // pop-up, apenas ajusta os botões (mostra "Registrar outra Ligação") e o resumo. Os
     // dados das ligações já foram carregados nos blocos por editarIndicacao().
+    // ALEX: marca que a ficha JÁ TEM pelo menos uma ligação salva (algumaLigacaoSalva=true).
+    // Essa flag é usada em cancelarLigacaoModal() pra decidir se reseta tudo (ficha nova,
+    // sem ligação) ou só desfaz o que foi digerido na sessão atual do pop-up.
     function iniciarPrimeiraLigacao() {
         algumaLigacaoSalva = true;
         $('#btn-iniciar-ligacao').hide();
@@ -850,9 +860,13 @@ function atualizarEstadoLigacoes() {
         $('#ligacao-1').show();
         blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
         
-        // Se você clicou no botão "Registrar outra Ligação" lá fora na ficha...
+        // ALEX: aqui é onde acontece o "reabrir a mesma ligação pendente". Se a última
+        // ligação NÃO estiver concluída (ultimoBlocoConcluido() === false, ex: só tem
+        // "Próximo contato" preenchido), o if abaixo não executa e o pop-up simplesmente
+        // abre em cima do bloco existente, sem criar um novo — é assim que o usuário
+        // continua a MESMA ligação em vez de começar outra.
         if (!primeira) {
-            // ... e a última ligação já tiver um desfecho (ex: Próximo Contato marcado),
+            // ... e a última ligação já tiver um desfecho (venda fechada: Canal + Prêmio),
             // o sistema CRIA UM NOVO BLOCO SOZINHO automaticamente.
             if (ultimoBlocoConcluido()) {
                 adicionarLigacao(true);
@@ -952,6 +966,10 @@ function atualizarEstadoLigacoes() {
         return m ? (m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5]) : iso;
     }
 
+    // ALEX: pop-up de HISTÓRICO (somente leitura) de todas as ligações já salvas de um
+    // registro. Não trava/desbloqueia nada, só exibe. Os dados vêm da célula oculta
+    // .dados-ligacoes-extras, que já é renderizada pelo backend (ordenada da mais recente
+    // pra mais antiga).
     // Monta e abre o histórico de ligações do registro (lê os dados já embutidos na
     // linha, na célula oculta .dados-ligacoes-extras). A mais recente aparece no topo,
     // em destaque.
@@ -1005,6 +1023,8 @@ function atualizarEstadoLigacoes() {
         modalHistorico.show();
     }
 
+    // ALEX: volta o pop-up de ligação pro estado "zerado" (0 ligações), usado quando abre
+    // uma ficha NOVA (sem histórico) ou quando cancela sem nenhuma ligação salva antes.
     function resetarContainerLigacoes() {
         contadorLigacoes = 1;
         let container = document.getElementById('container-ligacoes');
@@ -1035,6 +1055,10 @@ function atualizarEstadoLigacoes() {
     // Vendas Central e Vendas Agência continuam mutuamente exclusivos entre si e com o
     // Motivo Não Venda (marcar um desativa os outros dois). Já o Motivo Não Venda nunca
     // fica desabilitado: o usuário pode selecioná-lo a qualquer momento.
+    // ALEX: trava/destrava campos DENTRO do mesmo bloco (Vendas Central, Vendas Agência,
+    // Motivo Não Venda, Prêmio Total, Próximo contato) para que sejam mutuamente exclusivos.
+    // É aqui que "Próximo contato" fica desabilitado assim que Central/Agência/Motivo é
+    // preenchido, e "Prêmio Total" só é liberado quando Central ou Agência é marcado.
     function sincronizarExclusividadeVenda(bloco) {
         if (!bloco) return;
         let campoCentral = bloco.querySelector('input[name^="ligacao_venda_central"]');
@@ -1077,6 +1101,10 @@ function atualizarEstadoLigacoes() {
         // quando a ligação ainda está em aberto (sem venda e sem motivo definido). Ao
         // marcar/selecionar qualquer um deles a ligação foi concluída, então desabilita
         // e limpa (campo desabilitado não vai no POST).
+        // ALEX: aqui "Próximo contato" é travado (disabled) se QUALQUER um dos três campos
+        // (Central, Agência ou Motivo) estiver preenchido no bloco atual. Isso é diferente do
+        // bloqueio de ultimoBlocoConcluido(): este aqui é só visual/campo-a-campo dentro do
+        // mesmo bloco, não é o que decide se pode abrir uma ligação nova.
         if (campoProximo) {
             let ligacaoConcluida = temCentral || temAgencia || temMotivo;
             campoProximo.disabled = ligacaoConcluida;
@@ -1220,7 +1248,11 @@ function atualizarEstadoLigacoes() {
     }
 
     function adicionarLigacao(forcar = false) {
-        // A validação impede o acréscimo a menos que seja forçado (histórico) ou concluído
+        // ALEX: esse if é o BLOQUEIO em si — impede criar/registrar uma ligação nova
+        // (manualmente, pelo botão "+Registrar outra Ligação") enquanto a última ligação
+        // não estiver com a venda fechada. "forcar=true" é usado só internamente (ex: ao
+        // recarregar o histórico de uma ficha já salva em editarIndicacao), pra não travar
+        // ligações antigas que já foram carregadas do banco.
         if (!forcar && !ultimoBlocoConcluido()) {
             avisoElegante('Só é possível registrar uma nova ligação após finalizar a venda da ligação atual (marque "Vendas Central" ou "Vendas Agência" e informe o Prêmio Total).', 'Ação não permitida');
             return;
