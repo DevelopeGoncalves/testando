@@ -304,34 +304,33 @@
                         </div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
-                        <div class="col-md-1"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
-                    </div>
-
-
-                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
-                    <div class="row g-3">
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail do indicador (se não for você)</label>{{ form_indicacao.email_indicador_outro }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Matrícula do indicador</label>{{ form_indicacao.matricula_indicador }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome do indicador</label>{{ form_indicacao.nome_indicador }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone do indicador</label>{{ form_indicacao.telefone_indicador }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Enviar orçamento para</label>{{ form_indicacao.enviar_orcamento_para }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Origem da informação</label>{{ form_indicacao.origem_informacao }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
                     </div>
 
                     <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user"></i> Dados do Cliente</h5>
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="fw-bold small mb-1">Nome do cliente</label>{{ form_indicacao.nome_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone do cliente</label>{{ form_indicacao.telefone_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF do cliente</label>{{ form_indicacao.cpf_cliente }}</div>
-                        <div class="col-md-4"><label class="fw-bold small mb-1">E-mail do cliente</label>{{ form_indicacao.email_cliente }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF</label>{{ form_indicacao.cpf_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
 
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Produto</label>{{ form_indicacao.produto }}</div>
-                        <div class="col-md-4"><label class="fw-bold small mb-1">Dados do veículo (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                        <!--<div class="col-md-2"><label class="fw-bold small mb-1">Produto</label>{{ form_indicacao.produto }}</div> -->
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                         
                         
+                    </div>
+
+                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
+                    <div class="row g-3">
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_indicador }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">E-mail do indicador (se não for você)</label>{{ form_indicacao.email_indicador_outro }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Enviar orçamento para</label>{{ form_indicacao.enviar_orcamento_para }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Origem da informação</label>{{ form_indicacao.origem_informacao }}</div>
                     </div>
 
                     <!-- NOVO: Container onde o histórico vai aparecer fora do modal -->
