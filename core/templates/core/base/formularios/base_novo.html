@@ -630,14 +630,21 @@
                     </div>
                     <div class="card-body py-2" style="font-size: 0.9rem;">
                         <div class="row g-2">
-                            <div class="col-md-3"><strong>Protocolo:</strong> ${protVal || '-'}</div>
-                            <div class="col-md-2"><strong>Ramal:</strong> ${ramalVal || '-'}</div>
-                            <div class="col-md-3"><strong>Venda:</strong> ${venda}</div>
-                            <div class="col-md-4"><strong>Prêmio Total:</strong> ${premioVal ? 'R$ ' + premioVal : '-'}</div>
-                            <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
-                            <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
-                            <div class="col-md-4"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
-                            <div class="col-md-12"><strong>Observações:</strong> <span style="white-space: pre-line;">${obsVal || '-'}</span></div>
+                            <div class="col-md-8">
+                                <div class="row g-2">
+                                    <div class="col-md-4"><strong>Protocolo:</strong> ${protVal || '-'}</div>
+                                    <div class="col-md-4"><strong>Ramal:</strong> ${ramalVal || '-'}</div>
+                                    <div class="col-md-4"><strong>Venda:</strong> ${venda}</div>
+                                    <div class="col-md-4"><strong>Prêmio Total:</strong> ${premioVal ? 'R$ ' + premioVal : '-'}</div>
+                                    <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
+                                    <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
+                                    <div class="col-md-12"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 border-start">
+                                <strong>Observações:</strong>
+                                <div style="white-space: pre-line;">${obsVal || '-'}</div>
+                            </div>
                         </div>
                     </div>
                 </div>`);
@@ -974,14 +981,18 @@
               +   '</div>'
               +   '<div class="card-body py-2" style="font-size:.9rem;">'
               +     '<div class="row g-2">'
-              +       '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
-              +       '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
-              +       '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
-              +       '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
-              +       '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
-              +       '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
-              +       '<div class="col-md-8"><strong>Observações:</strong> <span style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</span></div>'
-              +       '<div class="col-md-4"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +       '<div class="col-md-8">'
+              +         '<div class="row g-2">'
+              +           '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
+              +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +           '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-4 border-start"><strong>Observações:</strong><div style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</div></div>'
               +     '</div>'
               +   '</div>'
               + '</div>';
