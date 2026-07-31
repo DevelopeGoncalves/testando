@@ -381,18 +381,18 @@
                                                         <input type="text" class="form-control form-control-sm" name="ligacao_ramal" id="edit_ligacao_ramal">
                                                     </div>
 
-                                                    <div class="col-md-1 d-flex flex-column align-items-center">
-                                                        <label class="fw-small mb-1">Venda Central</label>
-                                                        <div class="form-check mt-1">
-                                                            <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-md-1 d-flex flex-column align-items-center">
-                                                        <label class="fw-small mb-1">Venda Agência</label>
-                                                        <div class="form-check mt-1">
-                                                            <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
-                                                        </div>
+                                                    <div class="col-md-2">
+                                                        <label class="fw-small mb-1">Vendas</label>
+                                                        <select class="form-select form-select-sm" id="edit_ligacao_vendas" data-vendas-select onchange="aplicarSelecaoVendas(this)">
+                                                            <option value="">-- Selecione --</option>
+                                                            <option value="central">Central</option>
+                                                            <option value="agencia">Agência</option>
+                                                        </select>
+                                                        <!-- Checkboxes ocultos: preservam o contrato com o backend
+                                                             (ligacao_venda_central / ligacao_agn). Quem os controla é o
+                                                             select "Vendas" acima, via aplicarSelecaoVendas(). -->
+                                                        <input type="checkbox" class="d-none campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central" tabindex="-1" aria-hidden="true">
+                                                        <input type="checkbox" class="d-none campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn" tabindex="-1" aria-hidden="true">
                                                     </div>
 
                                                     <div class="col-md-3">
@@ -617,7 +617,7 @@
                 let motText = motSelect.options[motSelect.selectedIndex]?.text;
                 if(motText === "-- Selecione --" || !motText) motText = "";
 
-                let canal = central ? 'Vendas Central' : (agn ? 'Vendas Agência' : (motText ? 'Não venda' : 'Em aberto'));
+                let venda = central ? 'Central' : (agn ? 'Agência' : '-');
                 let numero = index + 1;
 
                 // Guarda o card no array em vez de concatenar direto
@@ -632,12 +632,12 @@
                         <div class="row g-2">
                             <div class="col-md-3"><strong>Protocolo:</strong> ${protVal || '-'}</div>
                             <div class="col-md-2"><strong>Ramal:</strong> ${ramalVal || '-'}</div>
-                            <div class="col-md-3"><strong>Canal:</strong> ${canal || '-'}</div>
+                            <div class="col-md-3"><strong>Venda:</strong> ${venda}</div>
                             <div class="col-md-4"><strong>Prêmio Total:</strong> ${premioVal ? 'R$ ' + premioVal : '-'}</div>
                             <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
                             <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
                             <div class="col-md-4"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
-                            <div class="col-md-12"><strong>Observações:</strong> ${obsVal || '-'}</div>
+                            <div class="col-md-12"><strong>Observações:</strong> <span style="white-space: pre-line;">${obsVal || '-'}</span></div>
                         </div>
                     </div>
                 </div>`);
@@ -958,9 +958,9 @@
         arr.forEach(function(item, idx) {
             var d = item.dataset;
             var ehUltima = (idx === 0);
-            var canal = d.vendaCentral === '1' ? 'Vendas Central'
-                      : d.agn === '1' ? 'Vendas Agência'
-                      : (d.motivo ? 'Não venda' : 'Em aberto');
+            var venda = d.vendaCentral === '1' ? 'Central'
+                      : d.agn === '1' ? 'Agência'
+                      : '-';
             var motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
             var premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
             var numero = total - idx; // 1ª, 2ª... na ordem cronológica
@@ -976,11 +976,11 @@
               +     '<div class="row g-2">'
               +       '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
               +       '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
-              +       '<div class="col-md-4"><strong>Canal:</strong> ' + escHtml(canal) + '</div>'
+              +       '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
               +       '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
               +       '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
               +       '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
-              +       '<div class="col-md-8"><strong>Observações:</strong> ' + (escHtml(d.obs) || '-') + '</div>'
+              +       '<div class="col-md-8"><strong>Observações:</strong> <span style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</span></div>'
               +       '<div class="col-md-4"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
               +     '</div>'
               +   '</div>'
@@ -1088,6 +1088,35 @@
                 campoProximo.value = '';
             }
         }
+
+        // Mantém o select "Vendas" (visível) coerente com os checkboxes ocultos.
+        sincronizarSelectVendas(bloco);
+    }
+
+    // Aplica a escolha do select "Vendas" (Central/Agência) nos checkboxes ocultos que o
+    // backend usa (ligacao_venda_central / ligacao_agn) e re-sincroniza os estados do bloco.
+    function aplicarSelecaoVendas(selectEl) {
+        let bloco = selectEl.closest('.bloco-ligacao');
+        if (!bloco) return;
+        let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+        let agn = bloco.querySelector('input[name^="ligacao_agn"]');
+        if (central) central.checked = (selectEl.value === 'central');
+        if (agn) agn.checked = (selectEl.value === 'agencia');
+        sincronizarExclusividadeVenda(bloco);
+        // Escolher a venda conta como "informar um dado": gera protocolo e data/hora.
+        if (selectEl.value) gerarProtocoloEDataSeNecessario($(bloco));
+    }
+
+    // Reflete no select "Vendas" o estado atual dos checkboxes ocultos e o desabilita
+    // quando um "Motivo Não Venda" está selecionado (venda e não-venda são exclusivos).
+    function sincronizarSelectVendas(bloco) {
+        let sel = bloco.querySelector('[data-vendas-select]');
+        if (!sel) return;
+        let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+        let agn = bloco.querySelector('input[name^="ligacao_agn"]');
+        let motivo = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
+        sel.value = (central && central.checked) ? 'central' : ((agn && agn.checked) ? 'agencia' : '');
+        sel.disabled = !!(motivo && motivo.value !== '');
     }
 
     // Máscara de milhar (formato brasileiro): os dígitos digitados são tratados como
