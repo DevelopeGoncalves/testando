@@ -278,7 +278,7 @@
 
                     <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="fw-bold small mb-1">Seguradora</label>
                             <div class="input-container">
                                 <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
@@ -302,8 +302,9 @@
                                 <div id="base_novo_dropdown_tipo_documento" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
+                        <div class="col-md-1"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
                     </div>
 
 
@@ -329,7 +330,7 @@
 
                         <div class="col-md-3"><label class="fw-bold small mb-1">Produto</label>{{ form_indicacao.produto }}</div>
                         <div class="col-md-4"><label class="fw-bold small mb-1">Dados do veículo (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
+                        
                         
                     </div>
 
