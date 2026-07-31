@@ -333,9 +333,12 @@
                         
                     </div>
 
+                    <!-- NOVO: Container onde o histórico vai aparecer fora do modal -->
+                    <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
 
                     {% if apenas_pendentes %}
                     <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação -->
+
                     <div class="mt-4 text-end border-bottom pb-4">
                         <span id="resumo-ligacoes" class="text-success fw-bold me-3"></span>
                         <button type="button" id="btn-iniciar-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalLigacao(true)">
@@ -348,8 +351,8 @@
 
                     <!-- POP-UP para registrar a ligação. -->
                     <div class="modal fade" id="modalLigacao" tabindex="-1" aria-labelledby="modalLigacaoLabel"
-                         data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
-                      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                        data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
@@ -358,83 +361,87 @@
                                 <div id="container-ligacoes">
                                     <div class="bloco-ligacao" id="ligacao-1">
                                         <h5 class="text-primary border-bottom pb-2 mb-3 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
-                                        <div class="row g-2">
+                                        <div class="row g-3">
+                                            
+                                            <div class="col-md-8">
+                                                
+                                                <div class="row g-2">
+                                                    <div class="col-md-3">
+                                                        <label class="fw-small mb-1">Data/Hora da Ligação</label>
+                                                        <input type="datetime-local" step="1" class="form-control form-control-sm" name="ligacao_data" id="edit_ligacao_data">
+                                                    </div>
 
-                                            <div class="col-md-3">
-                                                <label class="fw- small mb-1">Data/Hora da Ligação</label>
-                                                <input type="datetime-local" step="1" class="form-control form-control-sm" name="ligacao_data" id="edit_ligacao_data">
-                                            </div>
+                                                    <div class="col-md-2">
+                                                        <label class="fw-small mb-1">Protocolo</label>
+                                                        <input type="text" class="form-control form-control-sm bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(automático)">
+                                                    </div>
 
-                                            <div class="col-md-2">
-                                                <label class="fw small mb-1">Protocolo</label>
-                                                <input type="text" class="form-control form-control-sm bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(automático)">
-                                            </div>
+                                                    <div class="col-md-2">
+                                                        <label class="fw-small mb-1">Ramal</label>
+                                                        <input type="text" class="form-control form-control-sm" name="ligacao_ramal" id="edit_ligacao_ramal">
+                                                    </div>
 
-                                            <div class="col-md-2">
-                                                <label class="fw small mb-1">Ramal</label>
-                                                <input type="text" class="form-control form-control-sm" name="ligacao_ramal" id="edit_ligacao_ramal">
-                                            </div>
+                                                    <div class="col-md-1 d-flex flex-column align-items-center">
+                                                        <label class="fw-small mb-1">Venda Central</label>
+                                                        <div class="form-check mt-1">
+                                                            <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
+                                                        </div>
+                                                    </div>
 
-                                            <div class="col-md-1 d-flex flex-column">
-                                                <label class="fw small mb-1">Vendas Central</label>
-                                                <div class="form-check mt-1">
-                                                    <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central">
+                                                    <div class="col-md-1 d-flex flex-column align-items-center">
+                                                        <label class="fw-small mb-1">Venda Agência</label>
+                                                        <div class="form-check mt-1">
+                                                            <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <label class="fw-small mb-1">Prêmio Total</label>
+                                                        <input type="text" inputmode="numeric" class="form-control form-control-sm campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div class="col-md-1 d-flex flex-column">
-                                                <label class="fw small mb-1">Vendas Agência</label>
-                                                <div class="form-check mt-1">
-                                                    <input type="checkbox" class="form-check-input campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn">
+                                                <div class="row g-2 mt-2">
+                                                    <div class="col-md-3">
+                                                        <label class="fw-small mb-1">Próximo contato</label>
+                                                        <input type="datetime-local" step="1" class="form-control form-control-sm campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-5">
+                                                        <label class="fw-small mb-1">Motivo Não Venda</label>
+                                                        <select class="form-select form-select-sm" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
+                                                            <option value="">-- Selecione --</option>
+                                                            {% for m in motivos_nao_venda %}
+                                                            <option value="{{ m.id }}">{{ m.motivo }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="col-md-4">
+                                                        <label class="fw-small mb-1">Cadastrado por</label>
+                                                        <input type="text" class="form-control form-control-sm bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
+                                                    </div>
                                                 </div>
+                                                
                                             </div>
 
-                                            <div class="col-md-3">
-                                                <label class="fw small mb-1">Prêmio Total</label>
-                                                <input type="text" inputmode="numeric" class="form-control form-control-sm campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
-                                            </div>
-
-                                            <div class="col-md-3">
-                                                <label class="fw small mb-1">Motivo Não Venda</label>
-                                                <select class="form-select form-select-sm" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
-                                                    <option value="">-- Selecione --</option>
-                                                    {% for m in motivos_nao_venda %}
-                                                    <option value="{{ m.id }}">{{ m.motivo }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-
-                                            <div class="col-md-3">
-                                                <label class="fw small mb-1">Próximo contato</label>
-                                                <input type="datetime-local" step="1" class="form-control form-control-sm campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
-                                            </div>
-
-                                            <div class="col-md-4">
-                                                <label class="fw small mb-1">Observações</label>
-                                                <textarea class="form-control form-control-sm" name="ligacao_obs" id="edit_ligacao_obs" rows="1"></textarea>
-                                            </div>
-
-                                            <div class="col-md-2">
-                                                <label class="fw small mb-1">Cadastrado por</label>
-                                                <input type="text" class="form-control form-control-sm bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
-                                            </div>
+                                            <div class="col-md-4 d-flex flex-column">
+                                                <label class="fw-small mb-1">Observações</label>
+                                                <textarea class="form-control form-control-sm flex-grow-1" name="ligacao_obs" id="edit_ligacao_obs" style="min-height: 125px; resize: none;" placeholder="Digite as observações com quebra de linha..."></textarea>
+                                            </div>  
 
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="text-end mt-3">
-                                    <button type="button" id="btn-add-ligacao-modal" class="btn btn-sm btn-outline-primary fw-bold" onclick="adicionarLigacao()">
-                                        <i class="fas fa-plus"></i> Registrar outra Ligação
-                                    </button>
-                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
                                 <button type="button" class="btn btn-success fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fas fa-check"></i> Salvar Ligação</button>
                             </div>
                         </div>
-                      </div>
+                    </div>
+                    </div>
                     </div>
                     {% endif %}
 
@@ -454,8 +461,7 @@
         </div>
     </div>
 
-    <!-- Pop-up (só leitura) com o histórico de ligações/vendas de um registro.
-         Abre ao clicar no número da coluna "Ligações". -->
+    <!-- Pop-up (só leitura) com o histórico de ligações/vendas de um registro. -->
     <div class="modal fade" id="modalHistoricoLigacoes" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -557,71 +563,113 @@
     }
 
     //trava ligacao 
-    // ALEX: função-chave do bloqueio. Decide se a ÚLTIMA ligação já está "concluída" (venda
-    // fechada) ou se ainda está "em aberto" (ex: só com Próximo contato preenchido).
-    // É essa decisão que outras funções (abrirModalLigacao, adicionarLigacao) usam para
-    // impedir a criação de uma ligação nova enquanto a atual não for finalizada.
+    // verifica se a ultima ligacao esta fechada ou nao e nao deixa fazer uma nova religacao
     function ultimoBlocoConcluido() {
-    let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
-    if (blocos.length === 0) return true;
-    
-    let ultimoBloco = blocos[blocos.length - 1];
-    let central = ultimoBloco.querySelector('input[name^="ligacao_venda_central"]').checked;
-    let agencia = ultimoBloco.querySelector('input[name^="ligacao_agn"]').checked;
-    let premio = ultimoBloco.querySelector('input[name^="ligacao_premio_total"]').value.trim() !== '';
-    
-    // O encerramento real da ligação SÓ acontece com a Venda: Canal (Central ou Agência) + Prêmio Total.
-    // Preencher "Motivo Não Venda" ou agendar "Próximo Contato" NÃO finaliza a ligação: ela continua em
-    // aberto e, da próxima vez que for aberta, retoma exatamente essa mesma ligação (não cria uma nova).
-    let vendaFechada = (central || agencia) && premio;
-    
-    return vendaFechada;
-}
-
-// ALEX: função que TRAVA (disabled) todos os blocos de ligação anteriores, deixando
-// editável apenas o último bloco (a ligação atual/ativa). É chamada sempre que um bloco
-// novo é adicionado (adicionarLigacao) ou removido (reorganizarLigacoes/removerLigacao).
-function atualizarEstadoLigacoes() {
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        if (blocos.length === 0) return true;
         
+        let ultimoBloco = blocos[blocos.length - 1];
+        let central = ultimoBloco.querySelector('input[name^="ligacao_venda_central"]').checked;
+        let agencia = ultimoBloco.querySelector('input[name^="ligacao_agn"]').checked;
+        let premio = ultimoBloco.querySelector('input[name^="ligacao_premio_total"]').value.trim() !== '';
+        
+        // O encerramento real da ligação so funciona quando marca  venda central ou agência) + prêmio Total.
+        let vendaFechada = (central || agencia) && premio;
+        
+        return vendaFechada;
+    
+    }
+
+        //trava ligacao
+        function atualizarEstadoLigacoes() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        let divHistorico = document.getElementById('historico-ligacoes-ficha');
+        let htmlHistorico = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
+        let temHistorico = false;
+        
+        // vai guardar os HTMLs dos cards
+        let cardsHistorico = [];
+
         blocos.forEach((bloco, index) => {
-            let isUltimo = (index === blocos.length - 1);
+            let isSalvo = bloco.classList.contains('ligacao-salva');
             let campos = bloco.querySelectorAll('input, select, textarea');
             let btnRemover = bloco.querySelector('.btn-outline-danger');
             let titulo = bloco.querySelector('.titulo-ligacao');
 
-            campos.forEach(c => {
-                // ALEX: trava (disabled=true) TODOS os campos das ligações que não são a última.
-                c.disabled = !isUltimo; 
-            });
+            if (isSalvo) {
+                // --- salva as ligacoes e deixa no historico ---
+                bloco.style.display = 'none'; 
+                campos.forEach(c => c.disabled = true); // Fica inativo/bloqueado
+                
+                temHistorico = true;
 
-            // Oculta o botão de remover das ligações que já estão travadas
-            if (btnRemover) {
-                btnRemover.style.display = isUltimo ? 'inline-block' : 'none';
-            }
+                let dataVal = bloco.querySelector('input[name^="ligacao_data"]').value;
+                let protVal = bloco.querySelector('input[name^="ligacao_protocolo"]').value;
+                let ramalVal = bloco.querySelector('input[name^="ligacao_ramal"]').value;
+                let premioVal = bloco.querySelector('input[name^="ligacao_premio_total"]').value;
+                let obsVal = bloco.querySelector('textarea[name^="ligacao_obs"]').value;
+                let cadastradoVal = bloco.querySelector('input[name^="ligacao_cadastrado_por"]').value;
+                let proxVal = bloco.querySelector('input[name^="ligacao_proximo"]').value;
 
-            // --- DESTAQUE VISUAL PARA A ÚLTIMA LIGAÇÃO ---
-            if (isUltimo) {
-                // Destaca a ativa
+                let central = bloco.querySelector('input[name^="ligacao_venda_central"]').checked;
+                let agn = bloco.querySelector('input[name^="ligacao_agn"]').checked;
+                let motSelect = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
+                let motText = motSelect.options[motSelect.selectedIndex]?.text;
+                if(motText === "-- Selecione --" || !motText) motText = "";
+
+                let canal = central ? 'Vendas Central' : (agn ? 'Vendas Agência' : (motText ? 'Não venda' : 'Em aberto'));
+                let numero = index + 1;
+
+                // Guarda o card no array em vez de concatenar direto
+
+                //trava espaços historico
+                cardsHistorico.push(`
+                <div class="card mb-3 bg-light border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white py-2">
+                        <i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span>
+                    </div>
+                    <div class="card-body py-2" style="font-size: 0.9rem;">
+                        <div class="row g-2">
+                            <div class="col-md-3"><strong>Protocolo:</strong> ${protVal || '-'}</div>
+                            <div class="col-md-2"><strong>Ramal:</strong> ${ramalVal || '-'}</div>
+                            <div class="col-md-3"><strong>Canal:</strong> ${canal || '-'}</div>
+                            <div class="col-md-4"><strong>Prêmio Total:</strong> ${premioVal ? 'R$ ' + premioVal : '-'}</div>
+                            <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
+                            <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
+                            <div class="col-md-4"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
+                            <div class="col-md-12"><strong>Observações:</strong> ${obsVal || '-'}</div>
+                        </div>
+                    </div>
+                </div>`);
+            } else {
+                // --- LIGAÇÃO NOVA/ATIVA: APARECE SOZINHA NO MODAL ---
+                bloco.style.display = 'block';
                 bloco.style.opacity = '1';
                 bloco.classList.add('p-3', 'border', 'border-2', 'border-primary', 'rounded', 'bg-white', 'shadow-sm');
                 bloco.classList.remove('border-bottom', 'pb-3', 'mb-3');
+                campos.forEach(c => c.disabled = false); // Editável
                 if (titulo) {
                     titulo.classList.add('text-primary');
                     titulo.classList.remove('text-muted');
                 }
-                sincronizarExclusividadeVenda(bloco); // Reaplica as regras de bloqueio de Venda vs Motivo
-            } else {
-                // Tira o destaque e escurece as anteriores
-                bloco.style.opacity = '0.6';
-                bloco.classList.remove('p-3', 'border', 'border-2', 'border-primary', 'rounded', 'bg-white', 'shadow-sm');
-                bloco.classList.add('border-bottom', 'pb-3', 'mb-3');
-                if (titulo) {
-                    titulo.classList.remove('text-primary');
-                    titulo.classList.add('text-muted');
-                }
+                if (btnRemover) btnRemover.style.display = 'inline-block';
+                sincronizarExclusividadeVenda(bloco);
             }
         });
+
+        // Inverte o array para que a ligação mais recente (ex: 3ª Ligação) fique no topo
+        htmlHistorico += cardsHistorico.reverse().join('');
+
+        // Atualiza a visualização da div principal do histórico
+        if (divHistorico) {
+            if (temHistorico) {
+                divHistorico.innerHTML = htmlHistorico;
+                divHistorico.style.display = 'block';
+            } else {
+                divHistorico.innerHTML = '';
+                divHistorico.style.display = 'none';
+            }
+        }
     }
 
     function definirRelacionamentoPesquisavel(hiddenId, inputId, valor, listaDeDados) {
@@ -666,11 +714,11 @@ function atualizarEstadoLigacoes() {
     }
 
 
-    let modalLigacao = null;          // instância do pop-up (segunda tela) de ligação
-    let algumaLigacaoSalva = false;   // já houve ao menos uma ligação confirmada nesta ficha?
-    let blocosSnapshot = 1;           // qtd de blocos ao abrir o pop-up (usado pelo Cancelar)
+    let modalLigacao = null;          
+    let algumaLigacaoSalva = false;   
+    let blocosSnapshot = 1;           
 
-    let modalHistorico = null;        // pop-up (só leitura) do histórico de ligações
+    let modalHistorico = null;        
     // Mapa id -> texto do motivo de não venda, para exibir o nome no histórico.
     const MOTIVOS_NAO_VENDA = {
         {% for m in motivos_nao_venda %}"{{ m.id }}": "{{ m.motivo|escapejs }}",{% endfor %}
@@ -838,12 +886,9 @@ function atualizarEstadoLigacoes() {
         }
     }
 
-    // Chamada ao ABRIR uma ficha que já tem ligações salvas (modo edição): não abre o
-    // pop-up, apenas ajusta os botões (mostra "Registrar outra Ligação") e o resumo. Os
-    // dados das ligações já foram carregados nos blocos por editarIndicacao().
-    // ALEX: marca que a ficha JÁ TEM pelo menos uma ligação salva (algumaLigacaoSalva=true).
-    // Essa flag é usada em cancelarLigacaoModal() pra decidir se reseta tudo (ficha nova,
-    // sem ligação) ou só desfaz o que foi digerido na sessão atual do pop-up.
+    // trava ligacao
+    // marca que a lista ja tem pelo menos uma ligação salva.
+
     function iniciarPrimeiraLigacao() {
         algumaLigacaoSalva = true;
         $('#btn-iniciar-ligacao').hide();
@@ -851,82 +896,6 @@ function atualizarEstadoLigacoes() {
         atualizarResumoLigacoes();
     }
 
-    // Abre o pop-up (segunda tela) para registrar a ligação.
-    //  - primeira=true  -> "Iniciar Ligação": abre com o 1º bloco pronto.
-    //  - primeira=false -> "Registrar outra Ligação": abre e adiciona um novo bloco.
-    function abrirModalLigacao(primeira) {
-        if (!modalLigacao) return;
-
-        $('#ligacao-1').show();
-        blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
-        
-        // ALEX: aqui é onde acontece o "reabrir a mesma ligação pendente". Se a última
-        // ligação NÃO estiver concluída (ultimoBlocoConcluido() === false, ex: só tem
-        // "Próximo contato" preenchido), o if abaixo não executa e o pop-up simplesmente
-        // abre em cima do bloco existente, sem criar um novo — é assim que o usuário
-        // continua a MESMA ligação em vez de começar outra.
-        if (!primeira) {
-            // ... e a última ligação já tiver um desfecho (venda fechada: Canal + Prêmio),
-            // o sistema CRIA UM NOVO BLOCO SOZINHO automaticamente.
-            if (ultimoBlocoConcluido()) {
-                adicionarLigacao(true);
-            }
-        }
-        
-        ativarBloqueioSaida();
-        modalLigacao.show();
-
-        // Rola a tela do pop-up automaticamente para baixo, 
-        // focando direto no card da nova ligação que acabou de ser criado
-        setTimeout(() => {
-            let modalBody = document.querySelector('#modalLigacao .modal-body');
-            if (modalBody) {
-                modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: 'smooth' });
-            }
-        }, 200);
-    }
-
-    // "Salvar Ligação": valida e fecha o pop-up mantendo os dados na ficha (os campos vão
-    // no POST quando o usuário clicar em Salvar da ficha). Não some com o registro.
-    function salvarLigacaoModal() {
-        let faltando = false;
-        document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(function(bloco) {
-            let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
-            let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
-            let premio = bloco.querySelector('input[name^="ligacao_premio_total"]');
-            let marcouVenda = (central && central.checked) || (agencia && agencia.checked);
-            if (marcouVenda && premio && !premio.value.trim()) {
-                faltando = true;
-            }
-        });
-        if (faltando) {
-            avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
-            return;
-        }
-        algumaLigacaoSalva = true;
-        desativarBloqueioSaida();
-        modalLigacao.hide();
-        $('#btn-iniciar-ligacao').hide();
-        $('#btn-registrar-outra-ligacao').show();
-        atualizarResumoLigacoes();
-    }
-
-    // "Cancelar": descarta o que foi preenchido nesta sessão do pop-up e fecha. Remove os
-    // blocos criados desde a abertura; se nenhuma ligação havia sido salva antes, volta ao
-    // estado inicial (botão "Iniciar Ligação").
-    function cancelarLigacaoModal() {
-        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
-        for (let i = blocos.length - 1; i >= blocosSnapshot; i--) {
-            blocos[i].remove();
-        }
-        reorganizarLigacoes();
-        if (!algumaLigacaoSalva) {
-            resetarContainerLigacoes();
-        }
-        desativarBloqueioSaida();
-        modalLigacao.hide();
-        atualizarResumoLigacoes();
-    }
 
     // Enquanto o pop-up está aberto, o navegador avisa/impede sair da página (fechar aba,
     // recarregar, navegar) sem antes Salvar ou Cancelar a ligação.
@@ -1050,6 +1019,13 @@ function atualizarEstadoLigacoes() {
         $('#btn-registrar-outra-ligacao').hide();
         sincronizarExclusividadeVenda(document.getElementById('ligacao-1'));
         atualizarResumoLigacoes();
+        
+        // NOVO: Limpa visualmente o histórico da tela de fundo ao resetar
+        let divHistorico = document.getElementById('historico-ligacoes-ficha');
+        if (divHistorico) {
+            divHistorico.innerHTML = '';
+            divHistorico.style.display = 'none';
+        }
     }
 
     // Vendas Central e Vendas Agência continuam mutuamente exclusivos entre si e com o
@@ -1202,11 +1178,14 @@ function atualizarEstadoLigacoes() {
         // INVERTE A ORDEM: A ligação mais antiga vira a 1ª (topo) e a mais recente vai para o final.
         let itensLigacoes = Array.from(itensLigacoesNode).reverse();
         
+        // Povoando ligações e marcando como SALVAS (irão para o histórico)
         itensLigacoes.forEach(function(item, index) {
             if(index === 0) {
+                let bloco = document.getElementById('ligacao-1');
+                bloco.classList.add('ligacao-salva');
+                
                 document.getElementById('edit_ligacao_protocolo').value = item.dataset.protocolo || '';
                 document.getElementById('edit_ligacao_data').value = item.dataset.data || '';
-                // document.getElementById('edit_ligacao_status').value = item.dataset.status || '';
                 document.getElementById('edit_ligacao_proximo').value = item.dataset.proximo || '';
                 document.getElementById('edit_ligacao_obs').value = item.dataset.obs || '';
                 document.getElementById('edit_ligacao_ramal').value = item.dataset.ramal || '';
@@ -1218,9 +1197,11 @@ function atualizarEstadoLigacoes() {
             } else {
                 adicionarLigacao(true);
                 let c = contadorLigacoes;
+                let bloco = document.getElementById('ligacao-' + c);
+                bloco.classList.add('ligacao-salva');
+                
                 document.getElementById('edit_ligacao_protocolo_' + c).value = item.dataset.protocolo || '';
                 document.getElementById('edit_ligacao_data_' + c).value = item.dataset.data || '';
-                // document.getElementById('edit_ligacao_status_' + c).value = item.dataset.status || '';
                 document.getElementById('edit_ligacao_proximo_' + c).value = item.dataset.proximo || '';
                 document.getElementById('edit_ligacao_obs_' + c).value = item.dataset.obs || '';
                 document.getElementById('edit_ligacao_ramal_' + c).value = item.dataset.ramal || '';
@@ -1237,32 +1218,37 @@ function atualizarEstadoLigacoes() {
         if(itensLigacoes.length === 0) {
             prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
         } else {
-            // Já existe ligação salva: revela a "1ª Ligação" (resetarContainerLigacoes a
-            // escondeu por padrão) e troca para o botão de "Registrar outra Ligação".
             iniciarPrimeiraLigacao();
         }
-        }
+        
+        // NOVO: Chama a atualização visual para jogar os dados carregados no histórico principal
+        atualizarEstadoLigacoes();
+        
+        } // fecha if(PODE_REGISTRAR_LIGACAO)
 
         $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo #' + id);
         toggleFormLocal('base-novo', true);
     }
 
     function adicionarLigacao(forcar = false) {
-        // ALEX: esse if é o BLOQUEIO em si — impede criar/registrar uma ligação nova
-        // (manualmente, pelo botão "+Registrar outra Ligação") enquanto a última ligação
-        // não estiver com a venda fechada. "forcar=true" é usado só internamente (ex: ao
-        // recarregar o histórico de uma ficha já salva em editarIndicacao), pra não travar
-        // ligações antigas que já foram carregadas do banco.
         if (!forcar && !ultimoBlocoConcluido()) {
             avisoElegante('Só é possível registrar uma nova ligação após finalizar a venda da ligação atual (marque "Vendas Central" ou "Vendas Agência" e informe o Prêmio Total).', 'Ação não permitida');
             return;
         }
 
-        contadorLigacoes++;
+        // Marca a ligação que estava no modal como salva, para ela ir para o histórico
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        if (blocos.length > 0) {
+            blocos[blocos.length - 1].classList.add('ligacao-salva');
+        }
 
+        contadorLigacoes++;
         let blocoOriginal = document.getElementById('ligacao-1');
         let novoBloco = blocoOriginal.cloneNode(true);
         novoBloco.id = 'ligacao-' + contadorLigacoes;
+        
+        // A nova ligação começa limpa (sem a classe de salva)
+        novoBloco.classList.remove('ligacao-salva');
         novoBloco.style.display = '';
 
         let titulo = novoBloco.querySelector('.titulo-ligacao');
@@ -1280,13 +1266,11 @@ function atualizarEstadoLigacoes() {
             } else {
                 campo.value = '';
             }
-
             let nomeOriginal = campo.getAttribute('name');
             if(nomeOriginal) {
                 nomeOriginal = nomeOriginal.replace(/_\d+$/, '');
                 campo.setAttribute('name', nomeOriginal + '_' + contadorLigacoes);
             }
-
             let idOriginal = campo.getAttribute('id');
             if(idOriginal) {
                 idOriginal = idOriginal.replace(/_\d+$/, '');
@@ -1297,8 +1281,75 @@ function atualizarEstadoLigacoes() {
         document.getElementById('container-ligacoes').appendChild(novoBloco);
         prepararNovaLigacao('edit_ligacao_protocolo_' + contadorLigacoes, 'edit_ligacao_cadastrado_por_' + contadorLigacoes);
         
-        // Atualiza o estado: trava as anteriores e libera a nova
+        atualizarEstadoLigacoes(); // Atualiza a tela pra remover a antiga do modal e mostrar a nova
+    }
+
+    function salvarLigacaoModal() {
+        let faltando = false;
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        blocos.forEach(function(bloco) {
+            if(bloco.classList.contains('ligacao-salva')) return; // Ignora as já salvas na validação
+            
+            let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+            let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
+            let premio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+            let marcouVenda = (central && central.checked) || (agencia && agencia.checked);
+            if (marcouVenda && premio && !premio.value.trim()) {
+                faltando = true;
+            }
+        });
+
+        if (faltando) {
+            avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
+            return;
+        }
+
+        // MARCA A LIGAÇÃO DO MODAL COMO SALVA E INATIVA
+        if (blocos.length > 0) {
+            blocos[blocos.length - 1].classList.add('ligacao-salva');
+        }
+
+        algumaLigacaoSalva = true;
+        desativarBloqueioSaida();
+        modalLigacao.hide();
+        $('#btn-iniciar-ligacao').hide();
+        $('#btn-registrar-outra-ligacao').show();
+        atualizarResumoLigacoes();
+        
+        atualizarEstadoLigacoes(); // Joga a ligação recém-salva para o Histórico Principal
+    }
+
+    function cancelarLigacaoModal() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        for (let i = blocos.length - 1; i >= blocosSnapshot; i--) {
+            blocos[i].remove();
+        }
+        reorganizarLigacoes();
+        if (!algumaLigacaoSalva) {
+            resetarContainerLigacoes();
+        }
+        desativarBloqueioSaida();
+        modalLigacao.hide();
+        atualizarResumoLigacoes();
+        atualizarEstadoLigacoes(); // Devolve o histórico ao estado normal
+    }
+
+    function abrirModalLigacao(primeira) {
+        if (!modalLigacao) return;
+
+        $('#ligacao-1').show();
+        blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
+       
+        if (!primeira) {
+            adicionarLigacao(true); // Cria a próxima em branco
+        } else {
+            let bloco1 = document.getElementById('ligacao-1');
+            if (bloco1) bloco1.classList.remove('ligacao-salva'); // Primeira ligação limpa
+        }
+        
         atualizarEstadoLigacoes();
+        ativarBloqueioSaida();
+        modalLigacao.show();
     }
 
     function removerLigacao(botao) {
@@ -1320,9 +1371,14 @@ function atualizarEstadoLigacoes() {
 
             let titulo = bloco.querySelector('.titulo-ligacao');
             if(titulo) {
+                // Aqui aplicamos a classe exata para deixar a margem/fundo azul (bg-primary) com texto branco
+                titulo.className = 'titulo-ligacao bg-primary text-white p-2 rounded mb-3 d-flex justify-content-between align-items-center';
+
                 titulo.innerHTML = `
-                    <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
-                    <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerLigacao(this)">
+                    <span>
+                        <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
+                    </span>
+                    <button type="button" class="btn btn-sm btn-light text-danger py-0" onclick="removerLigacao(this)">
                         <i class="fas fa-trash"></i> Remover
                     </button>
                 `;
