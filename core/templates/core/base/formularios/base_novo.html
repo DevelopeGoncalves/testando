@@ -140,8 +140,8 @@
                             <th class="text-center">{% if apenas_pendentes %}Responsável{% else %}E-mail{% endif %}</th>
                             <th class="text-center">E-mail do indicador (outro)</th>
                             <th class="text-center">Matrícula do indicador</th>
-                            <th class="text-center">{% if apenas_pendentes %}Indicador{% else %}Nome do indicador{% endif %}</th>
-                            <th class="text-center">{% if apenas_pendentes %}Agência{% else %}CID da agência{% endif %}</th>
+                            <th class="text-center">Indicador</th>
+                            <th class="text-center">Agência</th>
                             <th class="text-center">Telefone do indicador</th>
                             <th class="text-center">Enviar orçamento para</th>
                             <th class="text-center">Nome do cliente</th>
@@ -212,8 +212,8 @@
                             <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
                             <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
                             <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
-                            <td class="text-center">{% if apenas_pendentes %}{% if i.matricula_indicador or i.nome_indicador %}{{ i.matricula_indicador|default:'' }}{% if i.matricula_indicador and i.nome_indicador %} - {% endif %}{{ i.nome_indicador|default:'' }}{% else %}-{% endif %}{% else %}{{ i.nome_indicador|default:'-' }}{% endif %}</td>
-                            <td class="text-center">{% if apenas_pendentes %}{% if i.cid_agencia or i.nome_agencia %}{{ i.cid_agencia|default:'' }}{% if i.cid_agencia and i.nome_agencia %} - {% endif %}{{ i.nome_agencia|default:'' }}{% else %}-{% endif %}{% else %}{{ i.cid_agencia|default:'-' }}{% endif %}</td>
+                            <td class="text-center">{% if i.matricula_indicador or i.nome_indicador %}{{ i.matricula_indicador|default:'' }}{% if i.matricula_indicador and i.nome_indicador %} - {% endif %}{{ i.nome_indicador|default:'' }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if i.cid_agencia or i.nome_agencia %}{{ i.cid_agencia|default:'' }}{% if i.cid_agencia and i.nome_agencia %} - {% endif %}{{ i.nome_agencia|default:'' }}{% else %}-{% endif %}</td>
                             <td class="text-center">{{ i.telefone_indicador|default:'-' }}</td>
                             <td class="text-center">{{ i.enviar_orcamento_para|default:'-' }}</td>
                             <td class="text-center">{{ i.nome_cliente|default:'-' }}</td>
@@ -762,7 +762,7 @@
         // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
         // Na tela "Novo", ordena por padrão pela coluna "Próxima ligação" (índice 22)
         // em ordem decrescente. Na Base Novo mantém sem ordenação inicial.
-        iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19{% if apenas_pendentes %}, 5{% endif %}]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
+        iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19, 5]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
 
         // Prepara o pop-up de ligação (só existe na tela do card "Novo").
         if (PODE_REGISTRAR_LIGACAO) {
