@@ -734,11 +734,16 @@ def vendas_novo_negocio(request):
     ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento').prefetch_related('ligacoes__motivo_nao_venda')
 
     indicacoes = list(indicacoes)
+    # Mapa CID -> nome da agência (tabela Unidade), para exibir "CID - Nome" concatenado
+    # na lista do Novo (facilita a busca/filtro). Se o CID não existir em Unidade, fica só o CID.
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
     for ind in indicacoes:
         ligacoes = list(ind.ligacoes.all())
         ultima = ligacoes[0] if ligacoes else None
         ind.responsavel = ultima.cadastrado_por if ultima else ''
         ind.proxima_ligacao = ultima.proximo_contato if ultima else None
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
