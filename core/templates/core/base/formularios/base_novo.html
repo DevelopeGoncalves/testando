@@ -170,6 +170,7 @@
                             data-matricula="{{ i.matricula_indicador|default:'' }}"
                             data-nome-indicador="{{ i.nome_indicador|default:'' }}"
                             data-cid="{{ i.cid_agencia|default:'' }}"
+                            data-nome-agencia="{{ i.nome_agencia|default:'' }}"
                             data-telefone-indicador="{{ i.telefone_indicador|default:'' }}"
                             data-orcamento="{{ i.enviar_orcamento_para|default:'' }}"
                             data-origem-informacao="{{ i.origem_informacao|default:'' }}"
@@ -322,9 +323,9 @@
 
                     <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
                     <div class="row g-3">
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                        <div class="col-md-{% if apenas_pendentes %}4{% else %}2{% endif %}"><label class="fw-bold small mb-1">{% if apenas_pendentes %}Indicador{% else %}Matrícula{% endif %}</label>{{ form_indicacao.matricula_indicador }}</div>
+                        <div class="col-md-2 {% if apenas_pendentes %}d-none{% endif %}"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
+                        <div class="col-md-{% if apenas_pendentes %}3{% else %}2{% endif %}"><label class="fw-bold small mb-1">{% if apenas_pendentes %}Agência{% else %}CID da agência{% endif %}</label>{{ form_indicacao.cid_agencia }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_indicador }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail do indicador (se não for você)</label>{{ form_indicacao.email_indicador_outro }}</div>
@@ -1176,9 +1177,20 @@
         $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
         $('#id_email').val(row.getAttribute('data-email'));
         $('#id_email_indicador_outro').val(row.getAttribute('data-email-indicador-outro'));
-        $('#id_matricula_indicador').val(row.getAttribute('data-matricula'));
-        $('#id_nome_indicador').val(row.getAttribute('data-nome-indicador'));
-        $('#id_cid_agencia').val(row.getAttribute('data-cid'));
+        var _mat = row.getAttribute('data-matricula') || '';
+        var _nomeInd = row.getAttribute('data-nome-indicador') || '';
+        var _cid = row.getAttribute('data-cid') || '';
+        var _nomeAg = row.getAttribute('data-nome-agencia') || '';
+        if (PODE_REGISTRAR_LIGACAO) {
+            // Tela Novo (ficha só leitura): exibe concatenado, igual à lista.
+            $('#id_matricula_indicador').val(_mat + (_mat && _nomeInd ? ' - ' : '') + _nomeInd);
+            $('#id_nome_indicador').val(_nomeInd);
+            $('#id_cid_agencia').val(_cid + (_cid && _nomeAg ? ' - ' : '') + _nomeAg);
+        } else {
+            $('#id_matricula_indicador').val(_mat);
+            $('#id_nome_indicador').val(_nomeInd);
+            $('#id_cid_agencia').val(_cid);
+        }
         $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
         $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
         $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
