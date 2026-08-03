@@ -825,18 +825,29 @@
         if(!tableInstance) return;
         var data = tableInstance.rows({ search: 'applied' }).data().toArray();
         var csvContent = "\uFEFF"; 
+        // Exporta apenas as colunas VISÍVEIS, na mesma ordem da tela: o CSV sai igual ao que
+        // está na tela - inclusive com Indicador e Agência já concatenados - e sem as colunas
+        // ocultas (ex.: a Matrícula separada). Cabeçalhos e dados ficam alinhados.
         var headers = [];
-        $('#' + tableInstance.table().node().id + ' thead th').each(function(i) {
-             var txt = $(this).text().trim();
-             if(txt && txt !== "Ações") headers.push('"' + txt + '"');
+        var colsExport = [];
+        tableInstance.columns(':visible').every(function() {
+            var th = $(this.header());
+            var btn = th.find('.excel-header-btn');
+            var txt = (btn.length ? btn.text() : th.text()).trim();
+            if(!txt || txt === "Ações") return; // pula a coluna de seleção e "Ações"
+            headers.push('"' + txt.replace(/"/g, '""') + '"');
+            colsExport.push(this.index());
         });
         csvContent += headers.join(";") + "\n";
         data.forEach(function(row) {
-            var rowData = [];
-            for (var i = 1; i < row.length; i++) { // Ajuste conforme colunas
-                var cleanText = row[i] ? row[i].toString().replace(/<[^>]+>/g, '').trim().replace(/"/g, '""') : "";
-                rowData.push('"' + cleanText + '"');
-            }
+            var rowData = colsExport.map(function(colIdx) {
+                var raw = row[colIdx];
+                // Colunas com data-order (ex.: Ligações/Próxima ligação) chegam como objeto
+                // "orthogonal" do DataTables; usa o valor de exibição ('display').
+                if (raw && typeof raw === 'object') raw = (raw.display != null ? raw.display : (raw['@data-order'] || ''));
+                var cleanText = raw ? raw.toString().replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().replace(/"/g, '""') : "";
+                return '"' + cleanText + '"';
+            });
             csvContent += rowData.join(";") + "\n";
         });
         var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
