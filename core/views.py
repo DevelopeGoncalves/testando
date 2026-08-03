@@ -846,8 +846,21 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
     item_id = request.POST.get('item_id')
     instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
 
+    # A ficha da Base Novo envia o Indicador e a Agência em campos ÚNICOS concatenados
+    # ("matrícula - nome" / "CID - nome"). Aqui separamos de volta para os campos que o
+    # formulário espera: matrícula/CID = parte antes do primeiro " - "; nome = o resto.
+    dados_post = request.POST
+    if 'indicador_combo' in request.POST or 'agencia_combo' in request.POST:
+        dados_post = request.POST.copy()
+        if 'indicador_combo' in dados_post:
+            mat, _, nome = (dados_post.get('indicador_combo') or '').strip().partition(' - ')
+            dados_post['matricula_indicador'] = mat.strip()
+            dados_post['nome_indicador'] = nome.strip()
+        if 'agencia_combo' in dados_post:
+            dados_post['cid_agencia'] = (dados_post.get('agencia_combo') or '').strip().partition(' - ')[0].strip()
+
     # Base Novo (False) continua editando a ficha normalmente.
-    form = IndicacaoForm(request.POST, instance=instancia, ficha_somente_leitura=processar_ligacoes)
+    form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=processar_ligacoes)
 
     # os campos "Vendas Central" obriga o preenchimento do "Prêmio Total".  se nao da erro
     if _falta_premio_total_venda_central(request):
