@@ -1209,8 +1209,12 @@
         $('#id_matricula_indicador').val(_mat);
         $('#id_nome_indicador').val(_nomeInd);
         $('#id_cid_agencia').val(_cid);
-        // Abrir registro existente => exibe o indicador/agência concatenados (só leitura).
-        modoIndicadorConcatenado(_mat, _nomeInd, _cid, _nomeAg);
+        // Novo: exibe concatenado (só leitura). Base Novo: mantém separado e editável.
+        if (PODE_REGISTRAR_LIGACAO) {
+            modoIndicadorConcatenado(_mat, _nomeInd, _cid, _nomeAg);
+        } else {
+            modoIndicadorSeparado();
+        }
         $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
         $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
         $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
