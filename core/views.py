@@ -933,7 +933,18 @@ def lista_base_novo(request):
         form = IndicacaoForm()
         erro_formulario_msg = ''
 
-    indicacoes = Indicacao.objects.all().order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento').prefetch_related('ligacoes__motivo_nao_venda')
+    indicacoes = list(
+        Indicacao.objects.all().order_by('-id')
+        .select_related('seguradora', 'ramo', 'tipo_documento')
+        .prefetch_related('ligacoes__motivo_nao_venda')
+    )
+    # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo.
+    # Necessário aqui também porque, ao encerrar a ligação, o registro sai do Novo e passa a
+    # aparecer só na Base Novo - que deve manter a mesma visão concatenada.
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    for ind in indicacoes:
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
