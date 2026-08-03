@@ -326,13 +326,17 @@
                         <!-- Exibição concatenada (só leitura): aparece ao ABRIR um registro
                              existente. No cadastro novo (Base Novo) ela some e os campos reais
                              reaparecem editáveis. Estes inputs não têm 'name', então não vão no POST. -->
-                        <div class="col-md-4 {% if not apenas_pendentes %}d-none{% endif %}" id="disp-ind-col"><label class="fw-bold small mb-1">Indicador</label><input type="text" id="disp-indicador" class="form-control form-control-sm bg-light" readonly tabindex="-1"></div>
-                        <div class="col-md-3 {% if not apenas_pendentes %}d-none{% endif %}" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" class="form-control form-control-sm bg-light" readonly tabindex="-1"></div>
-                        <!-- Campos reais (editáveis): guardam os valores SEPARADOS e são o que
-                             realmente vai no POST ao salvar. No Novo ficam ocultos (só leitura). -->
-                        <div class="col-md-2 {% if apenas_pendentes %}d-none{% endif %}" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
-                        <div class="col-md-2 {% if apenas_pendentes %}d-none{% endif %}" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
-                        <div class="col-md-2 {% if apenas_pendentes %}d-none{% endif %}" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                        <!-- Indicador e Agência concatenados. No Novo: só leitura. Na Base Novo:
+                             EDITÁVEIS (name=..._combo); o backend separa de volta ao salvar
+                             (matrícula/CID = parte antes do primeiro " - "). -->
+                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold small mb-1">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control form-control-sm" placeholder="matrícula - nome"{% endif %}></div>
+                        <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control form-control-sm" placeholder="CID - nome da agência"{% endif %}></div>
+                        <!-- Campos reais do form: sempre ocultos. No Novo o form os desabilita
+                             (mantém o valor original); na Base Novo o backend os preenche pela
+                             separação dos campos concatenados acima. -->
+                        <div class="col-md-2 d-none" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
+                        <div class="col-md-2 d-none" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
+                        <div class="col-md-2 d-none" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_indicador }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail do indicador (se não for você)</label>{{ form_indicacao.email_indicador_outro }}</div>
@@ -1164,8 +1168,9 @@
                 limparRelacionamentosPesquisaveis();
                 resetarContainerLigacoes();
                 prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
-                // Cadastro novo: mostra os campos reais separados e editáveis do indicador.
-                modoIndicadorSeparado();
+                // Cadastro novo: limpa os campos concatenados do indicador/agência.
+                $('#disp-indicador').val('');
+                $('#disp-agencia').val('');
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
             }
         } else {
@@ -1179,21 +1184,6 @@
         }
     }
 
-    // Alterna a seção "Dados do Indicador" entre a exibição concatenada (só leitura, ao abrir
-    // um registro existente) e os campos reais separados (editáveis, ao cadastrar novo).
-    function modoIndicadorConcatenado(mat, nome, cid, nomeAg) {
-        var indicador = (mat || '') + ((mat && nome) ? ' - ' : '') + (nome || '');
-        var agencia = (cid || '') + ((cid && nomeAg) ? ' - ' : '') + (nomeAg || '');
-        var di = document.getElementById('disp-indicador'); if (di) di.value = indicador;
-        var da = document.getElementById('disp-agencia'); if (da) da.value = agencia;
-        ['disp-ind-col', 'disp-ag-col'].forEach(function(x){ var e = document.getElementById(x); if (e) e.classList.remove('d-none'); });
-        ['col-ind-matricula', 'col-ind-nome', 'col-ind-cid'].forEach(function(x){ var e = document.getElementById(x); if (e) e.classList.add('d-none'); });
-    }
-    function modoIndicadorSeparado() {
-        ['disp-ind-col', 'disp-ag-col'].forEach(function(x){ var e = document.getElementById(x); if (e) e.classList.add('d-none'); });
-        ['col-ind-matricula', 'col-ind-nome', 'col-ind-cid'].forEach(function(x){ var e = document.getElementById(x); if (e) e.classList.remove('d-none'); });
-    }
-
     function editarIndicacao(row) {
         var id = row.getAttribute('data-id');
         $('#base_novo_id_hidden').val(id);
@@ -1205,16 +1195,14 @@
         var _nomeInd = row.getAttribute('data-nome-indicador') || '';
         var _cid = row.getAttribute('data-cid') || '';
         var _nomeAg = row.getAttribute('data-nome-agencia') || '';
-        // Campos reais sempre com os valores SEPARADOS (é o que vai no POST ao salvar).
+        // Campos reais (ocultos) com os valores separados - segurança para o Novo (só leitura).
         $('#id_matricula_indicador').val(_mat);
         $('#id_nome_indicador').val(_nomeInd);
         $('#id_cid_agencia').val(_cid);
-        // Novo: exibe concatenado (só leitura). Base Novo: mantém separado e editável.
-        if (PODE_REGISTRAR_LIGACAO) {
-            modoIndicadorConcatenado(_mat, _nomeInd, _cid, _nomeAg);
-        } else {
-            modoIndicadorSeparado();
-        }
+        // Campos visíveis concatenados (Indicador / Agência) - no Novo são só leitura; na Base
+        // Novo são editáveis e o backend separa de volta ao salvar.
+        $('#disp-indicador').val(_mat + ((_mat && _nomeInd) ? ' - ' : '') + _nomeInd);
+        $('#disp-agencia').val(_cid + ((_cid && _nomeAg) ? ' - ' : '') + _nomeAg);
         $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
         $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
         $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
