@@ -281,6 +281,13 @@ class Indicacao(models.Model):
     # chave para nao duplicar a mesma apólice/endosso (mesmo padrão do RegistroProducao)
     chave_unica = models.CharField("Chave única", max_length=255, null=True, blank=True, db_index=True)
 
+    # Trava de atendimento: quando alguém abre o registro para registrar uma ligação no
+    # card "Novo", ele fica "em atendimento" (linha vermelha na lista para todos). Some ao
+    # salvar/cancelar. 'atendimento_em' permite expirar travas esquecidas (registro que
+    # ficou aberto e o usuário fechou o navegador sem salvar/cancelar).
+    atendimento_por = models.CharField("Em atendimento por", max_length=150, blank=True, null=True)
+    atendimento_em = models.DateTimeField("Em atendimento desde", blank=True, null=True)
+
     @staticmethod
     def montar_chave_unica(seguradora_id, ramo_id, tipo_documento_id, numero_contrato, numero_endosso):
         partes = [

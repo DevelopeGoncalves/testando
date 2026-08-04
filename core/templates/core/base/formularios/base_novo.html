@@ -18,6 +18,11 @@
     #tabela-base-novo { visibility: hidden; }
     #tabela-base-novo.dt-pronta { visibility: visible; }
 
+    /* Registro "em atendimento" (alguém está numa ligação): linha vermelha para todos. */
+    #tabela-base-novo tbody tr.em-atendimento,
+    #tabela-base-novo tbody tr.em-atendimento:hover { background-color: #f5c2c7 !important; }
+    #tabela-base-novo tbody tr.em-atendimento td { color: #842029; }
+
     .excel-header-btn {
         display: flex !important;
         align-items: center !important;
@@ -162,8 +167,9 @@
                     </thead>
                     <tbody>
                         {% for i in indicacoes %}
-                        <tr class="tr-clickable" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
+                        <tr class="tr-clickable{% if i.atendimento_ativo %} em-atendimento{% endif %}" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
                             data-id="{{ i.id }}"
+                            data-atendimento="{{ i.atendimento_por|default:'' }}"
                             data-carimbo="{{ i.carimbo_data_hora|date:'Y-m-d\TH:i'|default:'' }}"
                             data-email="{{ i.email|default:'' }}"
                             data-email-indicador-outro="{{ i.email_indicador_outro|default:'' }}"
@@ -190,6 +196,7 @@
 
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-primary" title="Editar registro" onclick="editarIndicacao(this.closest('tr'))"><i class="fas fa-pencil-alt"></i></button>
                             </td>
 
                             <td style="display:none;" class="dados-ligacoes-extras">
@@ -476,6 +483,10 @@
     const PODE_REGISTRAR_LIGACAO = {% if apenas_pendentes %}true{% else %}false{% endif %};
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
+    const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
+    // As URLs de marcar/encerrar usam /0/ como espaço reservado para o id do registro.
+    const URL_MARCAR_ATEND = "{% url 'marcar_atendimento' 0 %}";
+    const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
 
     const listaBaseNovoSeguradoras = [
         {% for s in form_indicacao.seguradora.field.queryset %}
@@ -746,6 +757,13 @@
         // Na tela "Novo", ordena por padrão pela coluna "Próxima ligação" (índice 22)
         // em ordem decrescente. Na Base Novo mantém sem ordenação inicial.
         iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19, 5]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
+
+        // Trava de atendimento ("em ligação"): pinta de vermelho os registros que alguém está
+        // atendendo e mantém isso atualizado automaticamente (polling). Reaplica a cada redesenho
+        // da tabela (paginação/filtro/ordenação).
+        atualizarAtendimentos();
+        setInterval(atualizarAtendimentos, 5000);
+        if (tableInstance) tableInstance.on('draw', aplicarAtendimentos);
 
         // Prepara o pop-up de ligação (só existe na tela do card "Novo").
         if (PODE_REGISTRAR_LIGACAO) {
@@ -1312,6 +1330,40 @@
         atualizarEstadoLigacoes(); // Atualiza a tela pra remover a antiga do modal e mostrar a nova
     }
 
+    // --- Trava de atendimento ("em ligação") -----------------------------------------------
+    var atendimentosAtivos = {}; // { "id": "nome de quem está atendendo" }
+    function csrfAtendimento() {
+        var el = document.querySelector('input[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+    function marcarAtendimento(id) {
+        if (!id) return;
+        $.ajax({ url: URL_MARCAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
+                 headers: { 'X-CSRFToken': csrfAtendimento() } });
+    }
+    function encerrarAtendimento(id) {
+        if (!id) return;
+        $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
+                 headers: { 'X-CSRFToken': csrfAtendimento() } });
+    }
+    // Aplica o vermelho nas linhas conforme o mapa atual de atendimentos ativos.
+    function aplicarAtendimentos() {
+        $('#tabela-base-novo tbody tr').each(function() {
+            var id = String($(this).data('id') || '');
+            if (atendimentosAtivos[id]) {
+                $(this).addClass('em-atendimento').attr('title', 'Em atendimento por ' + atendimentosAtivos[id]);
+            } else {
+                $(this).removeClass('em-atendimento').removeAttr('title');
+            }
+        });
+    }
+    function atualizarAtendimentos() {
+        $.get(URL_ATENDIMENTOS_ATIVOS, function(resp) {
+            atendimentosAtivos = (resp && resp.atendimentos) ? resp.atendimentos : {};
+            aplicarAtendimentos();
+        });
+    }
+
     function salvarLigacaoModal() {
         let faltando = false;
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
@@ -1343,8 +1395,10 @@
         $('#btn-iniciar-ligacao').hide();
         $('#btn-registrar-outra-ligacao').show();
         atualizarResumoLigacoes();
-        
+
         atualizarEstadoLigacoes(); // Joga a ligação recém-salva para o Histórico Principal
+        // Encerra a trava de atendimento (registro volta ao normal para todos).
+        encerrarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function cancelarLigacaoModal() {
@@ -1360,6 +1414,8 @@
         modalLigacao.hide();
         atualizarResumoLigacoes();
         atualizarEstadoLigacoes(); // Devolve o histórico ao estado normal
+        // Encerra a trava de atendimento (registro volta ao normal para todos).
+        encerrarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function abrirModalLigacao(primeira) {
@@ -1378,6 +1434,8 @@
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
+        // Marca o registro como "em atendimento" (vermelho na lista para todos).
+        marcarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function removerLigacao(botao) {

@@ -12,7 +12,7 @@ from .models import (
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.db import transaction
@@ -738,12 +738,14 @@ def vendas_novo_negocio(request):
     # na lista do Novo (facilita a busca/filtro). Se o CID não existir em Unidade, fica só o CID.
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
     for ind in indicacoes:
         ligacoes = list(ind.ligacoes.all())
         ultima = ligacoes[0] if ligacoes else None
         ind.responsavel = ultima.cadastrado_por if ultima else ''
         ind.proxima_ligacao = ultima.proximo_contato if ultima else None
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
@@ -776,6 +778,44 @@ def agora_servidor_ligacao(request):
     # horário vem sempre do servidor, nunca do relógio do navegador: o relógio do
     agora = timezone.localtime(timezone.now())
     return JsonResponse({'datahora': agora.strftime('%Y-%m-%dT%H:%M:%S')})
+
+
+# --- Trava de atendimento ("em ligação") --------------------------------------------------
+# Quando alguém abre um registro para registrar uma ligação, ele fica "em atendimento" e
+# aparece em vermelho na lista para TODOS os usuários (evita duas pessoas no mesmo lead).
+# Some ao salvar/cancelar. A trava expira sozinha após ATENDIMENTO_TIMEOUT_MIN minutos, para
+# não travar para sempre caso o usuário feche o navegador sem encerrar.
+ATENDIMENTO_TIMEOUT_MIN = 15
+
+@login_required
+def marcar_atendimento(request, id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    ind = get_object_or_404(Indicacao, id=id)
+    ind.atendimento_por = request.user.get_full_name() or request.user.username
+    ind.atendimento_em = timezone.now()
+    ind.save(update_fields=['atendimento_por', 'atendimento_em'])
+    return JsonResponse({'ok': True})
+
+@login_required
+def encerrar_atendimento(request, id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    ind = get_object_or_404(Indicacao, id=id)
+    ind.atendimento_por = None
+    ind.atendimento_em = None
+    ind.save(update_fields=['atendimento_por', 'atendimento_em'])
+    return JsonResponse({'ok': True})
+
+@login_required
+def atendimentos_ativos(request):
+    limite = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
+    qs = (Indicacao.objects
+          .filter(atendimento_em__gte=limite)
+          .exclude(atendimento_por__isnull=True)
+          .exclude(atendimento_por__exact='')
+          .values('id', 'atendimento_por'))
+    return JsonResponse({'atendimentos': {str(r['id']): r['atendimento_por'] for r in qs}})
 
 def _parse_valor_moeda_brl(valor_str):
     if not valor_str: return None
@@ -956,8 +996,10 @@ def lista_base_novo(request):
     # aparecer só na Base Novo - que deve manter a mesma visão concatenada.
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
     for ind in indicacoes:
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
