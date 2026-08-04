@@ -196,7 +196,6 @@
 
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
-                                <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-primary" title="Editar registro" onclick="editarIndicacao(this.closest('tr'))"><i class="fas fa-pencil-alt"></i></button>
                             </td>
 
                             <td style="display:none;" class="dados-ligacoes-extras">
@@ -619,8 +618,9 @@
                 //trava espaços historico
                 cardsHistorico.push(`
                 <div class="card mb-3 bg-light border-0 shadow-sm">
-                    <div class="card-header bg-primary text-white py-2">
-                        <i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span>
+                    <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span></span>
+                        <button type="button" class="btn btn-sm btn-light py-0 px-2" title="Editar esta ligação" onclick="editarLigacaoHistorico(${numero})"><i class="fas fa-pencil-alt"></i></button>
                     </div>
                     <div class="card-body py-2" style="font-size: 0.9rem;">
                         <div class="row g-2">
@@ -998,6 +998,54 @@
         modalHistorico.show();
     }
 
+    // ALEX: na Base Novo (que não registra ligação) mostramos o histórico de ligações
+    // JÁ FINALIZADAS direto na ficha, somente leitura. Os dados vêm da mesma célula oculta
+    // .dados-ligacoes-extras da linha (mais recente -> mais antiga).
+    function renderHistoricoFichaBaseNovo(row) {
+        let div = document.getElementById('historico-ligacoes-ficha');
+        if (!div) return;
+        let itens = Array.from(row.querySelectorAll('.extra-item-ligacao'));
+        let total = itens.length;
+        if (total === 0) {
+            div.innerHTML = '';
+            div.style.display = 'none';
+            return;
+        }
+        let html = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
+        itens.forEach(function(item, idx) {
+            let d = item.dataset;
+            let numero = total - idx; // ordem cronológica (1ª, 2ª, ...)
+            let venda = d.vendaCentral === '1' ? 'Central' : (d.agn === '1' ? 'Agência' : '-');
+            let motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
+            let premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
+            html += ''
+              + '<div class="card mb-3 bg-light border-0 shadow-sm">'
+              +   '<div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">'
+              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ' + (escHtml(formatarDataHora(d.data)) || '-') + '</span></span>'
+              +     '<span class="badge bg-success"><i class="fas fa-check"></i> Finalizada</span>'
+              +   '</div>'
+              +   '<div class="card-body py-2" style="font-size:0.9rem;">'
+              +     '<div class="row g-2">'
+              +       '<div class="col-md-8">'
+              +         '<div class="row g-2">'
+              +           '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
+              +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +           '<div class="col-md-4"><strong>Motivo:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-4 border-start"><strong>Observações:</strong><div style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</div></div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        });
+        div.innerHTML = html;
+        div.style.display = 'block';
+    }
+
     // ALEX: volta o pop-up de ligação pro estado "zerado" (0 ligações), usado quando abre
     // uma ficha NOVA (sem histórico) ou quando cancela sem nenhuma ligação salva antes.
     function resetarContainerLigacoes() {
@@ -1154,6 +1202,9 @@
                 // Cadastro novo: limpa os campos concatenados do indicador/agência.
                 $('#disp-indicador').val('');
                 $('#disp-agencia').val('');
+                // Cadastro novo não tem histórico: limpa o bloco de histórico da ficha (Base Novo).
+                var _histFicha = document.getElementById('historico-ligacoes-ficha');
+                if (_histFicha) { _histFicha.innerHTML = ''; _histFicha.style.display = 'none'; }
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
             }
         } else {
@@ -1269,7 +1320,10 @@
         
         // NOVO: Chama a atualização visual para jogar os dados carregados no histórico principal
         atualizarEstadoLigacoes();
-        
+
+        } else {
+            // Base Novo: não registra ligação, mas mostra o histórico finalizado na ficha (só leitura).
+            renderHistoricoFichaBaseNovo(row);
         } // fecha if(PODE_REGISTRAR_LIGACAO)
 
         $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo');
@@ -1384,10 +1438,11 @@
             return;
         }
 
-        // MARCA A LIGAÇÃO DO MODAL COMO SALVA E INATIVA
-        if (blocos.length > 0) {
-            blocos[blocos.length - 1].classList.add('ligacao-salva');
-        }
+        // MARCA A LIGAÇÃO DO MODAL COMO SALVA E INATIVA. Marcamos TODAS as que não estão
+        // salvas (normalmente é só a que estava aberta), assim também cobre o caso de uma
+        // ligação reaberta pelo lápis do histórico, que pode não ser a última.
+        blocos.forEach(function(b) { b.classList.add('ligacao-salva'); });
+        ligacaoEmEdicao = null;
 
         algumaLigacaoSalva = true;
         desativarBloqueioSaida();
@@ -1402,6 +1457,19 @@
     }
 
     function cancelarLigacaoModal() {
+        // Se o usuário estava editando uma ligação já salva (lápis do histórico) e cancelou,
+        // apenas devolvemos a marca de "salva" para ela voltar ao histórico como estava.
+        if (ligacaoEmEdicao) {
+            ligacaoEmEdicao.classList.add('ligacao-salva');
+            ligacaoEmEdicao = null;
+            desativarBloqueioSaida();
+            modalLigacao.hide();
+            atualizarResumoLigacoes();
+            atualizarEstadoLigacoes();
+            encerrarAtendimento($('#base_novo_id_hidden').val());
+            return;
+        }
+
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
         for (let i = blocos.length - 1; i >= blocosSnapshot; i--) {
             blocos[i].remove();
@@ -1435,6 +1503,31 @@
         ativarBloqueioSaida();
         modalLigacao.show();
         // Marca o registro como "em atendimento" (vermelho na lista para todos).
+        marcarAtendimento($('#base_novo_id_hidden').val());
+    }
+
+    // ALEX: guarda a ligação que está sendo reaberta pelo lápis do histórico (para
+    // conseguir restaurá-la caso o usuário cancele a edição).
+    var ligacaoEmEdicao = null;
+
+    // ALEX: lápis do histórico -> reabre uma ligação JÁ SALVA no modal para editá-la.
+    // "numero" é a posição do bloco (1ª, 2ª, ...). Tira a marca de "salva" só desse
+    // bloco, então ele volta a aparecer editável no modal enquanto os demais continuam
+    // no histórico.
+    function editarLigacaoHistorico(numero) {
+        if (!PODE_REGISTRAR_LIGACAO || !modalLigacao) return;
+        let blocos = Array.from(document.querySelectorAll('#container-ligacoes .bloco-ligacao'));
+        let bloco = blocos[numero - 1];
+        if (!bloco) return;
+        ligacaoEmEdicao = bloco;
+        $('#ligacao-1').show();
+        // Não criamos bloco novo, então o "cancelar" não deve remover nada.
+        blocosSnapshot = blocos.length;
+        bloco.classList.remove('ligacao-salva'); // volta a ser a ligação editável do modal
+        atualizarEstadoLigacoes();
+        ativarBloqueioSaida();
+        modalLigacao.show();
+        // Reabrir uma ligação também tranca o registro (vermelho na lista para todos).
         marcarAtendimento($('#base_novo_id_hidden').val());
     }
 
