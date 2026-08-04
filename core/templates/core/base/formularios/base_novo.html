@@ -6,7 +6,7 @@
     <span style="font-size: 1rem; font-weight: normal;">
         <span class="text-primary">Produção</span> /
         <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> /
-        <span>{% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}</span>
+        <span class="text-primary">{% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}</span>
     </span>
 {% endblock %}
 
@@ -327,8 +327,8 @@
                         <!-- Indicador e Agência concatenados. No Novo: só leitura. Na Base Novo:
                              EDITÁVEIS (name=..._combo); o backend separa de volta ao salvar
                              (matrícula/CID = parte antes do primeiro " - "). -->
-                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold text-success mb-1" style="font-size: 1rem;">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control form-control-sm" placeholder="matrícula - nome"{% endif %}></div>
-                        <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control form-control-sm" placeholder="CID - nome da agência"{% endif %}></div>
+                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold text-success mb-1" style="font-size: 1rem;">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control" placeholder="matrícula - nome"{% endif %}></div>
+                        <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control" placeholder="CID - nome da agência"{% endif %}></div>
                         <!-- Campos reais do form: sempre ocultos. No Novo o form os desabilita
                              (mantém o valor original); na Base Novo o backend os preenche pela
                              separação dos campos concatenados acima. -->
