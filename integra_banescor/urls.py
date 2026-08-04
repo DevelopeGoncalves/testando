@@ -77,10 +77,10 @@ urlpatterns = [
     
     path('base/formularios/tipo-pessoa/', views.tipo_pessoa_lista, name='tipo_pessoa_lista'),
 
-    # 10.1 Base Novo (Indicação de Seguridade) - segue o padrão dos formulários da aba Base
-    path('base/formularios/base-novo/', views.lista_base_novo, name='lista_base_novo'),
-    path('base/formularios/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
-    path('base/formularios/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),
+    # 10.1 Base Novo (Indicação de Seguridade) - card de Produção / Vendas
+    path('producao/vendas/base-novo/', views.lista_base_novo, name='lista_base_novo'),
+    path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
+    path('producao/vendas/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),
 
     # 10. Rotas para cada Card específico de vendas
     path('producao/vendas/banseg/', views.vendas_banseg, name='vendas_banseg'),
