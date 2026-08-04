@@ -308,28 +308,26 @@
                         <div class="col-md-2"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
                     </div>
 
-                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user"></i> Dados do Cliente</h5>
-                    <div class="row g-3">
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_cliente }}</div>
+                    <div class="row g-3 mt-5 pt-4 border-top">
+                        <div class="col-md-3"><label class="fw-bold text-success mb-1" style="font-size: 1rem;">Nome do Cliente</label>{{ form_indicacao.nome_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">CPF</label>{{ form_indicacao.cpf_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
 
                         <!--<div class="col-md-2"><label class="fw-bold small mb-1">Produto</label>{{ form_indicacao.produto }}</div> -->
                         <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
-                        
-                        
+
+
                     </div>
 
-                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
-                    <div class="row g-3">
+                    <div class="row g-3 mt-5 pt-4 border-top">
                         <!-- Exibição concatenada (só leitura): aparece ao ABRIR um registro
                              existente. No cadastro novo (Base Novo) ela some e os campos reais
                              reaparecem editáveis. Estes inputs não têm 'name', então não vão no POST. -->
                         <!-- Indicador e Agência concatenados. No Novo: só leitura. Na Base Novo:
                              EDITÁVEIS (name=..._combo); o backend separa de volta ao salvar
                              (matrícula/CID = parte antes do primeiro " - "). -->
-                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold small mb-1">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control form-control-sm" placeholder="matrícula - nome"{% endif %}></div>
+                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold text-success mb-1" style="font-size: 1rem;">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control form-control-sm" placeholder="matrícula - nome"{% endif %}></div>
                         <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control form-control-sm" placeholder="CID - nome da agência"{% endif %}></div>
                         <!-- Campos reais do form: sempre ocultos. No Novo o form os desabilita
                              (mantém o valor original); na Base Novo o backend os preenche pela
