@@ -12,13 +12,11 @@
 
 {% block content %}
 <style>
-    /* Evita o "flash" da tabela crua: fica oculta até o DataTables terminar de
-       esconder colunas e paginar, quando recebe a classe .dt-pronta.
-       O quadro branco (.tabela-container) permanece visível como carregamento. */
+    /* Evita o "flash" da tabela crua */
     #tabela-base-novo { visibility: hidden; }
     #tabela-base-novo.dt-pronta { visibility: visible; }
 
-    /* Registro "em atendimento" (alguém está numa ligação): linha vermelha para todos. */
+    /* Registro "em atendimento" */
     #tabela-base-novo tbody tr.em-atendimento,
     #tabela-base-novo tbody tr.em-atendimento:hover { background-color: #f5c2c7 !important; }
     #tabela-base-novo tbody tr.em-atendimento td { color: #842029; }
@@ -109,6 +107,13 @@
         background: #6c757d;
     }
 
+    /* Garante o alinhamento perfeito e preenchimento vertical do campo de observações */
+    #id_observacoes {
+        height: 100% !important;
+        min-height: 100px;
+        resize: none;
+    }
+
 </style>
 
 <div id="tela-base-novo">
@@ -141,28 +146,28 @@
                         <tr>
                             <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
                             <th style="display:none;"></th>
-                            <th class="text-center">Carimbo de data/hora</th>
-                            <th class="text-center">{% if apenas_pendentes %}Responsável{% else %}E-mail{% endif %}</th>
-                            <th class="text-center">E-mail do indicador (outro)</th>
-                            <th class="text-center">Matrícula do indicador</th>
-                            <th class="text-center">Indicador</th>
-                            <th class="text-center">Agência</th>
-                            <th class="text-center">Telefone do indicador</th>
-                            <th class="text-center">Enviar orçamento para</th>
-                            <th class="text-center">Nome do cliente</th>
-                            <th class="text-center">Telefone do cliente</th>
-                            <th class="text-center">CPF do cliente</th>
-                            <th class="text-center">E-mail do cliente</th>
-                            <th class="text-center">Produto</th>
-                            <th class="text-start">Dados do veículo</th>
-                            <th class="text-center">Renovação</th>
-                            <th class="text-center">Seguradora</th>
-                            <th class="text-center">Grupo/Ramo</th>
-                            <th class="text-center">Tipo Documento</th>
-                            <th class="text-center">Nº Contrato</th>
-                            <th class="text-center">Nº Endosso</th>
-                            <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th>
-                            <th class="text-start">Observações</th>
+                            <th class="text-center">Carimbo de data/hora</th> <!-- 1 -->
+                            <th class="text-center">{% if apenas_pendentes %}Responsável{% else %}E-mail{% endif %}</th> <!-- 2 -->
+                            <th class="text-center">E-mail do indicador (outro)</th> <!-- 3 -->
+                            <th class="text-center">Matrícula do indicador</th> <!-- 4 -->
+                            <th class="text-center">Indicador</th> <!-- 5 -->
+                            <th class="text-center">Agência</th> <!-- 6 -->
+                            <th class="text-center">Telefone do indicador</th> <!-- 7 -->
+                            <th class="text-center">Enviar orçamento para</th> <!-- 8 -->
+                            <th class="text-center">Nome do cliente</th> <!-- 9 -->
+                            <th class="text-center">Telefone do cliente</th> <!-- 10 -->
+                            <th class="text-center">CPF do cliente</th> <!-- 11 -->
+                            <th class="text-center">E-mail do cliente</th> <!-- 12 -->
+                            <th class="text-center">Produto</th> <!-- 13 -->
+                            <th class="text-start">Dados do veículo</th> <!-- 14 -->
+                            <th class="text-center">Renovação</th> <!-- 15 -->
+                            <th class="text-center">Seguradora</th> <!-- 16 -->
+                            <th class="text-center">Grupo/Ramo</th> <!-- 17 -->
+                            <th class="text-center">Tipo Documento</th> <!-- 18 -->
+                            <th class="text-center">Nº Contrato</th> <!-- 19 -->
+                            <th class="text-center">Nº Endosso</th> <!-- 20 -->
+                            <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 21 -->
+                            <th class="text-start">Observações</th> <!-- 22 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -301,7 +306,7 @@
                                 <div id="base_novo_dropdown_ramo" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="fw-bold small mb-1">Tipo Documento</label>
                             <div class="input-container">
                                 <input type="hidden" name="tipo_documento" id="base_novo_tipo_documento_val">
@@ -311,7 +316,8 @@
                         </div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
+                        <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
                     </div>
 
                     <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user"></i> Dados do Cliente</h5>
@@ -325,21 +331,57 @@
 
                     <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
                     <div class="row g-3">
+                        
+                        <div class="col-md-8">
+                            <div class="row g-3">
+                                <div class="col-md-4" id="disp-ind-col">
+                                    <label class="fw-bold small mb-1">Indicador</label>
+                                    <input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control" placeholder="matrícula - nome"{% endif %}>
+                                </div>
+                                <div class="col-md-4" id="disp-ag-col">
+                                    <label class="fw-bold small mb-1">Agência</label>
+                                    <input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control" placeholder="CID - nome da agência"{% endif %}>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold small mb-1">Telefone</label>
+                                    {{ form_indicacao.telefone_indicador }}
+                                </div>
+                                
+                                <div class="col-md-5">
+                                    <label class="fw-bold small mb-1">E-mail</label>
+                                    {{ form_indicacao.email }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold small mb-1">Enviar orçamento para</label>
+                                    {{ form_indicacao.enviar_orcamento_para }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Origem da informação</label>
+                                    {{ form_indicacao.origem_informacao }}
+                                </div>
+                                
+                                <!-- Campos Ocultos (Mantidos) -->
+                                <div class="col-md-2 d-none" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
+                                <div class="col-md-2 d-none" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
+                                <div class="col-md-2 d-none" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                            </div>
+                        </div>
 
-                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold small mb-1">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control form-control-sm" placeholder="matrícula - nome"{% endif %}></div>
-                        <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control form-control-sm" placeholder="CID - nome da agência"{% endif %}></div>
-                        <div class="col-md-2 d-none" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
-                        <div class="col-md-2 d-none" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
-                        <div class="col-md-2 d-none" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_indicador }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">E-mail do indicador (se não for você)</label>{{ form_indicacao.email_indicador_outro }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Enviar orçamento para</label>{{ form_indicacao.enviar_orcamento_para }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Origem da informação</label>{{ form_indicacao.origem_informacao }}</div>
+                        <!-- Lado Direito: Div separada de Observações com alinhamento flexível -->
+                        <div class="col-md-4 d-flex flex-column">
+                            <label class="fw-bold small mb-1">Observações</label>
+                            <div class="flex-grow-1 d-flex flex-column">
+                                {% if form_indicacao.observacoes %}
+                                    {{ form_indicacao.observacoes }}
+                                {% else %}
+                                    <textarea class="form-control flex-grow-1" name="observacoes" id="id_observacoes" placeholder="Digite as observações com quebra de linha..."></textarea>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
                     </div>
 
-                    <!--  onde o histórico vai aparecer fora do modal -->
+                    <!-- onde o histórico vai aparecer fora do modal -->
                     <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
 
                     {% if apenas_pendentes %}
@@ -483,7 +525,6 @@
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
     const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
-    // As URLs de marcar/encerrar usam /0/ como espaço reservado para o id do registro.
     const URL_MARCAR_ATEND = "{% url 'marcar_atendimento' 0 %}";
     const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
 
@@ -549,14 +590,11 @@
         $input.on('focus.relacionamentoPesquisa click.relacionamentoPesquisa', mostrarLista);
 
         $input.on('input.relacionamentoPesquisa', function() {
-            // Ao editar o texto manualmente, invalida o ID anterior.
             $hidden.val('');
             mostrarLista();
         });
     }
 
-    //trava ligacao 
-    // verifica se a ultima ligacao esta fechada ou nao e nao deixa fazer uma nova religacao
     function ultimoBlocoConcluido() {
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
         if (blocos.length === 0) return true;
@@ -566,21 +604,15 @@
         let agencia = ultimoBloco.querySelector('input[name^="ligacao_agn"]').checked;
         let premio = ultimoBloco.querySelector('input[name^="ligacao_premio_total"]').value.trim() !== '';
         
-        // O encerramento real da ligação so funciona quando marca  venda central ou agência) + prêmio Total.
         let vendaFechada = (central || agencia) && premio;
-        
         return vendaFechada;
-    
     }
 
-        //trava ligacao
-        function atualizarEstadoLigacoes() {
+    function atualizarEstadoLigacoes() {
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
         let divHistorico = document.getElementById('historico-ligacoes-ficha');
         let htmlHistorico = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
         let temHistorico = false;
-        
-        // vai guardar os HTMLs dos cards
         let cardsHistorico = [];
 
         blocos.forEach((bloco, index) => {
@@ -590,10 +622,8 @@
             let titulo = bloco.querySelector('.titulo-ligacao');
 
             if (isSalvo) {
-                // --- salva as ligacoes e deixa no historico ---
                 bloco.style.display = 'none'; 
-                campos.forEach(c => c.disabled = true); // Fica inativo/bloqueado
-                
+                campos.forEach(c => c.disabled = true);
                 temHistorico = true;
 
                 let dataVal = bloco.querySelector('input[name^="ligacao_data"]').value;
@@ -613,9 +643,6 @@
                 let venda = central ? 'Central' : (agn ? 'Agência' : '-');
                 let numero = index + 1;
 
-                // Guarda o card no array em vez de concatenar direto
-
-                //trava espaços historico
                 cardsHistorico.push(`
                 <div class="card mb-3 bg-light border-0 shadow-sm">
                     <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
@@ -643,12 +670,11 @@
                     </div>
                 </div>`);
             } else {
-                // --- LIGAÇÃO NOVA/ATIVA: APARECE SOZINHA NO MODAL ---
                 bloco.style.display = 'block';
                 bloco.style.opacity = '1';
                 bloco.classList.add('p-3', 'border', 'border-2', 'border-primary', 'rounded', 'bg-white', 'shadow-sm');
                 bloco.classList.remove('border-bottom', 'pb-3', 'mb-3');
-                campos.forEach(c => c.disabled = false); // Editável
+                campos.forEach(c => c.disabled = false);
                 if (titulo) {
                     titulo.classList.add('text-primary');
                     titulo.classList.remove('text-muted');
@@ -658,10 +684,8 @@
             }
         });
 
-        // Inverte o array para que a ligação mais recente (ex: 3ª Ligação) fique no topo
         htmlHistorico += cardsHistorico.reverse().join('');
 
-        // Atualiza a visualização da div principal do histórico
         if (divHistorico) {
             if (temHistorico) {
                 divHistorico.innerHTML = htmlHistorico;
@@ -714,20 +738,17 @@
         $('.lista-suspensa').addClass('d-none');
     }
 
-
     let modalLigacao = null;          
     let algumaLigacaoSalva = false;   
     let blocosSnapshot = 1;           
 
     let modalHistorico = null;        
-    // Mapa id -> texto do motivo de não venda, para exibir o nome no histórico.
     const MOTIVOS_NAO_VENDA = {
         {% for m in motivos_nao_venda %}"{{ m.id }}": "{{ m.motivo|escapejs }}",{% endfor %}
     };
 
     $(document).ready(function() {
 
-        // Relacionamentos pesquisáveis, seguindo o padrão de lista_fase.html.
         inicializarDropdownRelacionamento(
             'base_novo_seguradora_texto',
             'base_novo_seguradora_val',
@@ -753,25 +774,20 @@
             }
         });
 
-        // Ramo(18) e Tipo Documento(19) ficam ocultas, deixo oculto as colunas de acordo com os numeros
-        // Na tela "Novo", ordena por padrão pela coluna "Próxima ligação" (índice 22)
-        // em ordem decrescente. Na Base Novo mantém sem ordenação inicial.
-        iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19, 5]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
+        //oculta coluna 
+        iniciarTabelaExcel('tabela-base-novo', [2, 5, 8, 9, 10, 21, 13, 15, 18, 19]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
+        //iniciarTabelaExcel('tabela-base-novo', [2, 4, 8, 9, 11, 12, 13, 15, 16, 18, 19, 5]{% if apenas_pendentes %}, [[22, 'desc']]{% endif %});
+        
 
-        // Trava de atendimento ("em ligação"): pinta de vermelho os registros que alguém está
-        // atendendo e mantém isso atualizado automaticamente (polling). Reaplica a cada redesenho
-        // da tabela (paginação/filtro/ordenação).
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);
         if (tableInstance) tableInstance.on('draw', aplicarAtendimentos);
 
-        // Prepara o pop-up de ligação (só existe na tela do card "Novo").
         if (PODE_REGISTRAR_LIGACAO) {
             modalLigacao = new bootstrap.Modal(document.getElementById('modalLigacao'));
             atualizarResumoLigacoes();
         }
 
-        // Pop-up do histórico de ligações (existe tanto no Novo quanto na Base Novo).
         var elHist = document.getElementById('modalHistoricoLigacoes');
         if (elHist) {
             modalHistorico = new bootstrap.Modal(elHist);
@@ -795,7 +811,6 @@
             avisoElegante("{{ erro_formulario_msg|escapejs }}", 'Não foi possível salvar');
         {% endif %}
 
-        // Só gera o Protocolo e a Data/Hora da Ligação quando o atendente
         $('#container-ligacoes').on('input change', [
             'input[name^="ligacao_data"]',
             'input[name^="ligacao_ramal"]',
@@ -806,24 +821,19 @@
             'input[name^="ligacao_proximo"]',
             'textarea[name^="ligacao_obs"]'
         ].join(', '), function() {
-            // Ignora quando o campo foi apenas percorrido/limpo sem informar nada:
-            // caixas de seleção contam quando marcadas; demais campos quando têm valor.
             var informou = (this.type === 'checkbox') ? this.checked : (this.value || '').trim() !== '';
             if (!informou) return;
             gerarProtocoloEDataSeNecessario($(this).closest('.bloco-ligacao'));
         });
 
-        // Vendas Central, Vendas Agência e Motivo Não Venda são mutuamente exclusivos: marcar/selecionar um desativa os outros dois
         $('#container-ligacoes').on('change', 'input[name^="ligacao_venda_central"], input[name^="ligacao_agn"], select[name^="ligacao_motivo_nao_venda"]', function() {
             sincronizarExclusividadeVenda(this.closest('.bloco-ligacao'));
         });
 
-        // Formata o "Prêmio Total" em milhar enquanto o usuário digita
         $('#container-ligacoes').on('input', 'input[name^="ligacao_premio_total"]', function() {
             aplicarMascaraMilhar(this);
         });
 
-        // Trava no navegador: não deixa salvar se uma ligação "Vendas Central" ficar sem "Prêmio Total"
         $('#form-base-novo form').on('submit', function(e) {
             let faltando = false;
             document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(function(bloco) {
@@ -839,15 +849,13 @@
             if (faltando) {
                 e.preventDefault();
                 avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
-                return; // Garante que a execução pare aqui em caso de erro
+                return;
             }
 
-            // Reativa todos os campos para que o Django receba as ligações anteriores no POST
             $('#container-ligacoes .bloco-ligacao').find('input, select, textarea').prop('disabled', false);
         });
     });
 
-    // Preenche automático o campo "Cadastrado/tratado por" com o nome do usuário logado.
     function prepararNovaLigacao(idProtocolo, idCadastradoPor) {
         let campoCadastradoPor = document.getElementById(idCadastradoPor);
         if (campoCadastradoPor) {
@@ -860,10 +868,6 @@
         }
     }
 
-    // Gera o Protocolo (se ainda não tiver) e carimba a Data/Hora da Ligação com o
-    // horário atual do servidor (se ainda vazia). Guarda de "gerando" evita disparar
-    // duas requisições de protocolo em paralelo (ex.: Ramal e Venda Central preenchidos
-    // quase ao mesmo tempo).
     function gerarProtocoloEDataSeNecessario(bloco) {
         if (!bloco || !bloco.length) return;
 
@@ -888,9 +892,6 @@
         }
     }
 
-    // trava ligacao
-    // marca que a lista ja tem pelo menos uma ligação salva.
-
     function iniciarPrimeiraLigacao() {
         algumaLigacaoSalva = true;
         $('#btn-iniciar-ligacao').hide();
@@ -898,9 +899,6 @@
         atualizarResumoLigacoes();
     }
 
-
-    // Enquanto o pop-up está aberto, o navegador avisa/impede sair da página (fechar aba,
-    // recarregar, navegar) sem antes Salvar ou Cancelar a ligação.
     function avisarSaida(e) {
         e.preventDefault();
         e.returnValue = '';
@@ -913,7 +911,6 @@
         window.removeEventListener('beforeunload', avisarSaida);
     }
 
-    // Mostra na ficha quantas ligações já foram registradas.
     function atualizarResumoLigacoes() {
         let resumo = document.getElementById('resumo-ligacoes');
         if (!resumo) return;
@@ -923,27 +920,18 @@
             : '';
     }
 
-    // --- HISTÓRICO DE LIGAÇÕES (pop-up só leitura, aberto pela coluna "Ligações") ---
     function escHtml(s) {
         return (s == null ? '' : String(s)).replace(/[&<>"]/g, function(c) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
         });
     }
 
-    // Converte "2026-05-07T01:29:00" (ou sem segundos) para "07/05/2026 01:29".
     function formatarDataHora(iso) {
         if (!iso) return '';
         var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
         return m ? (m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5]) : iso;
     }
 
-    // ALEX: pop-up de HISTÓRICO (somente leitura) de todas as ligações já salvas de um
-    // registro. Não trava/desbloqueia nada, só exibe. Os dados vêm da célula oculta
-    // .dados-ligacoes-extras, que já é renderizada pelo backend (ordenada da mais recente
-    // pra mais antiga).
-    // Monta e abre o histórico de ligações do registro (lê os dados já embutidos na
-    // linha, na célula oculta .dados-ligacoes-extras). A mais recente aparece no topo,
-    // em destaque.
     function abrirHistoricoLigacoes(el) {
         if (!modalHistorico) return;
         var tr = el.closest('tr');
@@ -951,8 +939,6 @@
         document.getElementById('hist-cliente').textContent = cliente ? '— ' + cliente : '';
 
         var itens = tr ? tr.querySelectorAll('.dados-ligacoes-extras .extra-item-ligacao') : [];
-        // As ligações já vêm da mais recente para a mais antiga (ordering do model:
-        // ['-data_ligacao', '-id']), então o índice 0 é sempre a última ligação.
         var arr = Array.prototype.slice.call(itens);
         var total = arr.length;
         var html = '';
@@ -965,7 +951,7 @@
                       : '-';
             var motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
             var premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
-            var numero = total - idx; // 1ª, 2ª... na ordem cronológica
+            var numero = total - idx;
 
             html += ''
               + '<div class="card mb-2 ' + (ehUltima ? 'border-primary' : '') + '">'
@@ -998,9 +984,6 @@
         modalHistorico.show();
     }
 
-    // ALEX: na Base Novo (que não registra ligação) mostramos o histórico de ligações
-    // JÁ FINALIZADAS direto na ficha, somente leitura. Os dados vêm da mesma célula oculta
-    // .dados-ligacoes-extras da linha (mais recente -> mais antiga).
     function renderHistoricoFichaBaseNovo(row) {
         let div = document.getElementById('historico-ligacoes-ficha');
         if (!div) return;
@@ -1014,7 +997,7 @@
         let html = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
         itens.forEach(function(item, idx) {
             let d = item.dataset;
-            let numero = total - idx; // ordem cronológica (1ª, 2ª, ...)
+            let numero = total - idx;
             let venda = d.vendaCentral === '1' ? 'Central' : (d.agn === '1' ? 'Agência' : '-');
             let motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
             let premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
@@ -1046,8 +1029,6 @@
         div.style.display = 'block';
     }
 
-    // ALEX: volta o pop-up de ligação pro estado "zerado" (0 ligações), usado quando abre
-    // uma ficha NOVA (sem histórico) ou quando cancela sem nenhuma ligação salva antes.
     function resetarContainerLigacoes() {
         contadorLigacoes = 1;
         let container = document.getElementById('container-ligacoes');
@@ -1057,7 +1038,6 @@
         }
         document.getElementById('edit_ligacao_protocolo').value = '';
         document.getElementById('edit_ligacao_data').value = '';
-        //document.getElementById('edit_ligacao_status').value = '';
         document.getElementById('edit_ligacao_proximo').value = '';
         document.getElementById('edit_ligacao_obs').value = '';
         document.getElementById('edit_ligacao_ramal').value = '';
@@ -1066,7 +1046,7 @@
         document.getElementById('edit_ligacao_agn').checked = false;
         document.getElementById('edit_ligacao_motivo_nao_venda').value = '';
         document.getElementById('edit_ligacao_cadastrado_por').value = '';
-        // Ficha nova: nenhuma ligação começada ainda, só o botão "Iniciar Ligação".
+
         algumaLigacaoSalva = false;
         $('#ligacao-1').hide();
         $('#btn-iniciar-ligacao').show();
@@ -1074,7 +1054,6 @@
         sincronizarExclusividadeVenda(document.getElementById('ligacao-1'));
         atualizarResumoLigacoes();
         
-        // NOVO: Limpa visualmente o histórico da tela de fundo ao resetar
         let divHistorico = document.getElementById('historico-ligacoes-ficha');
         if (divHistorico) {
             divHistorico.innerHTML = '';
@@ -1082,13 +1061,6 @@
         }
     }
 
-    // Vendas Central e Vendas Agência continuam mutuamente exclusivos entre si e com o
-    // Motivo Não Venda (marcar um desativa os outros dois). Já o Motivo Não Venda nunca
-    // fica desabilitado: o usuário pode selecioná-lo a qualquer momento.
-    // ALEX: trava/destrava campos DENTRO do mesmo bloco (Vendas Central, Vendas Agência,
-    // Motivo Não Venda, Prêmio Total, Próximo contato) para que sejam mutuamente exclusivos.
-    // É aqui que "Próximo contato" fica desabilitado assim que Central/Agência/Motivo é
-    // preenchido, e "Prêmio Total" só é liberado quando Central ou Agência é marcado.
     function sincronizarExclusividadeVenda(bloco) {
         if (!bloco) return;
         let campoCentral = bloco.querySelector('input[name^="ligacao_venda_central"]');
@@ -1104,9 +1076,6 @@
 
         campoMotivo.disabled = false;
 
-        // Ao desabilitar Central/Agência por causa do Motivo (agora selecionável mesmo com
-        // um dos dois já marcado), desmarca também para não deixar um checkbox desabilitado
-        // e ainda marcado, que não é enviado no POST e geraria um estado inconsistente.
         campoCentral.disabled = temAgencia || temMotivo;
         if (campoCentral.disabled) campoCentral.checked = false;
 
@@ -1116,9 +1085,6 @@
         temCentral = campoCentral.checked;
         temAgencia = campoAgencia.checked;
 
-        // "Prêmio Total" fica ativo quando a ligação é "Vendas Central" OU "Vendas Agência".
-        // Ao desmarcar ambos, desabilita e limpa para não enviar valor indevido (campo
-        // desabilitado não vai no POST).
         if (campoPremio) {
             campoPremio.disabled = !(temCentral || temAgencia);
             if (!(temCentral || temAgencia)) {
@@ -1126,15 +1092,6 @@
             }
         }
 
-        // "Próximo contato" só fica ativo quando NENHUM dos três campos de marcação
-        // (Vendas Central, Vendas Agência ou Motivo Não Venda) está preenchido, ou seja,
-        // quando a ligação ainda está em aberto (sem venda e sem motivo definido). Ao
-        // marcar/selecionar qualquer um deles a ligação foi concluída, então desabilita
-        // e limpa (campo desabilitado não vai no POST).
-        // ALEX: aqui "Próximo contato" é travado (disabled) se QUALQUER um dos três campos
-        // (Central, Agência ou Motivo) estiver preenchido no bloco atual. Isso é diferente do
-        // bloqueio de ultimoBlocoConcluido(): este aqui é só visual/campo-a-campo dentro do
-        // mesmo bloco, não é o que decide se pode abrir uma ligação nova.
         if (campoProximo) {
             let ligacaoConcluida = temCentral || temAgencia || temMotivo;
             campoProximo.disabled = ligacaoConcluida;
@@ -1143,12 +1100,9 @@
             }
         }
 
-        // Mantém o select "Vendas" (visível) coerente com os checkboxes ocultos.
         sincronizarSelectVendas(bloco);
     }
 
-    // Aplica a escolha do select "Vendas" (Central/Agência) nos checkboxes ocultos que o
-    // backend usa (ligacao_venda_central / ligacao_agn) e re-sincroniza os estados do bloco.
     function aplicarSelecaoVendas(selectEl) {
         let bloco = selectEl.closest('.bloco-ligacao');
         if (!bloco) return;
@@ -1157,12 +1111,9 @@
         if (central) central.checked = (selectEl.value === 'central');
         if (agn) agn.checked = (selectEl.value === 'agencia');
         sincronizarExclusividadeVenda(bloco);
-        // Escolher a venda conta como "informar um dado": gera protocolo e data/hora.
         if (selectEl.value) gerarProtocoloEDataSeNecessario($(bloco));
     }
 
-    // Reflete no select "Vendas" o estado atual dos checkboxes ocultos e o desabilita
-    // quando um "Motivo Não Venda" está selecionado (venda e não-venda são exclusivos).
     function sincronizarSelectVendas(bloco) {
         let sel = bloco.querySelector('[data-vendas-select]');
         if (!sel) return;
@@ -1173,8 +1124,6 @@
         sel.disabled = !!(motivo && motivo.value !== '');
     }
 
-    // Máscara de milhar (formato brasileiro): os dígitos digitados são tratados como
-    // centavos -> "123456" vira "1.234,56".
     function aplicarMascaraMilhar(input) {
         let digitos = (input.value || '').replace(/\D/g, '');
         if (!digitos) { input.value = ''; return; }
@@ -1182,7 +1131,6 @@
         input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Converte um valor "cru" salvo (ex.: "1234.56") para exibição "1.234,56".
     function formatarValorBRL(valor) {
         if (valor === undefined || valor === null || valor === '') return '';
         let numero = parseFloat(valor);
@@ -1199,10 +1147,8 @@
                 limparRelacionamentosPesquisaveis();
                 resetarContainerLigacoes();
                 prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
-                // Cadastro novo: limpa os campos concatenados do indicador/agência.
                 $('#disp-indicador').val('');
                 $('#disp-agencia').val('');
-                // Cadastro novo não tem histórico: limpa o bloco de histórico da ficha (Base Novo).
                 var _histFicha = document.getElementById('historico-ligacoes-ficha');
                 if (_histFicha) { _histFicha.innerHTML = ''; _histFicha.style.display = 'none'; }
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
@@ -1229,12 +1175,9 @@
         var _nomeInd = row.getAttribute('data-nome-indicador') || '';
         var _cid = row.getAttribute('data-cid') || '';
         var _nomeAg = row.getAttribute('data-nome-agencia') || '';
-        // Campos reais (ocultos) com os valores separados - segurança para o Novo (só leitura).
         $('#id_matricula_indicador').val(_mat);
         $('#id_nome_indicador').val(_nomeInd);
         $('#id_cid_agencia').val(_cid);
-        // Campos visíveis concatenados (Indicador / Agência) - no Novo são só leitura; na Base
-        // Novo são editáveis e o backend separa de volta ao salvar.
         $('#disp-indicador').val(_mat + ((_mat && _nomeInd) ? ' - ' : '') + _nomeInd);
         $('#disp-agencia').val(_cid + ((_cid && _nomeAg) ? ' - ' : '') + _nomeAg);
         $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
@@ -1267,15 +1210,15 @@
         );
         $('#id_numero_contrato').val(row.getAttribute('data-contrato'));
         $('#id_numero_endosso').val(row.getAttribute('data-endosso'));
+        
+        $('#id_observacoes').val(row.getAttribute('data-obs'));
 
         if (PODE_REGISTRAR_LIGACAO) {
         resetarContainerLigacoes();
         
         let itensLigacoesNode = row.querySelectorAll('.extra-item-ligacao');
-        // INVERTE A ORDEM: A ligação mais antiga vira a 1ª (topo) e a mais recente vai para o final.
         let itensLigacoes = Array.from(itensLigacoesNode).reverse();
         
-        // Povoando ligações e marcando como SALVAS (irão para o histórico)
         itensLigacoes.forEach(function(item, index) {
             if(index === 0) {
                 let bloco = document.getElementById('ligacao-1');
@@ -1318,13 +1261,11 @@
             iniciarPrimeiraLigacao();
         }
         
-        // NOVO: Chama a atualização visual para jogar os dados carregados no histórico principal
         atualizarEstadoLigacoes();
 
         } else {
-            // Base Novo: não registra ligação, mas mostra o histórico finalizado na ficha (só leitura).
             renderHistoricoFichaBaseNovo(row);
-        } // fecha if(PODE_REGISTRAR_LIGACAO)
+        }
 
         $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo');
         toggleFormLocal('base-novo', true);
@@ -1336,7 +1277,6 @@
             return;
         }
 
-        // Marca a ligação que estava no modal como salva, para ela ir para o histórico
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
         if (blocos.length > 0) {
             blocos[blocos.length - 1].classList.add('ligacao-salva');
@@ -1347,7 +1287,6 @@
         let novoBloco = blocoOriginal.cloneNode(true);
         novoBloco.id = 'ligacao-' + contadorLigacoes;
         
-        // A nova ligação começa limpa (sem a classe de salva)
         novoBloco.classList.remove('ligacao-salva');
         novoBloco.style.display = '';
 
@@ -1381,11 +1320,10 @@
         document.getElementById('container-ligacoes').appendChild(novoBloco);
         prepararNovaLigacao('edit_ligacao_protocolo_' + contadorLigacoes, 'edit_ligacao_cadastrado_por_' + contadorLigacoes);
         
-        atualizarEstadoLigacoes(); // Atualiza a tela pra remover a antiga do modal e mostrar a nova
+        atualizarEstadoLigacoes();
     }
 
-    // --- Trava de atendimento ("em ligação") -----------------------------------------------
-    var atendimentosAtivos = {}; // { "id": "nome de quem está atendendo" }
+    var atendimentosAtivos = {};
     function csrfAtendimento() {
         var el = document.querySelector('input[name=csrfmiddlewaretoken]');
         return el ? el.value : '';
@@ -1400,7 +1338,6 @@
         $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
                  headers: { 'X-CSRFToken': csrfAtendimento() } });
     }
-    // Aplica o vermelho nas linhas conforme o mapa atual de atendimentos ativos.
     function aplicarAtendimentos() {
         $('#tabela-base-novo tbody tr').each(function() {
             var id = String($(this).data('id') || '');
@@ -1422,7 +1359,7 @@
         let faltando = false;
         let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
         blocos.forEach(function(bloco) {
-            if(bloco.classList.contains('ligacao-salva')) return; // Ignora as já salvas na validação
+            if(bloco.classList.contains('ligacao-salva')) return;
             
             let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
             let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
@@ -1438,9 +1375,6 @@
             return;
         }
 
-        // MARCA A LIGAÇÃO DO MODAL COMO SALVA E INATIVA. Marcamos TODAS as que não estão
-        // salvas (normalmente é só a que estava aberta), assim também cobre o caso de uma
-        // ligação reaberta pelo lápis do histórico, que pode não ser a última.
         blocos.forEach(function(b) { b.classList.add('ligacao-salva'); });
         ligacaoEmEdicao = null;
 
@@ -1451,14 +1385,11 @@
         $('#btn-registrar-outra-ligacao').show();
         atualizarResumoLigacoes();
 
-        atualizarEstadoLigacoes(); // Joga a ligação recém-salva para o Histórico Principal
-        // Encerra a trava de atendimento (registro volta ao normal para todos).
+        atualizarEstadoLigacoes();
         encerrarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function cancelarLigacaoModal() {
-        // Se o usuário estava editando uma ligação já salva (lápis do histórico) e cancelou,
-        // apenas devolvemos a marca de "salva" para ela voltar ao histórico como estava.
         if (ligacaoEmEdicao) {
             ligacaoEmEdicao.classList.add('ligacao-salva');
             ligacaoEmEdicao = null;
@@ -1481,8 +1412,7 @@
         desativarBloqueioSaida();
         modalLigacao.hide();
         atualizarResumoLigacoes();
-        atualizarEstadoLigacoes(); // Devolve o histórico ao estado normal
-        // Encerra a trava de atendimento (registro volta ao normal para todos).
+        atualizarEstadoLigacoes();
         encerrarAtendimento($('#base_novo_id_hidden').val());
     }
 
@@ -1493,27 +1423,20 @@
         blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
        
         if (!primeira) {
-            adicionarLigacao(true); // Cria a próxima em branco
+            adicionarLigacao(true);
         } else {
             let bloco1 = document.getElementById('ligacao-1');
-            if (bloco1) bloco1.classList.remove('ligacao-salva'); // Primeira ligação limpa
+            if (bloco1) bloco1.classList.remove('ligacao-salva');
         }
         
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
-        // Marca o registro como "em atendimento" (vermelho na lista para todos).
         marcarAtendimento($('#base_novo_id_hidden').val());
     }
 
-    // ALEX: guarda a ligação que está sendo reaberta pelo lápis do histórico (para
-    // conseguir restaurá-la caso o usuário cancele a edição).
     var ligacaoEmEdicao = null;
 
-    // ALEX: lápis do histórico -> reabre uma ligação JÁ SALVA no modal para editá-la.
-    // "numero" é a posição do bloco (1ª, 2ª, ...). Tira a marca de "salva" só desse
-    // bloco, então ele volta a aparecer editável no modal enquanto os demais continuam
-    // no histórico.
     function editarLigacaoHistorico(numero) {
         if (!PODE_REGISTRAR_LIGACAO || !modalLigacao) return;
         let blocos = Array.from(document.querySelectorAll('#container-ligacoes .bloco-ligacao'));
@@ -1521,13 +1444,11 @@
         if (!bloco) return;
         ligacaoEmEdicao = bloco;
         $('#ligacao-1').show();
-        // Não criamos bloco novo, então o "cancelar" não deve remover nada.
         blocosSnapshot = blocos.length;
-        bloco.classList.remove('ligacao-salva'); // volta a ser a ligação editável do modal
+        bloco.classList.remove('ligacao-salva');
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
-        // Reabrir uma ligação também tranca o registro (vermelho na lista para todos).
         marcarAtendimento($('#base_novo_id_hidden').val());
     }
 
@@ -1550,7 +1471,6 @@
 
             let titulo = bloco.querySelector('.titulo-ligacao');
             if(titulo) {
-                // Aqui aplicamos a classe exata para deixar a margem/fundo azul (bg-primary) com texto branco
                 titulo.className = 'titulo-ligacao bg-primary text-white p-2 rounded mb-3 d-flex justify-content-between align-items-center';
 
                 titulo.innerHTML = `
