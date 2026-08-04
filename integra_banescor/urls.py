@@ -81,6 +81,10 @@ urlpatterns = [
     path('producao/vendas/base-novo/', views.lista_base_novo, name='lista_base_novo'),
     path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
     path('producao/vendas/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),
+    # Trava de atendimento ("em ligação") - marcar/encerrar e listar os ativos (polling)
+    path('producao/vendas/atendimento/<int:id>/iniciar/', views.marcar_atendimento, name='marcar_atendimento'),
+    path('producao/vendas/atendimento/<int:id>/encerrar/', views.encerrar_atendimento, name='encerrar_atendimento'),
+    path('producao/vendas/atendimentos-ativos/', views.atendimentos_ativos, name='atendimentos_ativos'),
 
     # 10. Rotas para cada Card específico de vendas
     path('producao/vendas/banseg/', views.vendas_banseg, name='vendas_banseg'),
