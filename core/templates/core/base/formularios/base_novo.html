@@ -150,7 +150,7 @@
                             <th class="text-center">E-mail do cliente</th>
                             <th class="text-center">Produto</th>
                             <th class="text-start">Dados do veículo</th>
-                            <th class="text-center">Já possui seguro?</th>
+                            <th class="text-center">Renovação</th>
                             <th class="text-center">Seguradora</th>
                             <th class="text-center">Grupo/Ramo</th>
                             <th class="text-center">Tipo Documento</th>
@@ -305,33 +305,23 @@
                         </div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Já possui seguro?</label>{{ form_indicacao.possui_seguro }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
                     </div>
 
-                    <div class="row g-3 mt-4 pt-4 border-top">
-                        <div class="col-md-3"><label class="fw-bold text-success mb-1" style="font-size: 1rem;">Nome do Cliente</label>{{ form_indicacao.nome_cliente }}</div>
+                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user"></i> Dados do Cliente</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">CPF</label>{{ form_indicacao.cpf_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
-
-                        <!--<div class="col-md-2"><label class="fw-bold small mb-1">Produto</label>{{ form_indicacao.produto }}</div> -->
                         <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
-
-
                     </div>
 
-                    <div class="row g-3 mt-4 pt-4 border-top">
-                        <!-- Exibição concatenada (só leitura): aparece ao ABRIR um registro
-                             existente. No cadastro novo (Base Novo) ela some e os campos reais
-                             reaparecem editáveis. Estes inputs não têm 'name', então não vão no POST. -->
-                        <!-- Indicador e Agência concatenados. No Novo: só leitura. Na Base Novo:
-                             EDITÁVEIS (name=..._combo); o backend separa de volta ao salvar
-                             (matrícula/CID = parte antes do primeiro " - "). -->
-                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold text-success mb-1" style="font-size: 1rem;">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control" placeholder="matrícula - nome"{% endif %}></div>
-                        <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control" placeholder="CID - nome da agência"{% endif %}></div>
-                        <!-- Campos reais do form: sempre ocultos. No Novo o form os desabilita
-                             (mantém o valor original); na Base Novo o backend os preenche pela
-                             separação dos campos concatenados acima. -->
+                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
+                    <div class="row g-3">
+
+                        <div class="col-md-4" id="disp-ind-col"><label class="fw-bold small mb-1">Indicador</label><input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control form-control-sm" placeholder="matrícula - nome"{% endif %}></div>
+                        <div class="col-md-3" id="disp-ag-col"><label class="fw-bold small mb-1">Agência</label><input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control form-control-sm bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control form-control-sm" placeholder="CID - nome da agência"{% endif %}></div>
                         <div class="col-md-2 d-none" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
                         <div class="col-md-2 d-none" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
                         <div class="col-md-2 d-none" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
@@ -343,7 +333,7 @@
                         <div class="col-md-2"><label class="fw-bold small mb-1">Origem da informação</label>{{ form_indicacao.origem_informacao }}</div>
                     </div>
 
-                    <!-- NOVO: Container onde o histórico vai aparecer fora do modal -->
+                    <!--  onde o histórico vai aparecer fora do modal -->
                     <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
 
                     {% if apenas_pendentes %}
@@ -398,9 +388,6 @@
                                                             <option value="central">Central</option>
                                                             <option value="agencia">Agência</option>
                                                         </select>
-                                                        <!-- Checkboxes ocultos: preservam o contrato com o backend
-                                                             (ligacao_venda_central / ligacao_agn). Quem os controla é o
-                                                             select "Vendas" acima, via aplicarSelecaoVendas(). -->
                                                         <input type="checkbox" class="d-none campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central" tabindex="-1" aria-hidden="true">
                                                         <input type="checkbox" class="d-none campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn" tabindex="-1" aria-hidden="true">
                                                     </div>
@@ -486,17 +473,10 @@
 <script>
     let contadorLigacoes = 1;
     const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
-    // Na Base Novo o bloco de ligação nem é renderizado; as funções abaixo precisam
-    // saber disso para não tentar ler elementos que não existem naquela tela.
     const PODE_REGISTRAR_LIGACAO = {% if apenas_pendentes %}true{% else %}false{% endif %};
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
 
-    // ================================================================
-    // RELACIONAMENTOS PESQUISÁVEIS
-    // Adaptado da lista_fase.html: o texto fica visível para pesquisa
-    // e o ID do relacionamento continua sendo enviado no POST.
-    // ================================================================
     const listaBaseNovoSeguradoras = [
         {% for s in form_indicacao.seguradora.field.queryset %}
         { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %}
@@ -797,11 +777,7 @@
             avisoElegante("{{ erro_formulario_msg|escapejs }}", 'Não foi possível salvar');
         {% endif %}
 
-        // Só gera o Protocolo e a Data/Hora da Ligação quando o atendente realmente
-        // INFORMA um dado da ligação - ou seja, ao digitar/preencher/marcar algum campo
-        // (eventos 'input'/'change'), e não apenas ao clicar/focar. Apenas abrir o pop-up
-        // ou clicar num campo sem preencher nada não gera protocolo, evitando desperdiçar
-        // números com ligações que acabam nunca sendo preenchidas nem salvas.
+        // Só gera o Protocolo e a Data/Hora da Ligação quando o atendente
         $('#container-ligacoes').on('input change', [
             'input[name^="ligacao_data"]',
             'input[name^="ligacao_ramal"]',
@@ -848,14 +824,12 @@
                 return; // Garante que a execução pare aqui em caso de erro
             }
 
-            // CRÍTICO: Reativa todos os campos para que o Django receba as ligações anteriores no POST
+            // Reativa todos os campos para que o Django receba as ligações anteriores no POST
             $('#container-ligacoes .bloco-ligacao').find('input, select, textarea').prop('disabled', false);
         });
     });
 
     // Preenche automático o campo "Cadastrado/tratado por" com o nome do usuário logado.
-    // O protocolo fica em branco (placeholder "gerado automaticamente") até o Ramal ser
-    // preenchido - ver gerarProtocoloEDataSeNecessario().
     function prepararNovaLigacao(idProtocolo, idCadastradoPor) {
         let campoCadastradoPor = document.getElementById(idCadastradoPor);
         if (campoCadastradoPor) {
