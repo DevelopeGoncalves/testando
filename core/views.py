@@ -932,10 +932,18 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
         motivo_val = request.POST.get(f'ligacao_motivo_nao_venda{sufixo}')
         seguradora_val = request.POST.get(f'ligacao_seguradora{sufixo}')
 
+        # Comissão em %: aceita o formato milhar/decimal do pt-BR e é limitada a 0-65.
+        comissao_val = _parse_valor_moeda_brl(request.POST.get(f'ligacao_comissao{sufixo}'))
+        if comissao_val is not None:
+            if comissao_val < 0:
+                comissao_val = 0
+            elif comissao_val > 65:
+                comissao_val = 65
+
         # o "Prêmio Total" só vem no POST quando "Vendas Central" ou "Vendas Agência" está marcado
         premio_total_val = _parse_valor_moeda_brl(request.POST.get(f'ligacao_premio_total{sufixo}')) if (venda_central_val or agn_val) else None
         if not any([data_val, status_val, proximo_val, obs_val, ramal_val,
-                    venda_central_val, agn_val, motivo_val, seguradora_val]):
+                    venda_central_val, agn_val, motivo_val, seguradora_val, comissao_val]):
             return
 
         # o protocolo já vem gerado do html (ao criar a ligação), mas se
@@ -956,6 +964,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
             agn=agn_val,
             motivo_nao_venda_id=motivo_val or None,
             seguradora_id=seguradora_val or None,
+            comissao=comissao_val,
             # sempre gravado com o usuário logado no momento do salvamento,
             # nunca aceito vindo do POST (campo é readonly na ficha)
             cadastrado_por=request.user.get_full_name() or request.user.username,

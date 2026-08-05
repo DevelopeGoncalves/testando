@@ -217,6 +217,8 @@
                                       data-agn="{{ l.agn|yesno:'1,0' }}"
                                       data-motivo="{{ l.motivo_nao_venda_id|default:'' }}"
                                       data-seguradora="{{ l.seguradora_id|default:'' }}"
+                                      data-seguradora-nome="{{ l.seguradora.seguradora|default:'' }}"
+                                      data-comissao="{{ l.comissao|floatformat:'2u'|default:'' }}"
                                       data-cadastrado-por="{{ l.cadastrado_por|default:'' }}"></span>
                                 {% endfor %}
                             </td>
@@ -407,6 +409,12 @@
                                 <h5 class="modal-title" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
                             </div>
                             <div class="modal-body">
+                                <!-- Lista (compartilhada) de seguradoras para o campo pesquisável de cada ligação -->
+                                <datalist id="lista-seguradoras">
+                                    {% for s in form_indicacao.seguradora.field.queryset %}
+                                    <option value="{{ s.seguradora }}"></option>
+                                    {% endfor %}
+                                </datalist>
                                 <div id="container-ligacoes">
                                     <div class="bloco-ligacao" id="ligacao-1">
                                         <h5 class="text-primary border-bottom pb-2 mb-3 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
@@ -472,12 +480,13 @@
                                                 <div class="row g-2 mt-2">
                                                     <div class="col-md-5">
                                                         <label class="fw-small mb-1">Seguradora</label>
-                                                        <select class="form-select form-select-sm" name="ligacao_seguradora" id="edit_ligacao_seguradora">
-                                                            <option value="">-- Selecione --</option>
-                                                            {% for s in form_indicacao.seguradora.field.queryset %}
-                                                            <option value="{{ s.id }}">{{ s.seguradora }}</option>
-                                                            {% endfor %}
-                                                        </select>
+                                                        <input type="text" class="form-control form-control-sm" name="ligacao_seguradora_texto" id="edit_ligacao_seguradora_texto"
+                                                               list="lista-seguradoras" autocomplete="off" placeholder="Pesquisar..." oninput="resolverSeguradora(this)">
+                                                        <input type="hidden" name="ligacao_seguradora" id="edit_ligacao_seguradora">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="fw-small mb-1">Comissão (%)</label>
+                                                        <input type="text" inputmode="decimal" class="form-control form-control-sm campo-comissao" name="ligacao_comissao" id="edit_ligacao_comissao" placeholder="0,00" oninput="aplicarMascaraComissao(this)">
                                                     </div>
                                                 </div>
 
@@ -653,9 +662,11 @@
                 let motText = motSelect.options[motSelect.selectedIndex]?.text;
                 if(motText === "-- Selecione --" || !motText) motText = "";
 
-                let segSelect = bloco.querySelector('select[name^="ligacao_seguradora"]');
-                let segText = segSelect ? segSelect.options[segSelect.selectedIndex]?.text : '';
-                if(segText === "-- Selecione --" || !segText) segText = "";
+                let segInput = bloco.querySelector('input[name^="ligacao_seguradora_texto"]');
+                let segText = segInput ? (segInput.value || '') : '';
+
+                let comInput = bloco.querySelector('input[name^="ligacao_comissao"]');
+                let comVal = comInput ? (comInput.value || '') : '';
 
                 let venda = central ? 'Central' : (agn ? 'Agência' : '-');
                 let numero = index + 1;
@@ -677,6 +688,7 @@
                                     <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
                                     <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
                                     <div class="col-md-4"><strong>Seguradora:</strong> ${segText || '-'}</div>
+                                    <div class="col-md-4"><strong>Comissão:</strong> ${comVal ? comVal + '%' : '-'}</div>
                                     <div class="col-md-12"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
                                 </div>
                             </div>
@@ -995,6 +1007,7 @@
               +           '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
               +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
               +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Comissão:</strong> ' + (d.comissao ? escHtml(formatarValorBRL(d.comissao)) + '%' : '-') + '</div>'
               +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
               +         '</div>'
               +       '</div>'
@@ -1043,6 +1056,7 @@
               +           '<div class="col-md-4"><strong>Motivo:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
               +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
               +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Comissão:</strong> ' + (d.comissao ? escHtml(formatarValorBRL(d.comissao)) + '%' : '-') + '</div>'
               +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
               +         '</div>'
               +       '</div>'
@@ -1072,6 +1086,8 @@
         document.getElementById('edit_ligacao_agn').checked = false;
         document.getElementById('edit_ligacao_motivo_nao_venda').value = '';
         document.getElementById('edit_ligacao_seguradora').value = '';
+        document.getElementById('edit_ligacao_seguradora_texto').value = '';
+        document.getElementById('edit_ligacao_comissao').value = '';
         document.getElementById('edit_ligacao_cadastrado_por').value = '';
 
         algumaLigacaoSalva = false;
@@ -1156,6 +1172,30 @@
         if (!digitos) { input.value = ''; return; }
         let numero = parseInt(digitos, 10) / 100;
         input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Comissão: valor em % com formato milhar/decimal (pt-BR) e limite de 0 a 65.
+    // Se o usuário digitar mais que 65, trava em 65,00.
+    function aplicarMascaraComissao(input) {
+        let digitos = (input.value || '').replace(/\D/g, '');
+        if (!digitos) { input.value = ''; return; }
+        let numero = parseInt(digitos, 10) / 100;
+        if (numero > 65) numero = 65;
+        input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Campo de seguradora pesquisável (por ligação): descobre o id da seguradora pelo texto
+    // digitado e guarda no input escondido do próprio bloco (name="ligacao_seguradora...").
+    function resolverSeguradora(input) {
+        let bloco = input.closest('.bloco-ligacao');
+        if (!bloco) return;
+        let hidden = bloco.querySelector('input[type="hidden"][name^="ligacao_seguradora"]');
+        if (!hidden) return;
+        let texto = (input.value || '').trim().toLowerCase();
+        let item = listaBaseNovoSeguradoras.find(function(s) {
+            return String(s.texto).trim().toLowerCase() === texto;
+        });
+        hidden.value = item ? item.id : '';
     }
 
     function formatarValorBRL(valor) {
@@ -1261,6 +1301,8 @@
                 document.getElementById('edit_ligacao_agn').checked = item.dataset.agn === '1';
                 document.getElementById('edit_ligacao_motivo_nao_venda').value = item.dataset.motivo || '';
                 document.getElementById('edit_ligacao_seguradora').value = item.dataset.seguradora || '';
+                document.getElementById('edit_ligacao_seguradora_texto').value = item.dataset.seguradoraNome || '';
+                document.getElementById('edit_ligacao_comissao').value = formatarValorBRL(item.dataset.comissao);
                 document.getElementById('edit_ligacao_cadastrado_por').value = item.dataset.cadastradoPor || '';
             } else {
                 adicionarLigacao(true);
@@ -1278,6 +1320,8 @@
                 document.getElementById('edit_ligacao_agn_' + c).checked = item.dataset.agn === '1';
                 document.getElementById('edit_ligacao_motivo_nao_venda_' + c).value = item.dataset.motivo || '';
                 document.getElementById('edit_ligacao_seguradora_' + c).value = item.dataset.seguradora || '';
+                document.getElementById('edit_ligacao_seguradora_texto_' + c).value = item.dataset.seguradoraNome || '';
+                document.getElementById('edit_ligacao_comissao_' + c).value = formatarValorBRL(item.dataset.comissao);
                 document.getElementById('edit_ligacao_cadastrado_por_' + c).value = item.dataset.cadastradoPor || '';
             }
         });
