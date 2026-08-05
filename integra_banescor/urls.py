@@ -79,6 +79,8 @@ urlpatterns = [
 
     # 10.1 Base Novo (Indicação de Seguridade) - card de Produção / Vendas
     path('producao/vendas/base-novo/', views.lista_base_novo, name='lista_base_novo'),
+    # Emissão: mesma base, mas só com as vendas já fechadas (Central/Agência)
+    path('producao/vendas/emissao/', views.vendas_emissao, name='vendas_emissao'),
     path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
     path('producao/vendas/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),
     # Trava de atendimento ("em ligação") - marcar/encerrar e listar os ativos (polling)

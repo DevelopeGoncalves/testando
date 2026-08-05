@@ -369,6 +369,9 @@ class LigacaoIndicacao(models.Model):
     premio_total = models.DecimalField("Prêmio Total", max_digits=15, decimal_places=2, null=True, blank=True)
     agn = models.BooleanField("Agn", default=False)
     motivo_nao_venda = models.ForeignKey('MotivoNaoVenda', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Motivo Não Venda")
+    # Seguradora escolhida no momento da ligação (usada principalmente quando a venda é
+    # fechada, para a Emissão). Relacionamento com a tabela de Seguradoras.
+    seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
     cadastrado_por = models.CharField("Cadastrado/tratado por", max_length=150, blank=True, null=True)
 
 

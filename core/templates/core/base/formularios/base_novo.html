@@ -1,12 +1,12 @@
 {% extends 'core/layout.html' %}
 
-{% block title %}Vendas - {% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}{% endblock %}
+{% block title %}Vendas - {% if apenas_pendentes %}Novo{% elif modo_emissao %}Emissão{% else %}Base Novo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
     <span style="font-size: 1rem; font-weight: normal;">
         <span class="text-primary">Produção</span> /
         <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> /
-        <span class="text-primary">{% if apenas_pendentes %}Novo{% else %}Base Novo{% endif %}</span>
+        <span class="text-primary">{% if apenas_pendentes %}Novo{% elif modo_emissao %}Emissão{% else %}Base Novo{% endif %}</span>
     </span>
 {% endblock %}
 
@@ -119,14 +119,14 @@
 <div id="tela-base-novo">
     <div id="lista-base-novo">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> {% if apenas_pendentes %}Ligação Novo{% else %}Base Novo{% endif %}</h4>
+            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> {% if apenas_pendentes %}Ligação Novo{% elif modo_emissao %}Emissão{% else %}Base Novo{% endif %}</h4>
             <div>
                 <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
-                {% if not apenas_pendentes %}
+                {% if not apenas_pendentes and not modo_emissao %}
                 <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
                 {% endif %}
             </div>
@@ -216,6 +216,7 @@
                                       data-premio-total="{{ l.premio_total|floatformat:'2u' }}"
                                       data-agn="{{ l.agn|yesno:'1,0' }}"
                                       data-motivo="{{ l.motivo_nao_venda_id|default:'' }}"
+                                      data-seguradora="{{ l.seguradora_id|default:'' }}"
                                       data-cadastrado-por="{{ l.cadastrado_por|default:'' }}"></span>
                                 {% endfor %}
                             </td>
@@ -467,7 +468,19 @@
                                                         <input type="text" class="form-control form-control-sm bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
                                                     </div>
                                                 </div>
-                                                
+
+                                                <div class="row g-2 mt-2">
+                                                    <div class="col-md-5">
+                                                        <label class="fw-small mb-1">Seguradora</label>
+                                                        <select class="form-select form-select-sm" name="ligacao_seguradora" id="edit_ligacao_seguradora">
+                                                            <option value="">-- Selecione --</option>
+                                                            {% for s in form_indicacao.seguradora.field.queryset %}
+                                                            <option value="{{ s.id }}">{{ s.seguradora }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
                                             </div>
 
                                             <div class="col-md-4 d-flex flex-column">
@@ -640,6 +653,10 @@
                 let motText = motSelect.options[motSelect.selectedIndex]?.text;
                 if(motText === "-- Selecione --" || !motText) motText = "";
 
+                let segSelect = bloco.querySelector('select[name^="ligacao_seguradora"]');
+                let segText = segSelect ? segSelect.options[segSelect.selectedIndex]?.text : '';
+                if(segText === "-- Selecione --" || !segText) segText = "";
+
                 let venda = central ? 'Central' : (agn ? 'Agência' : '-');
                 let numero = index + 1;
 
@@ -659,6 +676,7 @@
                                     <div class="col-md-4"><strong>Prêmio Total:</strong> ${premioVal ? 'R$ ' + premioVal : '-'}</div>
                                     <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
                                     <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
+                                    <div class="col-md-4"><strong>Seguradora:</strong> ${segText || '-'}</div>
                                     <div class="col-md-12"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
                                 </div>
                             </div>
@@ -746,6 +764,13 @@
     const MOTIVOS_NAO_VENDA = {
         {% for m in motivos_nao_venda %}"{{ m.id }}": "{{ m.motivo|escapejs }}",{% endfor %}
     };
+
+    // Mapa id -> nome da seguradora, para mostrar o nome no histórico (a linha guarda só o id).
+    function nomeSeguradora(id) {
+        if (!id) return '';
+        var s = listaBaseNovoSeguradoras.find(function(x) { return String(x.id) === String(id); });
+        return s ? s.texto : '';
+    }
 
     $(document).ready(function() {
 
@@ -970,6 +995,7 @@
               +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
               +           '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
               +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
               +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
               +         '</div>'
               +       '</div>'
@@ -1017,6 +1043,7 @@
               +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
               +           '<div class="col-md-4"><strong>Motivo:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
               +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
               +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
               +         '</div>'
               +       '</div>'
@@ -1045,6 +1072,7 @@
         document.getElementById('edit_ligacao_premio_total').value = '';
         document.getElementById('edit_ligacao_agn').checked = false;
         document.getElementById('edit_ligacao_motivo_nao_venda').value = '';
+        document.getElementById('edit_ligacao_seguradora').value = '';
         document.getElementById('edit_ligacao_cadastrado_por').value = '';
 
         algumaLigacaoSalva = false;
@@ -1233,6 +1261,7 @@
                 document.getElementById('edit_ligacao_premio_total').value = formatarValorBRL(item.dataset.premioTotal);
                 document.getElementById('edit_ligacao_agn').checked = item.dataset.agn === '1';
                 document.getElementById('edit_ligacao_motivo_nao_venda').value = item.dataset.motivo || '';
+                document.getElementById('edit_ligacao_seguradora').value = item.dataset.seguradora || '';
                 document.getElementById('edit_ligacao_cadastrado_por').value = item.dataset.cadastradoPor || '';
             } else {
                 adicionarLigacao(true);
@@ -1249,6 +1278,7 @@
                 document.getElementById('edit_ligacao_premio_total_' + c).value = formatarValorBRL(item.dataset.premioTotal);
                 document.getElementById('edit_ligacao_agn_' + c).checked = item.dataset.agn === '1';
                 document.getElementById('edit_ligacao_motivo_nao_venda_' + c).value = item.dataset.motivo || '';
+                document.getElementById('edit_ligacao_seguradora_' + c).value = item.dataset.seguradora || '';
                 document.getElementById('edit_ligacao_cadastrado_por_' + c).value = item.dataset.cadastradoPor || '';
             }
         });
