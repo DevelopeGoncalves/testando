@@ -720,7 +720,9 @@ def vendas_novo_negocio(request):
         if form is None:
             return redirect('vendas_novo_negocio')
     else:
-        form = IndicacaoForm(ficha_somente_leitura=True)
+        # A ficha do Novo fica travada visualmente, mas os dados podem ser editados pelo
+        # pop-up (lápis) e salvos de verdade - por isso o form NÃO é mais só leitura.
+        form = IndicacaoForm()
         erro_formulario_msg = ''
 
     ultima_ligacao = LigacaoIndicacao.objects.filter(indicacao=OuterRef('pk')).order_by('-id')
@@ -899,8 +901,11 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
         if 'agencia_combo' in dados_post:
             dados_post['cid_agencia'] = (dados_post.get('agencia_combo') or '').strip().partition(' - ')[0].strip()
 
-    # Base Novo (False) continua editando a ficha normalmente.
-    form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=processar_ligacoes)
+    # No Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de
+    # edição (flag 'editar_dados'). Ao só registrar uma ligação, a ficha continua só leitura
+    # (não sobrescreve os dados). Na Base Novo/Emissão a ficha é sempre editável.
+    somente_leitura = processar_ligacoes and request.POST.get('editar_dados') != '1'
+    form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
 
     # os campos "Vendas Central" obriga o preenchimento do "Prêmio Total".  se nao da erro
     if _falta_premio_total_venda_central(request):

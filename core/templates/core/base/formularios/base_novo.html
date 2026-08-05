@@ -21,6 +21,13 @@
     #tabela-base-novo tbody tr.em-atendimento:hover { background-color: #f5c2c7 !important; }
     #tabela-base-novo tbody tr.em-atendimento td { color: #ff0217; }
 
+    /* No Novo, os dados ficam travados (só leitura) até abrir o pop-up do lápis.
+       pointer-events:none impede a edição, mas os campos continuam sendo enviados no POST. */
+    #bloco-dados-editaveis.dados-travados { pointer-events: none; opacity: 0.92; }
+    #bloco-dados-editaveis.dados-travados input,
+    #bloco-dados-editaveis.dados-travados select,
+    #bloco-dados-editaveis.dados-travados textarea { background-color: #f3f4f6; }
+
     .excel-header-btn {
         display: flex !important;
         align-items: center !important;
@@ -287,9 +294,21 @@
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+                <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
+                <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
 
                 <div class="card-body p-4" style="font-size: 0.95rem;">
 
+                    {% if apenas_pendentes %}
+                    <!-- No Novo os dados ficam travados; o lápis abre o pop-up para editar. -->
+                    <div class="text-end mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" title="Editar dados do registro" onclick="abrirEdicaoDados()">
+                            <i class="fas fa-pencil-alt"></i> Editar dados
+                        </button>
+                    </div>
+                    {% endif %}
+
+                    <div id="bloco-dados-editaveis"{% if apenas_pendentes %} class="dados-travados"{% endif %}>
 
                     <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
                     <div class="row g-3">
@@ -339,11 +358,11 @@
                             <div class="row g-3">
                                 <div class="col-md-4" id="disp-ind-col">
                                     <label class="fw-bold small mb-1">Indicador</label>
-                                    <input type="text" id="disp-indicador" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="indicador_combo" class="form-control" placeholder="matrícula - nome"{% endif %}>
+                                    <input type="text" id="disp-indicador" name="indicador_combo" class="form-control" placeholder="matrícula - nome">
                                 </div>
                                 <div class="col-md-4" id="disp-ag-col">
                                     <label class="fw-bold small mb-1">Agência</label>
-                                    <input type="text" id="disp-agencia" {% if apenas_pendentes %}class="form-control bg-light" readonly tabindex="-1"{% else %}name="agencia_combo" class="form-control" placeholder="CID - nome da agência"{% endif %}>
+                                    <input type="text" id="disp-agencia" name="agencia_combo" class="form-control" placeholder="CID - nome da agência">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="fw-bold small mb-1">Telefone</label>
@@ -381,8 +400,32 @@
                                 {% endif %}
                             </div>
                         </div>
-                        
+
                     </div>
+
+                    </div><!-- /#bloco-dados-editaveis -->
+
+                    {% if apenas_pendentes %}
+                    <!-- POP-UP de edição dos dados do registro (o conteúdo #bloco-dados-editaveis é
+                         movido para cá quando o usuário clica no lápis, e volta ao cancelar). -->
+                    <div class="modal fade" id="modalEditarDados" tabindex="-1" aria-labelledby="modalEditarDadosLabel"
+                         data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+                        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title" id="modalEditarDadosLabel"><i class="fas fa-edit"></i> Editar Dados do Registro</h5>
+                                </div>
+                                <div class="modal-body" id="modal-editar-dados-corpo">
+                                    <!-- #bloco-dados-editaveis entra aqui ao abrir -->
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="cancelarEdicaoDados()"><i class="fas fa-times"></i> Cancelar</button>
+                                    <button type="button" class="btn btn-success fw-bold px-4" onclick="salvarEdicaoDados()"><i class="fas fa-check"></i> Salvar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- onde o histórico vai aparecer fora do modal -->
                     <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
@@ -772,7 +815,45 @@
     let algumaLigacaoSalva = false;   
     let blocosSnapshot = 1;           
 
-    let modalHistorico = null;        
+    let modalHistorico = null;
+    let modalEditarDados = null;      // pop-up de edição dos dados do registro (card Novo)
+
+    // Abre o pop-up de edição: move o bloco de dados (travado na ficha) para dentro do
+    // modal e destrava, permitindo editar. Ao salvar, envia o formulário (grava no banco).
+    function abrirEdicaoDados() {
+        if (!modalEditarDados) return;
+        var bloco = document.getElementById('bloco-dados-editaveis');
+        var corpo = document.getElementById('modal-editar-dados-corpo');
+        if (bloco && corpo) {
+            corpo.appendChild(bloco);          // move os campos reais para dentro do modal
+            bloco.classList.remove('dados-travados'); // destrava para edição
+        }
+        modalEditarDados.show();
+    }
+
+    // Cancela: devolve o bloco para a ficha e trava de novo, sem salvar.
+    function cancelarEdicaoDados() {
+        devolverBlocoDadosParaFicha();
+        if (modalEditarDados) modalEditarDados.hide();
+    }
+
+    // Salva: marca a flag (para o backend gravar os dados no Novo) e envia o formulário da ficha.
+    function salvarEdicaoDados() {
+        var flag = document.getElementById('editar_dados_flag');
+        if (flag) flag.value = '1';
+        var form = document.querySelector('#form-base-novo form');
+        if (form) form.requestSubmit ? form.requestSubmit() : form.submit();
+    }
+
+    // Recoloca o bloco de dados na ficha (antes do histórico) e volta a travar.
+    function devolverBlocoDadosParaFicha() {
+        var bloco = document.getElementById('bloco-dados-editaveis');
+        var refHistorico = document.getElementById('historico-ligacoes-ficha');
+        if (bloco && refHistorico && refHistorico.parentNode) {
+            bloco.classList.add('dados-travados');
+            refHistorico.parentNode.insertBefore(bloco, refHistorico);
+        }
+    }
     const MOTIVOS_NAO_VENDA = {
         {% for m in motivos_nao_venda %}"{{ m.id }}": "{{ m.motivo|escapejs }}",{% endfor %}
     };
@@ -822,6 +903,8 @@
         if (PODE_REGISTRAR_LIGACAO) {
             modalLigacao = new bootstrap.Modal(document.getElementById('modalLigacao'));
             atualizarResumoLigacoes();
+            var elEditar = document.getElementById('modalEditarDados');
+            if (elEditar) modalEditarDados = new bootstrap.Modal(elEditar);
         }
 
         var elHist = document.getElementById('modalHistoricoLigacoes');
