@@ -372,6 +372,8 @@ class LigacaoIndicacao(models.Model):
     # Seguradora escolhida no momento da ligação (usada principalmente quando a venda é
     # fechada, para a Emissão). Relacionamento com a tabela de Seguradoras.
     seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
+    # Comissão em % (0 a 65). Preenchida na ligação, junto da venda/seguradora.
+    comissao = models.DecimalField("Comissão (%)", max_digits=5, decimal_places=2, null=True, blank=True)
     cadastrado_por = models.CharField("Cadastrado/tratado por", max_length=150, blank=True, null=True)
 
 
