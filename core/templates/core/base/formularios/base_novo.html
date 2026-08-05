@@ -296,6 +296,12 @@
                 <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
                 <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
                 <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
+                <!-- Lista (compartilhada) de seguradoras para os campos pesquisáveis (ficha e ligações) -->
+                <datalist id="lista-seguradoras">
+                    {% for s in form_indicacao.seguradora.field.queryset %}
+                    <option value="{{ s.seguradora }}"></option>
+                    {% endfor %}
+                </datalist>
 
                 <div class="card-body p-4" style="font-size: 0.95rem;">
 
@@ -314,11 +320,9 @@
                     <div class="row g-3">
                         <div class="col-md-2">
                             <label class="fw-bold small mb-1">Seguradora</label>
-                            <div class="input-container">
-                                <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
-                                <input type="text" id="base_novo_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
-                                <div id="base_novo_dropdown_seguradora" class="lista-suspensa d-none"></div>
-                            </div>
+                            <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
+                            <input type="text" id="base_novo_seguradora_texto" class="form-control w-100" list="lista-seguradoras"
+                                   autocomplete="off" placeholder="Pesquisar..." oninput="resolverSeguradoraFicha(this)">
                         </div>
                         <div class="col-md-2">
                             <label class="fw-bold small mb-1">Grupo/Ramo</label>
@@ -452,12 +456,6 @@
                                 <h5 class="modal-title" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
                             </div>
                             <div class="modal-body">
-                                <!-- Lista (compartilhada) de seguradoras para o campo pesquisável de cada ligação -->
-                                <datalist id="lista-seguradoras">
-                                    {% for s in form_indicacao.seguradora.field.queryset %}
-                                    <option value="{{ s.seguradora }}"></option>
-                                    {% endfor %}
-                                </datalist>
                                 <div id="container-ligacoes">
                                     <div class="bloco-ligacao" id="ligacao-1">
                                         <h5 class="text-primary border-bottom pb-2 mb-3 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
@@ -867,12 +865,8 @@
 
     $(document).ready(function() {
 
-        inicializarDropdownRelacionamento(
-            'base_novo_seguradora_texto',
-            'base_novo_seguradora_val',
-            'base_novo_dropdown_seguradora',
-            listaBaseNovoSeguradoras
-        );
+        // Seguradora da ficha agora usa datalist (mesmo campo pesquisável da ligação),
+        // por isso não inicializa mais o dropdown customizado aqui.
         inicializarDropdownRelacionamento(
             'base_novo_ramo_texto',
             'base_novo_ramo_val',
@@ -1273,6 +1267,18 @@
         let bloco = input.closest('.bloco-ligacao');
         if (!bloco) return;
         let hidden = bloco.querySelector('input[type="hidden"][name^="ligacao_seguradora"]');
+        if (!hidden) return;
+        let texto = (input.value || '').trim().toLowerCase();
+        let item = listaBaseNovoSeguradoras.find(function(s) {
+            return String(s.texto).trim().toLowerCase() === texto;
+        });
+        hidden.value = item ? item.id : '';
+    }
+
+    // Seguradora da ficha (Bloco Apólice): mesmo mecanismo (datalist), guarda o id no
+    // campo escondido do formulário (name="seguradora").
+    function resolverSeguradoraFicha(input) {
+        let hidden = document.getElementById('base_novo_seguradora_val');
         if (!hidden) return;
         let texto = (input.value || '').trim().toLowerCase();
         let item = listaBaseNovoSeguradoras.find(function(s) {
