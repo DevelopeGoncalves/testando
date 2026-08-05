@@ -930,11 +930,12 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
         venda_central_val = request.POST.get(f'ligacao_venda_central{sufixo}') == 'on'
         agn_val = request.POST.get(f'ligacao_agn{sufixo}') == 'on'
         motivo_val = request.POST.get(f'ligacao_motivo_nao_venda{sufixo}')
-        
+        seguradora_val = request.POST.get(f'ligacao_seguradora{sufixo}')
+
         # o "Prêmio Total" só vem no POST quando "Vendas Central" ou "Vendas Agência" está marcado
         premio_total_val = _parse_valor_moeda_brl(request.POST.get(f'ligacao_premio_total{sufixo}')) if (venda_central_val or agn_val) else None
         if not any([data_val, status_val, proximo_val, obs_val, ramal_val,
-                    venda_central_val, agn_val, motivo_val]):
+                    venda_central_val, agn_val, motivo_val, seguradora_val]):
             return
 
         # o protocolo já vem gerado do html (ao criar a ligação), mas se
@@ -954,6 +955,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
             premio_total=premio_total_val,
             agn=agn_val,
             motivo_nao_venda_id=motivo_val or None,
+            seguradora_id=seguradora_val or None,
             # sempre gravado com o usuário logado no momento do salvamento,
             # nunca aceito vindo do POST (campo é readonly na ficha)
             cadastrado_por=request.user.get_full_name() or request.user.username,
@@ -1006,6 +1008,46 @@ def lista_base_novo(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': MotivoNaoVenda.objects.all(),
+    })
+
+@login_required
+def vendas_emissao(request):
+    """Card 'Emissão': mostra SOMENTE os registros cuja venda foi fechada (a última
+    ligação está marcada como 'Vendas Central' ou 'Vendas Agência'). É uma visão
+    filtrada dos mesmos dados da Base Novo - nada é duplicado no banco. Reaproveita a
+    mesma tela (base_novo.html) no modo de consulta/edição, igual à Base Novo."""
+    if request.method == 'POST':
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False)
+        if form is None:
+            return redirect('vendas_emissao')
+    else:
+        form = IndicacaoForm()
+        erro_formulario_msg = ''
+
+    ultima_ligacao = LigacaoIndicacao.objects.filter(indicacao=OuterRef('pk')).order_by('-id')
+    indicacoes = list(
+        Indicacao.objects.annotate(
+            ultima_central=Subquery(ultima_ligacao.values('venda_central')[:1]),
+            ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
+        ).filter(
+            Q(ultima_central=True) | Q(ultima_agn=True)
+        ).order_by('-id')
+        .select_related('seguradora', 'ramo', 'tipo_documento')
+        .prefetch_related('ligacoes__motivo_nao_venda')
+    )
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
+    for ind in indicacoes:
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+
+    return render(request, 'core/base/formularios/base_novo.html', {
+        'indicacoes': indicacoes,
+        'form_indicacao': form,
+        'erro_formulario_msg': erro_formulario_msg,
+        'motivos_nao_venda': MotivoNaoVenda.objects.all(),
+        'modo_emissao': True,
     })
 
 @login_required
