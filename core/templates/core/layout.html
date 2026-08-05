@@ -504,14 +504,72 @@
             .closest('.tabela-container').find('.tabela-loading').remove();
     }
 
-    function iniciarTabelaExcel(tabelaId, colunasOcultasPorPadrao) {
+    // Reorganiza fisicamente as colunas da tabela (thead + cada linha do tbody) seguindo a
+    // "ordem" informada (lista de índices ORIGINAIS na nova ordem desejada). Precisa rodar
+    // ANTES de inicializar o DataTables, para que ele adote a nova ordem/índices.
+    function reordenarColunasDom(tabelaId, ordem) {
+        var $table = $('#' + tabelaId);
+        function reordLinha($tr) {
+            var celulas = $tr.children().toArray();
+            var frag = document.createDocumentFragment();
+            ordem.forEach(function (i) { if (celulas[i]) frag.appendChild(celulas[i]); });
+            $tr.append(frag); // reanexa as células já existentes na nova ordem
+        }
+        $table.find('thead tr').each(function () { reordLinha($(this)); });
+        $table.find('tbody tr').each(function () { reordLinha($(this)); });
+    }
+
+    // tabelaId: id da tabela.
+    // colunasVisiveisEmOrdem (opcional): lista com os NÚMEROS das colunas (os mesmos que estão
+    //   comentados no HTML, <!-- 1 -->, <!-- 2 -->, ...) que devem APARECER, na ORDEM informada.
+    //   Ex.: [1, 6, 9] mostra só essas três colunas, nessa ordem. As demais colunas de conteúdo
+    //   ficam ocultas. As colunas de sistema do início (checkbox e colunas com display:none)
+    //   são mantidas automaticamente e não entram nessa numeração. Se não informar nada, a
+    //   tabela aparece com todas as colunas (comportamento das outras telas).
+    function iniciarTabelaExcel(tabelaId, colunasVisiveisEmOrdem) {
         // Failsafe: revela a tabela mesmo que o DataTables falhe ao inicializar,
         // evitando que ela fique oculta para sempre (ex.: CDN indisponível).
         setTimeout(function () { revelarTabela(tabelaId); }, 5000);
 
         var columnDefs = [{ orderable: false, targets: 0 }];
-        if (colunasOcultasPorPadrao && colunasOcultasPorPadrao.length) {
-            columnDefs.push({ visible: false, targets: colunasOcultasPorPadrao });
+
+        if (colunasVisiveisEmOrdem && colunasVisiveisEmOrdem.length) {
+            var $ths = $('#' + tabelaId + ' thead th');
+            var totalCols = $ths.length;
+
+            // Descobre quantas colunas de sistema existem no início (prefixo contíguo):
+            // a do checkbox e as que já vêm com display:none. Elas ficam sempre no começo.
+            var numSistema = 0;
+            $ths.each(function (idx) {
+                var $th = $(this);
+                var temDisplayNone = ($th.attr('style') || '').replace(/\s/g, '').indexOf('display:none') > -1;
+                var ehCheckbox = $th.find('input.chk-delete').length > 0;
+                if (idx === numSistema && (temDisplayNone || ehCheckbox)) {
+                    numSistema++;
+                } else {
+                    return false; // para no primeiro que não é de sistema
+                }
+            });
+
+            // Converte os números do comentário (1 = primeira coluna de conteúdo) para o
+            // índice REAL da coluna no DataTables.
+            var mostrarReais = colunasVisiveisEmOrdem.map(function (n) { return (n - 1) + numSistema; });
+
+            // Nova ordem dos índices originais: [sistema] + [selecionadas na ordem] + [o resto].
+            var ordem = [];
+            for (var s = 0; s < numSistema; s++) ordem.push(s);
+            mostrarReais.forEach(function (i) { if (ordem.indexOf(i) === -1) ordem.push(i); });
+            for (var c = 0; c < totalCols; c++) { if (ordem.indexOf(c) === -1) ordem.push(c); }
+
+            reordenarColunasDom(tabelaId, ordem);
+
+            // Depois de reordenar, as colunas selecionadas ocupam as posições logo após as de
+            // sistema; tudo que vier depois é conteúdo NÃO selecionado -> esconde no DataTables.
+            // Obs.: não escondo as colunas de sistema com display:none pelo DataTables (ele
+            // removeria a célula do DOM), pois elas guardam dados usados pelo histórico.
+            var ocultar = [];
+            for (var h = numSistema + mostrarReais.length; h < totalCols; h++) ocultar.push(h);
+            if (ocultar.length) columnDefs.push({ visible: false, targets: ocultar });
         }
 
         tableInstance = $('#' + tabelaId).DataTable({
