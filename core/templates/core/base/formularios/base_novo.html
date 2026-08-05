@@ -296,12 +296,6 @@
                 <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
                 <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
                 <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
-                <!-- Lista (compartilhada) de seguradoras para os campos pesquisáveis (ficha e ligações) -->
-                <datalist id="lista-seguradoras">
-                    {% for s in form_indicacao.seguradora.field.queryset %}
-                    <option value="{{ s.seguradora }}"></option>
-                    {% endfor %}
-                </datalist>
 
                 <div class="card-body p-4" style="font-size: 0.95rem;">
 
@@ -320,9 +314,11 @@
                     <div class="row g-3">
                         <div class="col-md-2">
                             <label class="fw-bold small mb-1">Seguradora</label>
-                            <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
-                            <input type="text" id="base_novo_seguradora_texto" class="form-control w-100" list="lista-seguradoras"
-                                   autocomplete="off" placeholder="Pesquisar..." oninput="resolverSeguradoraFicha(this)">
+                            <div class="input-container">
+                                <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
+                                <input type="text" id="base_novo_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_seguradora" class="lista-suspensa d-none"></div>
+                            </div>
                         </div>
                         <div class="col-md-2">
                             <label class="fw-bold small mb-1">Grupo/Ramo</label>
@@ -521,13 +517,16 @@
                                                 <div class="row g-2 mt-2">
                                                     <div class="col-md-5">
                                                         <label class="fw-small mb-1">Seguradora</label>
-                                                        <input type="text" class="form-control form-control-sm" name="ligacao_seguradora_texto" id="edit_ligacao_seguradora_texto"
-                                                               list="lista-seguradoras" autocomplete="off" placeholder="Pesquisar..." oninput="resolverSeguradora(this)">
-                                                        <input type="hidden" name="ligacao_seguradora" id="edit_ligacao_seguradora">
+                                                        <div class="input-container">
+                                                            <input type="hidden" name="ligacao_seguradora" id="edit_ligacao_seguradora">
+                                                            <input type="text" class="form-control campo-seguradora-ligacao" name="ligacao_seguradora_texto" id="edit_ligacao_seguradora_texto"
+                                                                   autocomplete="off" placeholder="Pesquisar..." disabled>
+                                                            <div class="lista-suspensa d-none campo-seguradora-dropdown"></div>
+                                                        </div>
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="fw-small mb-1">Comissão (%)</label>
-                                                        <input type="text" inputmode="decimal" class="form-control form-control-sm campo-comissao" name="ligacao_comissao" id="edit_ligacao_comissao" placeholder="0,00" oninput="aplicarMascaraComissao(this)">
+                                                        <input type="text" inputmode="decimal" class="form-control form-control-sm campo-comissao" name="ligacao_comissao" id="edit_ligacao_comissao" placeholder="0,00" oninput="aplicarMascaraComissao(this)" disabled>
                                                     </div>
                                                 </div>
 
@@ -865,8 +864,12 @@
 
     $(document).ready(function() {
 
-        // Seguradora da ficha agora usa datalist (mesmo campo pesquisável da ligação),
-        // por isso não inicializa mais o dropdown customizado aqui.
+        inicializarDropdownRelacionamento(
+            'base_novo_seguradora_texto',
+            'base_novo_seguradora_val',
+            'base_novo_dropdown_seguradora',
+            listaBaseNovoSeguradoras
+        );
         inicializarDropdownRelacionamento(
             'base_novo_ramo_texto',
             'base_novo_ramo_val',
@@ -879,6 +882,7 @@
             'base_novo_dropdown_tipo_documento',
             listaBaseNovoTiposDocumento
         );
+        inicializarSeguradoraLigacao(document.getElementById('ligacao-1'));
 
         $(document).on('click', function(e) {
             if (!$(e.target).closest('.input-container').length) {
@@ -1188,6 +1192,9 @@
         let campoMotivo = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
         let campoPremio = bloco.querySelector('input[name^="ligacao_premio_total"]');
         let campoProximo = bloco.querySelector('input[name^="ligacao_proximo"]');
+        let campoSeguradoraTexto = bloco.querySelector('.campo-seguradora-ligacao');
+        let campoSeguradoraHidden = bloco.querySelector('input[type="hidden"][name^="ligacao_seguradora"]');
+        let campoComissao = bloco.querySelector('input[name^="ligacao_comissao"]');
         if (!campoCentral || !campoAgencia || !campoMotivo) return;
 
         let temCentral = campoCentral.checked;
@@ -1217,6 +1224,23 @@
             campoProximo.disabled = ligacaoConcluida;
             if (ligacaoConcluida) {
                 campoProximo.value = '';
+            }
+        }
+
+        let vendaFechada = temCentral || temAgencia;
+
+        if (campoSeguradoraTexto) {
+            campoSeguradoraTexto.disabled = !vendaFechada;
+            if (!vendaFechada) {
+                campoSeguradoraTexto.value = '';
+                if (campoSeguradoraHidden) campoSeguradoraHidden.value = '';
+            }
+        }
+
+        if (campoComissao) {
+            campoComissao.disabled = !vendaFechada;
+            if (!vendaFechada) {
+                campoComissao.value = '';
             }
         }
 
@@ -1261,30 +1285,56 @@
         input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Campo de seguradora pesquisável (por ligação): descobre o id da seguradora pelo texto
-    // digitado e guarda no input escondido do próprio bloco (name="ligacao_seguradora...").
-    function resolverSeguradora(input) {
-        let bloco = input.closest('.bloco-ligacao');
-        if (!bloco) return;
-        let hidden = bloco.querySelector('input[type="hidden"][name^="ligacao_seguradora"]');
-        if (!hidden) return;
-        let texto = (input.value || '').trim().toLowerCase();
-        let item = listaBaseNovoSeguradoras.find(function(s) {
-            return String(s.texto).trim().toLowerCase() === texto;
-        });
-        hidden.value = item ? item.id : '';
-    }
+    // Campo de seguradora pesquisável (por ligação): mesmo mecanismo dos outros campos de
+    // relacionamento (Ramo/Tipo Documento), mas escopado ao próprio bloco da ligação, já que
+    // cada bloco novo (2ª, 3ª ligação...) é clonado dinamicamente em adicionarLigacao().
+    function inicializarSeguradoraLigacao(bloco) {
+        const $input = $(bloco).find('.campo-seguradora-ligacao');
+        const $hidden = $(bloco).find('input[type="hidden"][name^="ligacao_seguradora"]');
+        const $dropdown = $(bloco).find('.campo-seguradora-dropdown');
 
-    // Seguradora da ficha (Bloco Apólice): mesmo mecanismo (datalist), guarda o id no
-    // campo escondido do formulário (name="seguradora").
-    function resolverSeguradoraFicha(input) {
-        let hidden = document.getElementById('base_novo_seguradora_val');
-        if (!hidden) return;
-        let texto = (input.value || '').trim().toLowerCase();
-        let item = listaBaseNovoSeguradoras.find(function(s) {
-            return String(s.texto).trim().toLowerCase() === texto;
+        if (!$input.length || !$hidden.length || !$dropdown.length) return;
+
+        $input.off('.seguradoraPesquisa');
+
+        function mostrarLista() {
+            const valorDigitado = ($input.val() || '').toLowerCase().trim();
+            $dropdown.empty();
+
+            const filtrados = listaBaseNovoSeguradoras.filter(function(item) {
+                return (item.texto || '').toLowerCase().includes(valorDigitado);
+            });
+
+            if (filtrados.length > 0) {
+                filtrados.forEach(function(item) {
+                    const $item = $('<div>')
+                        .addClass('item-lista')
+                        .text(item.texto);
+
+                    $item.on('mousedown', function(evt) {
+                        evt.preventDefault();
+                        $input.val(item.texto);
+                        $hidden.val(item.id);
+                        $dropdown.addClass('d-none');
+                    });
+
+                    $dropdown.append($item);
+                });
+            } else {
+                $dropdown.append(
+                    $('<div>').addClass('item-lista text-muted').text('Nada encontrado')
+                );
+            }
+
+            $dropdown.removeClass('d-none');
+        }
+
+        $input.on('focus.seguradoraPesquisa click.seguradoraPesquisa', mostrarLista);
+
+        $input.on('input.seguradoraPesquisa', function() {
+            $hidden.val('');
+            mostrarLista();
         });
-        hidden.value = item ? item.id : '';
     }
 
     function formatarValorBRL(valor) {
@@ -1322,6 +1372,13 @@
 
     function editarIndicacao(row) {
         var id = row.getAttribute('data-id');
+
+        if (row.classList.contains('em-atendimento')) {
+            var atendentePor = atendimentosAtivos[String(id)] || row.getAttribute('data-atendimento') || 'outro usuário';
+            avisoElegante('Este registro já está em atendimento por ' + atendentePor + '. Aguarde a liberação para poder abri-lo.', 'Registro em atendimento');
+            return;
+        }
+
         $('#base_novo_id_hidden').val(id);
 
         $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
@@ -1480,8 +1537,9 @@
         });
         
         document.getElementById('container-ligacoes').appendChild(novoBloco);
+        inicializarSeguradoraLigacao(novoBloco);
         prepararNovaLigacao('edit_ligacao_protocolo_' + contadorLigacoes, 'edit_ligacao_cadastrado_por_' + contadorLigacoes);
-        
+
         atualizarEstadoLigacoes();
     }
 
