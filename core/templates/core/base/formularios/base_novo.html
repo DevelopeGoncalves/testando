@@ -1383,8 +1383,9 @@
 
         $('#base_novo_id_hidden').val(id);
         // Ao abrir a ficha (duplo clique) o registro já fica "em uso": vermelho na lista e
-        // aparece o nome na coluna "Uso por" (em tempo real, para todos).
-        if (PODE_REGISTRAR_LIGACAO) marcarAtendimento(id);
+        // aparece o nome na coluna "Uso por" (em tempo real, para todos). O heartbeat mantém
+        // a trava enquanto a ficha estiver aberta.
+        if (PODE_REGISTRAR_LIGACAO) { marcarAtendimento(id); iniciarHeartbeatAtendimento(id); }
 
         $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
         $('#id_email').val(row.getAttribute('data-email'));
@@ -1553,12 +1554,24 @@
         var el = document.querySelector('input[name=csrfmiddlewaretoken]');
         return el ? el.value : '';
     }
+    var heartbeatAtendimento = null;   // "sinal de vida" enquanto a ficha está aberta
     function marcarAtendimento(id) {
         if (!id) return;
         $.ajax({ url: URL_MARCAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
                  headers: { 'X-CSRFToken': csrfAtendimento() } });
     }
+    // Enquanto a ficha fica aberta, renova a trava a cada 15s. Se o navegador fechar/travar
+    // ou faltar luz, esse sinal para e a trava expira sozinha no servidor (~45s), liberando.
+    function iniciarHeartbeatAtendimento(id) {
+        pararHeartbeatAtendimento();
+        if (!id) return;
+        heartbeatAtendimento = setInterval(function() { marcarAtendimento(id); }, 15000);
+    }
+    function pararHeartbeatAtendimento() {
+        if (heartbeatAtendimento) { clearInterval(heartbeatAtendimento); heartbeatAtendimento = null; }
+    }
     function encerrarAtendimento(id) {
+        pararHeartbeatAtendimento();
         if (!id) return;
         $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
                  headers: { 'X-CSRFToken': csrfAtendimento() } });
@@ -1566,6 +1579,18 @@
         delete atendimentosAtivos[String(id)];
         aplicarAtendimentos();
     }
+    // Ao fechar a aba/navegador sem salvar/cancelar, avisa o servidor para liberar na hora
+    // (sendBeacon consegue enviar mesmo durante o fechamento da página).
+    function liberarAoFechar() {
+        var id = document.getElementById('base_novo_id_hidden');
+        id = id ? id.value : '';
+        if (!id || !navigator.sendBeacon) return;
+        var fd = new FormData();
+        fd.append('csrfmiddlewaretoken', csrfAtendimento());
+        navigator.sendBeacon(URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), fd);
+    }
+    window.addEventListener('pagehide', liberarAoFechar);
+    window.addEventListener('beforeunload', liberarAoFechar);
     function aplicarAtendimentos() {
         $('#tabela-base-novo tbody tr').each(function() {
             var id = String($(this).data('id') || '');
