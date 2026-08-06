@@ -115,13 +115,12 @@
         </a>
     </div>
 
-        <div class="col-md-3 mb-4">
-        <a href="{% url 'tipo_pessoa_lista' %}" class="text-decoration-none text-dark d-block h-100">
-            <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #17a2b8; transition: 0.3s;" onmouseover="this.classList.remove('shadow-sm'); this.classList.add('shadow');" onmouseout="this.classList.remove('shadow'); this.classList.add('shadow-sm');">
-                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
-                    <i class="fas fa-id-card fa-3x mb-3" style="color: #17a2b8;"></i>
-                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Tipos de pessoa</h6>
-                    <p class="text-muted small m-0 mt-1">Gerenciar indicadores</p>
+    <div class="col-lg-3 col-6">
+        <a href="{% url 'tipo_pessoa_lista' %}" class="link-card">
+            <div class="card card-menu mb-4" style="border-top-color: #17a2b8;"> <div class="card-body text-center p-4">
+                    <i class="fas fa-id-card fa-3x text-info mb-3"></i>
+                    <h5 class="card-title text-dark fw-bold">Tipos de pessoa</h5>
+                    <p class="card-text text-muted small">Gerenciar indicadores</p>
                 </div>
             </div>
         </a>
@@ -138,5 +137,40 @@
         </a>
     </div>
 
+    <div class="col-lg-3 col-6">
+        <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImportarBaseNovo">
+            <div class="card card-menu mb-4" style="border-top-color: #17a2b8;"> <div class="card-body text-center p-4">
+                    <i class="fas fa-file-signature fa-3x text-info mb-3"></i>
+                    <h5 class="card-title text-dark fw-bold">Importar Base Novo</h5>
+                    <p class="card-text text-muted small">Atualizar indicações de seguridade</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+</div>
+
+<!-- Modal de importação da Base Novo (movido de Base / Processamentos) -->
+<div class="modal fade" id="modalImportarBaseNovo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title"><i class="fas fa-file-signature"></i> Importar Base Novo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{% url 'importar_base_novo' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+            <p>Selecione a planilha (Excel ou CSV) com as respostas do formulário de Indicação de Seguridade (padrão "base novo").</p>
+            <p class="text-muted small">Certifique-se de que a planilha contenha as colunas exatas (ex: "Carimbo de data/hora", "Nome completo do cliente", "Produto", etc).</p>
+            <input class="form-control" type="file" name="arquivo_planilha" accept=".xlsx, .xls, .csv" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-info text-white">Iniciar Importação</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

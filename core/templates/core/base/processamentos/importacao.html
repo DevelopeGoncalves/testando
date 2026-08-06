@@ -56,17 +56,6 @@
         </a>
     </div>
 
-    <div class="col-lg-3 col-6">
-        <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImportarBaseNovo">
-            <div class="card card-menu mb-4" style="border-top-color: #17a2b8;">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-file-signature fa-3x text-info mb-3"></i>
-                    <h5 class="card-title text-dark fw-bold">Importar Base Novo</h5>
-                    <p class="card-text text-muted small">Atualizar indicações de seguridade</p>
-                </div>
-            </div>
-        </a>
-    </div>
 
 </div>
 
@@ -131,29 +120,6 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn text-white" style="background-color: #9c27b0;">Iniciar Importação</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="modalImportarBaseNovo" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-info text-white">
-        <h5 class="modal-title"><i class="fas fa-file-signature"></i> Importar Base Novo</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form action="{% url 'importar_base_novo' %}" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="modal-body">
-            <p>Selecione a planilha (Excel ou CSV) com as respostas do formulário de Indicação de Seguridade (padrão "base novo").</p>
-            <p class="text-muted small">Certifique-se de que a planilha contenha as colunas exatas (ex: "Carimbo de data/hora", "Nome completo do cliente", "Produto", etc).</p>
-            <input class="form-control" type="file" name="arquivo_planilha" accept=".xlsx, .xls, .csv" required>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-info text-white">Iniciar Importação</button>
         </div>
       </form>
     </div>
