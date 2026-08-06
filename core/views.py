@@ -789,12 +789,21 @@ def agora_servidor_ligacao(request):
 # não travar para sempre caso o usuário feche o navegador sem encerrar.
 ATENDIMENTO_TIMEOUT_MIN = 15
 
+def _nome_usuario_atendimento(user):
+    """Nome mostrado na coluna 'Uso por': pega pelo perfil (colaborador vinculado).
+    Se não houver perfil/colaborador, cai para o nome completo ou o login."""
+    perfil = getattr(user, 'perfil', None)
+    if perfil and perfil.colaborador:
+        col = perfil.colaborador
+        return col.nome_social or col.colaborador
+    return user.get_full_name() or user.username
+
 @login_required
 def marcar_atendimento(request, id):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     ind = get_object_or_404(Indicacao, id=id)
-    ind.atendimento_por = request.user.get_full_name() or request.user.username
+    ind.atendimento_por = _nome_usuario_atendimento(request.user)
     ind.atendimento_em = timezone.now()
     ind.save(update_fields=['atendimento_por', 'atendimento_em'])
     return JsonResponse({'ok': True})
@@ -919,6 +928,12 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
         return form, erro_formulario_msg
 
     indicacao = form.save()
+
+    # Ao salvar, libera a trava de "uso" do registro (quem salvou terminou de mexer).
+    if indicacao.atendimento_por or indicacao.atendimento_em:
+        indicacao.atendimento_por = None
+        indicacao.atendimento_em = None
+        indicacao.save(update_fields=['atendimento_por', 'atendimento_em'])
 
     # Base Novo não mexe em ligação: preserva o histórico já registado no card "Novo".
     if not processar_ligacoes:

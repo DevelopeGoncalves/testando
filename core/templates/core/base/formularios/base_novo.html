@@ -155,26 +155,27 @@
                             <th style="display:none;"></th>
                             <th class="text-center">Carimbo de data/hora</th> <!-- 1 -->
                             <th class="text-center">{% if apenas_pendentes %}Responsável{% else %}E-mail{% endif %}</th> <!-- 2 -->
-                            <th class="text-center">E-mail do indicador (outro)</th> <!-- 3 -->
-                            <th class="text-center">Matrícula do indicador</th> <!-- 4 -->
-                            <th class="text-center">Indicador</th> <!-- 5 -->
-                            <th class="text-center">Agência</th> <!-- 6 -->
-                            <th class="text-center">Telefone do indicador</th> <!-- 7 -->
-                            <th class="text-center">Enviar orçamento para</th> <!-- 8 -->
-                            <th class="text-center">Nome do cliente</th> <!-- 9 -->
-                            <th class="text-center">Telefone do cliente</th> <!-- 10 -->
-                            <th class="text-center">CPF do cliente</th> <!-- 11 -->
-                            <th class="text-center">E-mail do cliente</th> <!-- 12 -->
-                            <th class="text-center">Produto</th> <!-- 13 -->
-                            <th class="text-start">Dados do veículo</th> <!-- 14 -->
-                            <th class="text-center">Renovação</th> <!-- 15 -->
-                            <th class="text-center">Seguradora</th> <!-- 16 -->
-                            <th class="text-center">Grupo/Ramo</th> <!-- 17 -->
-                            <th class="text-center">Tipo Documento</th> <!-- 18 -->
-                            <th class="text-center">Nº Contrato</th> <!-- 19 -->
-                            <th class="text-center">Nº Endosso</th> <!-- 20 -->
-                            <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 21 -->
-                            <th class="text-start">Observações</th> <!-- 22 -->
+                            <th class="text-center">Uso por</th> <!-- 3 -->
+                            <th class="text-center">E-mail do indicador (outro)</th> <!-- 4 -->
+                            <th class="text-center">Matrícula do indicador</th> <!-- 5 -->
+                            <th class="text-center">Indicador</th> <!-- 6 -->
+                            <th class="text-center">Agência</th> <!-- 7 -->
+                            <th class="text-center">Telefone do indicador</th> <!-- 8 -->
+                            <th class="text-center">Enviar orçamento para</th> <!-- 9 -->
+                            <th class="text-center">Nome do cliente</th> <!-- 10 -->
+                            <th class="text-center">Telefone do cliente</th> <!-- 11 -->
+                            <th class="text-center">CPF do cliente</th> <!-- 12 -->
+                            <th class="text-center">E-mail do cliente</th> <!-- 13 -->
+                            <th class="text-center">Produto</th> <!-- 14 -->
+                            <th class="text-start">Dados do veículo</th> <!-- 15 -->
+                            <th class="text-center">Renovação</th> <!-- 16 -->
+                            <th class="text-center">Seguradora</th> <!-- 17 -->
+                            <th class="text-center">Grupo/Ramo</th> <!-- 18 -->
+                            <th class="text-center">Tipo Documento</th> <!-- 19 -->
+                            <th class="text-center">Nº Contrato</th> <!-- 20 -->
+                            <th class="text-center">Nº Endosso</th> <!-- 21 -->
+                            <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 22 -->
+                            <th class="text-start">Observações</th> <!-- 23 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -232,6 +233,7 @@
 
                             <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
                             <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
+                            <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
                             <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
                             <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
                             <td class="text-center">{% if i.matricula_indicador or i.nome_indicador %}{{ i.matricula_indicador|default:'' }}{% if i.matricula_indicador and i.nome_indicador %} - {% endif %}{{ i.nome_indicador|default:'' }}{% else %}-{% endif %}</td>
@@ -891,7 +893,7 @@
         });
 
         //ocultar tabela 
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 13, 4, 6, 20, 21,22]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 21, 22, 23]);
         
 
         atualizarAtendimentos();
@@ -1363,6 +1365,9 @@
             {% if form_indicacao.errors %}
                 window.location.href = window.location.pathname;
             {% else %}
+                // Ao voltar para a lista, libera a trava do registro que estava aberto.
+                var _idFechar = document.getElementById('base_novo_id_hidden').value;
+                if (_idFechar) encerrarAtendimento(_idFechar);
                 $('#form-' + tipo).hide();
                 $('#lista-' + tipo).show();
                 $('#base_novo_id_hidden').val('');
@@ -1380,6 +1385,9 @@
         }
 
         $('#base_novo_id_hidden').val(id);
+        // Ao abrir a ficha (duplo clique) o registro já fica "em uso": vermelho na lista e
+        // aparece o nome na coluna "Uso por" (em tempo real, para todos).
+        if (PODE_REGISTRAR_LIGACAO) marcarAtendimento(id);
 
         $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
         $('#id_email').val(row.getAttribute('data-email'));
@@ -1561,10 +1569,14 @@
     function aplicarAtendimentos() {
         $('#tabela-base-novo tbody tr').each(function() {
             var id = String($(this).data('id') || '');
-            if (atendimentosAtivos[id]) {
-                $(this).addClass('em-atendimento').attr('title', 'Em atendimento por ' + atendimentosAtivos[id]);
+            var nome = atendimentosAtivos[id];
+            var cell = $(this).find('.uso-por-cell');
+            if (nome) {
+                $(this).addClass('em-atendimento').attr('title', 'Em atendimento por ' + nome);
+                cell.text(nome);
             } else {
                 $(this).removeClass('em-atendimento').removeAttr('title');
+                cell.text('-');
             }
         });
     }
@@ -1606,7 +1618,6 @@
         atualizarResumoLigacoes();
 
         atualizarEstadoLigacoes();
-        encerrarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function cancelarLigacaoModal() {
@@ -1617,7 +1628,6 @@
             modalLigacao.hide();
             atualizarResumoLigacoes();
             atualizarEstadoLigacoes();
-            encerrarAtendimento($('#base_novo_id_hidden').val());
             return;
         }
 
@@ -1633,7 +1643,6 @@
         modalLigacao.hide();
         atualizarResumoLigacoes();
         atualizarEstadoLigacoes();
-        encerrarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function abrirModalLigacao(primeira) {
@@ -1652,7 +1661,6 @@
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
-        marcarAtendimento($('#base_novo_id_hidden').val());
     }
 
     var ligacaoEmEdicao = null;
@@ -1669,7 +1677,6 @@
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
-        marcarAtendimento($('#base_novo_id_hidden').val());
     }
 
     function removerLigacao(botao) {
