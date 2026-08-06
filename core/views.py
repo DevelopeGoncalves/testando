@@ -740,7 +740,7 @@ def vendas_novo_negocio(request):
     # na lista do Novo (facilita a busca/filtro). Se o CID não existir em Unidade, fica só o CID.
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
-    limite_atend = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
     for ind in indicacoes:
         ligacoes = list(ind.ligacoes.all())
         ultima = ligacoes[0] if ligacoes else None
@@ -785,9 +785,10 @@ def agora_servidor_ligacao(request):
 # --- Trava de atendimento ("em ligação") --------------------------------------------------
 # Quando alguém abre um registro para registrar uma ligação, ele fica "em atendimento" e
 # aparece em vermelho na lista para TODOS os usuários (evita duas pessoas no mesmo lead).
-# Some ao salvar/cancelar. A trava expira sozinha após ATENDIMENTO_TIMEOUT_MIN minutos, para
-# não travar para sempre caso o usuário feche o navegador sem encerrar.
-ATENDIMENTO_TIMEOUT_MIN = 15
+# Some ao salvar/cancelar. Enquanto a ficha está aberta o navegador manda um "sinal de vida"
+# (heartbeat) que renova o atendimento. Se o navegador fechar/travar/faltar luz, o sinal para
+# e a trava expira sozinha após ATENDIMENTO_TIMEOUT_SEG segundos, liberando o registro.
+ATENDIMENTO_TIMEOUT_SEG = 45
 
 def _nome_usuario_atendimento(user):
     """Nome mostrado na coluna 'Uso por': pega pelo perfil (colaborador vinculado).
@@ -820,7 +821,7 @@ def encerrar_atendimento(request, id):
 
 @login_required
 def atendimentos_ativos(request):
-    limite = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
+    limite = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
     qs = (Indicacao.objects
           .filter(atendimento_em__gte=limite)
           .exclude(atendimento_por__isnull=True)
@@ -1027,7 +1028,7 @@ def lista_base_novo(request):
     # aparecer só na Base Novo - que deve manter a mesma visão concatenada.
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
-    limite_atend = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
     for ind in indicacoes:
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
@@ -1066,7 +1067,7 @@ def vendas_emissao(request):
     )
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
-    limite_atend = timezone.now() - timedelta(minutes=ATENDIMENTO_TIMEOUT_MIN)
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
     for ind in indicacoes:
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
