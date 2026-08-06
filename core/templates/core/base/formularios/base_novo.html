@@ -285,11 +285,8 @@
     </div>
 
     <div id="form-base-novo" style="display:none;">
-        <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+        <div class="mb-3 mt-2">
             <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
-            <button type="button" class="btn btn-outline-secondary" onclick="toggleFormLocal('base-novo', false)">
-                <i class="fas fa-arrow-left"></i> Voltar para a Lista
-            </button>
         </div>
 
         <div class="card shadow-sm border-0">
@@ -299,15 +296,14 @@
                 <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
                 <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
 
-                <div class="card-body p-4" style="font-size: 0.95rem;">
+                <div class="card-body p-4 position-relative" style="font-size: 0.95rem;">
 
                     {% if apenas_pendentes %}
-                    <!-- No Novo os dados ficam travados; o lápis abre o pop-up para editar. -->
-                    <div class="text-end mb-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" title="Editar dados do registro" onclick="abrirEdicaoDados()">
-                            <i class="fas fa-pencil-alt"></i> Editar dados
-                        </button>
-                    </div>
+                    <!-- No Novo os dados ficam travados; o lápis abre o pop-up para editar.
+                         Botão fica na linha do "Bloco Apólice" (canto direito), sem espaço em branco acima. -->
+                    <button type="button" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
+                        <i class="fas fa-pencil-alt"></i> Editar dados
+                    </button>
                     {% endif %}
 
                     <div id="bloco-dados-editaveis"{% if apenas_pendentes %} class="dados-travados"{% endif %}>
@@ -585,6 +581,9 @@
 <script>
     let contadorLigacoes = 1;
     const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
+    // Nome de "uso" do usuário atual (mesmo critério do backend: pega pelo perfil/colaborador).
+    // Serve para deixar o próprio dono reabrir o registro que ele travou.
+    const USUARIO_ATUAL_ATENDIMENTO = "{{ request.user.perfil.colaborador.nome_social|default:request.user.perfil.colaborador.colaborador|default:request.user.get_full_name|default:request.user.username|escapejs }}";
     const PODE_REGISTRAR_LIGACAO = {% if apenas_pendentes %}true{% else %}false{% endif %};
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
@@ -1380,8 +1379,11 @@
 
         if (row.classList.contains('em-atendimento')) {
             var atendentePor = atendimentosAtivos[String(id)] || row.getAttribute('data-atendimento') || 'outro usuário';
-            avisoElegante('Este registro já está em atendimento por ' + atendentePor + '. Aguarde a liberação para poder abri-lo.', 'Registro em atendimento');
-            return;
+            // Só bloqueia se estiver em uso por OUTRA pessoa. O próprio dono pode reabrir.
+            if (atendentePor !== USUARIO_ATUAL_ATENDIMENTO) {
+                avisoElegante('Este registro já está em atendimento por ' + atendentePor + '. Aguarde a liberação para poder abri-lo.', 'Registro em atendimento');
+                return;
+            }
         }
 
         $('#base_novo_id_hidden').val(id);
@@ -1565,6 +1567,9 @@
         if (!id) return;
         $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
                  headers: { 'X-CSRFToken': csrfAtendimento() } });
+        // Libera na hora (sem esperar o polling de 5s), pra não bloquear a reabertura.
+        delete atendimentosAtivos[String(id)];
+        aplicarAtendimentos();
     }
     function aplicarAtendimentos() {
         $('#tabela-base-novo tbody tr').each(function() {
