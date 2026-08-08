@@ -317,7 +317,7 @@ class Indicacao(models.Model):
 class IndicacaoExcluida(models.Model):
     """Guarda a chave (carimbo de data/hora + e-mail) de uma Indicação apagada
     manualmente na Base Novo. A importação da planilha usa essa mesma chave
-    para localizar/atualizar registros (ver importar_base_novo); sem esse
+    para localizar/atualizar registros (ver producao_base_novo_import); sem esse
     registro, reimportar a planilha de origem recriaria uma indicação que o
     usuário já removeu de propósito."""
     carimbo_data_hora = models.DateTimeField("Carimbo de data/hora")
@@ -560,6 +560,15 @@ class CompatibilidadeSeguradora(models.Model):
     
 '''vou parametrizar a coluna que adriel pediu ligacao com a views'''
 class ParametrizacaoHabitacional(models.Model):
+    campo_sistema = models.CharField(max_length=100, unique=True)
+    coluna_excel = models.CharField(max_length=150, blank=True, null=True)
+    valor_fixo = models.CharField(max_length=150, blank=True, null=True)
+
+    def __str__(self):
+        return self.campo_sistema
+
+
+class ParametrizacaoBaseNovo(models.Model):
     campo_sistema = models.CharField(max_length=100, unique=True)
     coluna_excel = models.CharField(max_length=150, blank=True, null=True)
     valor_fixo = models.CharField(max_length=150, blank=True, null=True)

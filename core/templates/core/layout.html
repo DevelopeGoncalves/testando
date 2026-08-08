@@ -504,9 +504,7 @@
             .closest('.tabela-container').find('.tabela-loading').remove();
     }
 
-    // Reorganiza fisicamente as colunas da tabela (thead + cada linha do tbody) seguindo a
-    // "ordem" informada (lista de índices ORIGINAIS na nova ordem desejada). Precisa rodar
-    // ANTES de inicializar o DataTables, para que ele adote a nova ordem/índices.
+
     function reordenarColunasDom(tabelaId, ordem) {
         var $table = $('#' + tabelaId);
         function reordLinha($tr) {
@@ -520,15 +518,8 @@
     }
 
     // tabelaId: id da tabela.
-    // colunasVisiveisEmOrdem (opcional): lista com os NÚMEROS das colunas (os mesmos que estão
-    //   comentados no HTML, <!-- 1 -->, <!-- 2 -->, ...) que devem APARECER, na ORDEM informada.
-    //   Ex.: [1, 6, 9] mostra só essas três colunas, nessa ordem. As demais colunas de conteúdo
-    //   ficam ocultas. As colunas de sistema do início (checkbox e colunas com display:none)
-    //   são mantidas automaticamente e não entram nessa numeração. Se não informar nada, a
-    //   tabela aparece com todas as colunas (comportamento das outras telas).
     function iniciarTabelaExcel(tabelaId, colunasVisiveisEmOrdem) {
         // Failsafe: revela a tabela mesmo que o DataTables falhe ao inicializar,
-        // evitando que ela fique oculta para sempre (ex.: CDN indisponível).
         setTimeout(function () { revelarTabela(tabelaId); }, 5000);
 
         var columnDefs = [{ orderable: false, targets: 0 }];
@@ -538,7 +529,6 @@
             var totalCols = $ths.length;
 
             // Descobre quantas colunas de sistema existem no início (prefixo contíguo):
-            // a do checkbox e as que já vêm com display:none. Elas ficam sempre no começo.
             var numSistema = 0;
             $ths.each(function (idx) {
                 var $th = $(this);
@@ -563,10 +553,6 @@
 
             reordenarColunasDom(tabelaId, ordem);
 
-            // Depois de reordenar, as colunas selecionadas ocupam as posições logo após as de
-            // sistema; tudo que vier depois é conteúdo NÃO selecionado -> esconde no DataTables.
-            // Obs.: não escondo as colunas de sistema com display:none pelo DataTables (ele
-            // removeria a célula do DOM), pois elas guardam dados usados pelo histórico.
             var ocultar = [];
             for (var h = numSistema + mostrarReais.length; h < totalCols; h++) ocultar.push(h);
             if (ocultar.length) columnDefs.push({ visible: false, targets: ocultar });
@@ -579,8 +565,11 @@
             columnDefs: columnDefs,
 
             // --- Aumentar o numero de linha por pagina para 50 ---
-            pageLength: 50, 
-            
+            pageLength: 50,
+
+            // Só monta a linha na tela quando ela for aparecer (evita travar com muitos registros).
+            deferRender: true,
+
             dom: 't<"mt-3 d-flex justify-content-between align-items-center"ip>',
             
             initComplete: function () {
@@ -640,9 +629,8 @@
             }
         });
         
-        tableInstance.on('draw', function() { 
-             atualizarListasDeFiltro(tableInstance); 
-        });
+        // atualizarListasDeFiltro só roda ao aplicar/limpar filtro (aplicarFiltro/limparFiltros),
+        // não em todo "draw" — rodar a cada página virada travava tabelas grandes.
 
         $(document).on('click', '.excel-dropdown-menu', function (e) { e.stopPropagation(); });
     }
@@ -793,7 +781,7 @@
         }
 
         tableInstance.column(colIndex).search(searchStr, true, false).draw();
-        
+
         var headerBtn = $(tableInstance.column(colIndex).header()).find('.excel-header-btn');
         if (searchStr !== '' && searchStr !== '^$') {
             headerBtn.addClass('header-filtered');
@@ -801,8 +789,9 @@
             headerBtn.removeClass('header-filtered');
         }
 
-        $('[data-bs-toggle="dropdown"]').dropdown('hide'); 
+        $('[data-bs-toggle="dropdown"]').dropdown('hide');
         currentFilterColumn = null; // Reseta para as listas atualizarem direito
+        atualizarListasDeFiltro(tableInstance);
         verificarEstadoFiltros();
     };
     

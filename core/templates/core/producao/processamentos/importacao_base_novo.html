@@ -1,0 +1,362 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Importação Base Novo{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Produção</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'producao_processamentos' %}" class="text-primary text-decoration-none">Processamentos</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="javascript:void(0);" onclick="voltarParaAcoesBN()" id="link-bc-bn-acoes" class="text-primary text-decoration-none" style="font-weight: normal;">Base Novo</a>
+
+        <span id="separador-bc-bn" class="text-primary text-decoration-none" style="display: none;">/</span>
+        <span id="texto-bc-bn" class="text-primary" style="display: none; font-weight: normal;"></span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div id="menu-acoes-bn" class="row mt-2">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #0d6efd; transition: 0.3s;" onclick="mostrarTelaImportarBN()" onmouseover="this.classList.remove('shadow-sm'); this.classList.add('shadow');" onmouseout="this.classList.remove('shadow'); this.classList.add('shadow-sm');">
+                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                    <i class="fas fa-file-excel fa-3x mb-3" style="color: #0d6efd;"></i>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Importar</h6>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #198754; transition: 0.3s;" onclick="mostrarTelaParametrizarBN()" onmouseover="this.classList.remove('shadow-sm'); this.classList.add('shadow');" onmouseout="this.classList.remove('shadow'); this.classList.add('shadow-sm');">
+                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                    <i class="fas fa-cogs fa-3x mb-3" style="color: #198754;"></i>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Parametrizar a importação</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="form-importacao-bn" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- ÁREA: IMPORTAR -->
+        <div id="area-selecao-bn" style="display: none;" class="mt-2">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h5 class="text-dark fw-bold mb-0">
+                    <i class="fas fa-file-excel text-primary me-2"></i> Importar planilha da Base Novo
+                </h5>
+                <div class="d-flex align-items-center">
+                    <div id="botoes-acao-importar-bn" style="display: none;" class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold d-flex align-items-center" onclick="apagarPlanilhaAtivaBN()">
+                            <i class="fas fa-trash me-2"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm d-flex align-items-center" onclick="forcarEnvioBN()">
+                            <i class="fas fa-upload me-2"></i> Importar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-3 rounded border">
+                <p class="text-muted small mb-3">Envie a planilha exportada do formulário de indicações. As colunas usadas seguem a parametrização salva; sem uma parametrização salva, o mapeamento feito abaixo antes de importar é usado só desta vez.</p>
+                <div id="box-upload-input-bn">
+                    <input type="file" name="arquivo_excel" id="arquivo_excel_bn" class="form-control" accept=".xlsx, .xls, .csv" onchange="mapearPlanilhaAutomaticamenteBN(this)">
+                </div>
+                <div id="aviso-arquivo-sessao-bn" class="mt-2 text-success small fw-bold" style="display: none;">
+                    <i class="fas fa-check-circle me-1"></i> Planilha carregada na memória: <span id="nome-arquivo-sessao-bn"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÁREA: PARAMETRIZAR COLUNAS -->
+        <div id="area-parametrizacao-bn" style="display: none;" class="mt-2">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h5 class="text-dark fw-bold mb-0">
+                    <i class="fas fa-sliders-h text-success me-2"></i>Parametrizar Colunas
+                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="file" id="arquivo_exclusivo_mapeamento_bn" class="d-none" accept=".xlsx, .xls, .csv" onchange="lerColunasExclusivoParametrizacaoBN(this)">
+                    <button type="button" class="btn btn-outline-success btn-sm fw-bold d-flex align-items-center" onclick="document.getElementById('arquivo_exclusivo_mapeamento_bn').click()">
+                        <i class="fas fa-file-excel me-2"></i> Ler Colunas
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center" onclick="salvarParametrizacaoBN()">
+                        <i class="fas fa-save me-2"></i> Salvar
+                    </button>
+                </div>
+            </div>
+            <div class="bg-white p-3 rounded border">
+                <p class="text-muted small mb-3">Indique de qual coluna da planilha vem cada campo do sistema, ou defina um valor fixo para os casos em que a planilha não traz aquela informação. "Carimbo de data/hora" e "Endereço de e-mail" identificam a resposta e não devem ficar em branco.</p>
+                <div id="msg-sem-arquivo-bn" class="text-center py-5 text-muted">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3 text-warning"></i>
+                    <h6>Nenhuma planilha em memória. Clique em "Ler Colunas" e selecione um arquivo para parametrizar.</h6>
+                </div>
+                <div id="tabela-parametrizacao-bn" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle table-hover">
+                            <thead class="table-light border-bottom">
+                                <tr class="small text-muted">
+                                    <th width="30%" class="ps-3 py-2">Campo no Sistema</th>
+                                    <th width="35%" class="py-2">Coluna no Excel (Origem)</th>
+                                    <th width="35%" class="pe-3 py-2">Valor Fixo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpo-mapeamento-bn"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script>
+    $(document).ready(function() {
+        let referrer = document.referrer;
+        if (!referrer || !referrer.includes(window.location.pathname)) {
+            sessionStorage.removeItem('tela_ativa_base_novo');
+        }
+        checarPlanilhaSessaoBN();
+        restaurarTelaAnteriorBN();
+    });
+
+    function atualizarBreadcrumbBN(tela) {
+        if (tela === 'importar') {
+            $('#separador-bc-bn').show();
+            $('#texto-bc-bn').show().text('Importar');
+        } else if (tela === 'parametrizar') {
+            $('#separador-bc-bn').show();
+            $('#texto-bc-bn').show().text('Parametrizar Colunas');
+        } else {
+            $('#separador-bc-bn').hide();
+            $('#texto-bc-bn').hide().text('');
+        }
+    }
+
+    function restaurarTelaAnteriorBN() {
+        const telaAtiva = sessionStorage.getItem('tela_ativa_base_novo');
+        if (telaAtiva === 'importar') {
+            $('#menu-acoes-bn').hide();
+            $('#area-selecao-bn').show();
+            atualizarBreadcrumbBN('importar');
+        } else if (telaAtiva === 'parametrizar') {
+            $('#menu-acoes-bn').hide();
+            $('#area-parametrizacao-bn').show();
+            atualizarBreadcrumbBN('parametrizar');
+        }
+    }
+
+    function voltarParaAcoesBN() {
+        sessionStorage.removeItem('tela_ativa_base_novo');
+        $('#area-selecao-bn').hide();
+        $('#area-parametrizacao-bn').hide();
+        $('#menu-acoes-bn').fadeIn(300);
+        atualizarBreadcrumbBN('inicio');
+    }
+
+    function mostrarTelaImportarBN() {
+        $('#menu-acoes-bn').hide();
+        $('#area-selecao-bn').fadeIn(300);
+        sessionStorage.setItem('tela_ativa_base_novo', 'importar');
+        atualizarBreadcrumbBN('importar');
+    }
+
+    function mostrarTelaParametrizarBN() {
+        $('#menu-acoes-bn').hide();
+        $('#area-parametrizacao-bn').fadeIn(300);
+        sessionStorage.setItem('tela_ativa_base_novo', 'parametrizar');
+        atualizarBreadcrumbBN('parametrizar');
+    }
+
+    const parametrosSalvosBN = {
+        {% for campo, dados in parametros_salvos.items %}
+            "{{ campo|escapejs }}": { col: "{{ dados.col|escapejs }}", fixo: "{{ dados.fixo|escapejs }}" },
+        {% endfor %}
+    };
+
+    const camposSistemaBN = [
+        {% for campo in campos_destino %}
+            {% if campo.nome == 'enviar_orcamento_para' %}
+                {nome: '{{ campo.nome }}', label: '{{ campo.label|escapejs }}', tipo: 'select', opcoes: ['Cliente', 'Indicador']},
+            {% else %}
+                {nome: '{{ campo.nome }}', label: '{{ campo.label|escapejs }}', tipo: 'texto'},
+            {% endif %}
+        {% endfor %}
+    ];
+
+    function renderizarTabelaMapeamentoBN(headersExcel) {
+        let html = '';
+        camposSistemaBN.forEach(campo => {
+            let fixoHtml = '';
+            let salvo = parametrosSalvosBN[campo.nome] || { col: '', fixo: '' };
+
+            if (campo.tipo === 'select') {
+                fixoHtml = `<select name="fixo_${campo.nome}" id="fixo_${campo.nome}" class="form-select form-select-sm">
+                    <option value="">-- Branco --</option>
+                    ${campo.opcoes.map(o => `<option value="${o}" ${o === salvo.fixo ? 'selected' : ''}>${o}</option>`).join('')}
+                </select>`;
+            } else {
+                fixoHtml = `<input type="text" name="fixo_${campo.nome}" id="fixo_${campo.nome}" class="form-control form-control-sm" value="${salvo.fixo || ''}">`;
+            }
+
+            html += `<tr>
+                <td class="small fw-bold ps-3 py-2">${campo.label}</td>
+                <td class="py-2">
+                    <select name="map_${campo.nome}" id="map_${campo.nome}" class="form-select form-select-sm text-secondary" onchange="toggleFixoBN('${campo.nome}')">
+                        <option value="">-- S/ Mapear --</option>
+                        ${headersExcel.map(h => `<option value="${h}" ${h === salvo.col ? 'selected' : ''}>${h}</option>`).join('')}
+                        ${salvo.col && !headersExcel.includes(salvo.col) ? `<option value="${salvo.col}" selected>${salvo.col}</option>` : ''}
+                    </select>
+                </td>
+                <td class="pe-3 py-2">${fixoHtml}</td>
+            </tr>`;
+        });
+
+        $('#corpo-mapeamento-bn').html(html);
+        camposSistemaBN.forEach(campo => toggleFixoBN(campo.nome));
+
+        $('#msg-sem-arquivo-bn').hide();
+        $('#tabela-parametrizacao-bn').show();
+    }
+
+    function toggleFixoBN(campoNome) {
+        const selectValue = document.getElementById('map_' + campoNome).value;
+        const inputFixo = document.getElementById('fixo_' + campoNome);
+        if (selectValue !== "") {
+            if (inputFixo) { inputFixo.value = ""; inputFixo.disabled = true; }
+        } else {
+            if (inputFixo) { inputFixo.disabled = false; }
+        }
+    }
+
+    function checarPlanilhaSessaoBN() {
+        const nomeSalvo = sessionStorage.getItem('bn_planilha_nome');
+        const headersSalvos = sessionStorage.getItem('bn_planilha_headers');
+        const paramHeadersSalvos = sessionStorage.getItem('bn_param_planilha_headers');
+
+        if (nomeSalvo && headersSalvos) {
+            $('#botoes-acao-importar-bn').show();
+            if (!document.getElementById('arquivo_excel_bn').files[0]) {
+                $('#nome-arquivo-sessao-bn').text(nomeSalvo);
+                $('#aviso-arquivo-sessao-bn').show();
+            } else {
+                $('#aviso-arquivo-sessao-bn').hide();
+            }
+            $('#arquivo_excel_bn').removeAttr('required');
+        } else {
+            $('#botoes-acao-importar-bn').hide();
+            $('#aviso-arquivo-sessao-bn').hide();
+            $('#arquivo_excel_bn').attr('required', 'required');
+        }
+
+        if (paramHeadersSalvos) {
+            renderizarTabelaMapeamentoBN(JSON.parse(paramHeadersSalvos));
+        } else if (headersSalvos) {
+            renderizarTabelaMapeamentoBN(JSON.parse(headersSalvos));
+        } else {
+            renderizarTabelaMapeamentoBN([]);
+        }
+    }
+
+    function lerHeadersDoArquivo(arquivo, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const primeiraAba = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[primeiraAba];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+                let headersExcel = [];
+                for (let i = 0; i < jsonData.length; i++) {
+                    const linha = jsonData[i];
+                    if (Array.isArray(linha) && linha.some(col => String(col).trim() !== "")) {
+                        headersExcel = linha.map(col => String(col).trim());
+                        break;
+                    }
+                }
+
+                if (headersExcel.length === 0) {
+                    avisoElegante("Não foi possível localizar o cabeçalho da planilha.");
+                    return;
+                }
+                callback(headersExcel);
+            } catch (erro) {
+                console.error("Erro ao ler a planilha:", erro);
+                avisoElegante("Erro ao ler a planilha.");
+            }
+        };
+        reader.onerror = function() {
+            avisoElegante("Erro ao carregar o arquivo.");
+        };
+        reader.readAsArrayBuffer(arquivo);
+    }
+
+    function mapearPlanilhaAutomaticamenteBN(fileInput) {
+        if (!fileInput.files[0]) return;
+        const nomeArquivo = fileInput.files[0].name;
+
+        $('#box-upload-input-bn').css('opacity', '0.6');
+        lerHeadersDoArquivo(fileInput.files[0], function(headersExcel) {
+            sessionStorage.setItem('bn_planilha_nome', nomeArquivo);
+            sessionStorage.setItem('bn_planilha_headers', JSON.stringify(headersExcel));
+            checarPlanilhaSessaoBN();
+            $('#box-upload-input-bn').css('opacity', '1');
+        });
+    }
+
+    function lerColunasExclusivoParametrizacaoBN(fileInput) {
+        if (!fileInput.files || !fileInput.files[0]) return;
+        lerHeadersDoArquivo(fileInput.files[0], function(headersExcel) {
+            sessionStorage.setItem('bn_param_planilha_headers', JSON.stringify(headersExcel));
+            renderizarTabelaMapeamentoBN(headersExcel);
+            fileInput.value = "";
+        });
+    }
+
+    function apagarPlanilhaAtivaBN() {
+        confirmarElegante("Deseja mesmo apagar e remover esta planilha ativa do sistema?", function() {
+            sessionStorage.removeItem('bn_planilha_nome');
+            sessionStorage.removeItem('bn_planilha_headers');
+            sessionStorage.removeItem('bn_param_planilha_headers');
+            document.getElementById('arquivo_excel_bn').value = "";
+            if (document.getElementById('arquivo_exclusivo_mapeamento_bn')) {
+                document.getElementById('arquivo_exclusivo_mapeamento_bn').value = "";
+            }
+            checarPlanilhaSessaoBN();
+        }, { titulo: 'Remover planilha', textoConfirmar: 'Sim, apagar', corBotao: 'danger' });
+    }
+
+    function salvarParametrizacaoBN() {
+        let form = document.getElementById('form-importacao-bn');
+        let inputAcao = document.createElement('input');
+        inputAcao.type = 'hidden';
+        inputAcao.name = 'acao';
+        inputAcao.value = 'salvar_parametrizacao';
+        form.appendChild(inputAcao);
+        $('#arquivo_excel_bn').removeAttr('required');
+        form.submit();
+    }
+
+    function forcarEnvioBN() {
+        const fileInput = document.getElementById('arquivo_excel_bn');
+        const nomeSalvo = sessionStorage.getItem('bn_planilha_nome');
+
+        if (!fileInput.files[0] && !nomeSalvo) {
+            avisoElegante("Por favor, selecione um arquivo de planilha (.xlsx ou .csv) antes de iniciar.");
+            return;
+        }
+
+        $('.btn-success').html('<i class="fas fa-spinner fa-spin me-2"></i> Processando...').prop('disabled', true);
+
+        sessionStorage.removeItem('bn_planilha_nome');
+        sessionStorage.removeItem('bn_planilha_headers');
+        document.getElementById('form-importacao-bn').submit();
+    }
+</script>
+{% endblock %}
