@@ -7,15 +7,15 @@ from .models import (
     Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado,
     Seguradora, TipoDocumento, Cliente, Apolice, PerfilUsuario,
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
-    ParametrizacaoHabitacional, Indicacao, LigacaoIndicacao, MotivoNaoVenda,
-    IndicacaoExcluida,
+    ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
+    MotivoNaoVenda, IndicacaoExcluida,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import Q, Sum, OuterRef, Subquery
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
@@ -782,17 +782,11 @@ def agora_servidor_ligacao(request):
     return JsonResponse({'datahora': agora.strftime('%Y-%m-%dT%H:%M:%S')})
 
 
-# --- Trava de atendimento ("em ligação") --------------------------------------------------
-# Quando alguém abre um registro para registrar uma ligação, ele fica "em atendimento" e
-# aparece em vermelho na lista para TODOS os usuários (evita duas pessoas no mesmo lead).
-# Some ao salvar/cancelar. Enquanto a ficha está aberta o navegador manda um "sinal de vida"
-# (heartbeat) que renova o atendimento. Se o navegador fechar/travar/faltar luz, o sinal para
-# e a trava expira sozinha após ATENDIMENTO_TIMEOUT_SEG segundos, liberando o registro.
+# a linha vermelha trabando quem ja esta em ligacao , 
 ATENDIMENTO_TIMEOUT_SEG = 45
 
 def _nome_usuario_atendimento(user):
-    """Nome mostrado na coluna 'Uso por': pega pelo perfil (colaborador vinculado).
-    Se não houver perfil/colaborador, cai para o nome completo ou o login."""
+    """mostra o nome na coluna quem esta usando uso por:"""
     perfil = getattr(user, 'perfil', None)
     if perfil and perfil.colaborador:
         col = perfil.colaborador
@@ -873,8 +867,7 @@ def _parse_date(valor_str):
 
 def _falta_premio_total_venda_central(request):
     """True se alguma ligação marcada como 'Vendas Central' ou 'Vendas Agência' ficou
-    sem 'Prêmio Total'. O checkbox só aparece no POST quando marcado; o sufixo
-    ('' ou '_2', '_3'...) identifica a ligação correspondente."""
+    sem 'Prêmio Total'. O checkbox só aparece no POST quando marcado"""
     for prefixo in ('ligacao_venda_central', 'ligacao_agn'):
         for chave, valor in request.POST.items():
             if chave.startswith(prefixo) and valor == 'on':
@@ -887,20 +880,11 @@ def _falta_premio_total_venda_central(request):
 
 def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
     """Processa o POST de cadastro/edição da ficha de Indicação (Base Novo e o card
-    'Novo', que reaproveitam a mesma ficha/tabela). Retorna None quando salvo com
-    sucesso; caso contrário retorna (form, erro_formulario_msg) para reabrir a
-    ficha com os erros.
-
-    processar_ligacoes=False é usado pela Base Novo, onde a ficha é só de
-    cadastro/consulta e não traz os campos de ligação. Sem essa trava, o
-    delete/recreate abaixo apagaria todo o histórico de ligações da indicação a
-    cada gravação feita por lá (o POST chega sem os campos e nada é recriado)."""
+    'Novo', que sao a mesma fincha"""
     item_id = request.POST.get('item_id')
     instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
 
-    # A ficha da Base Novo envia o Indicador e a Agência em campos ÚNICOS concatenados
-    # ("matrícula - nome" / "CID - nome"). Aqui separamos de volta para os campos que o
-    # formulário espera: matrícula/CID = parte antes do primeiro " - "; nome = o resto.
+    # A ficha da Base Novo envia o Indicador e a Agência em campos ÚNICOS.
     dados_post = request.POST
     if 'indicador_combo' in request.POST or 'agencia_combo' in request.POST:
         dados_post = request.POST.copy()
@@ -911,9 +895,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
         if 'agencia_combo' in dados_post:
             dados_post['cid_agencia'] = (dados_post.get('agencia_combo') or '').strip().partition(' - ')[0].strip()
 
-    # No Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de
-    # edição (flag 'editar_dados'). Ao só registrar uma ligação, a ficha continua só leitura
-    # (não sobrescreve os dados). Na Base Novo/Emissão a ficha é sempre editável.
+    # No Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de edição
     somente_leitura = processar_ligacoes and request.POST.get('editar_dados') != '1'
     form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
 
@@ -1169,87 +1151,189 @@ def importar_unidades(request):
 
     return redirect('base_processamentos')
 
+# Campos parametrizáveis da importação da Base Novo.
+# carimbo_data_hora + email = chave que evita duplicar a mesma resposta.
+CAMPOS_BASE_NOVO = [
+    {'nome': 'carimbo_data_hora', 'label': 'Carimbo de data/hora'},
+    {'nome': 'email', 'label': 'Endereço de e-mail'},
+    {'nome': 'email_indicador_outro', 'label': 'E-mail do indicador (se não for você)'},
+    {'nome': 'matricula_indicador', 'label': 'Matrícula do indicador'},
+    {'nome': 'nome_indicador', 'label': 'Nome completo do indicador'},
+    {'nome': 'cid_agencia', 'label': 'CID da agência'},
+    {'nome': 'telefone_indicador', 'label': 'Telefone ou celular do indicador'},
+    {'nome': 'enviar_orcamento_para', 'label': 'Enviar orçamento para'},
+    {'nome': 'nome_cliente', 'label': 'Nome completo do cliente'},
+    {'nome': 'telefone_cliente', 'label': 'Telefone ou celular do cliente'},
+    {'nome': 'cpf_cliente', 'label': 'CPF do cliente'},
+    {'nome': 'email_cliente', 'label': 'E-mail do cliente'},
+    {'nome': 'produto', 'label': 'Produto'},
+    {'nome': 'dados_veiculo', 'label': 'Dados do veículo (modelo, ano e placa)'},
+    {'nome': 'possui_seguro', 'label': 'Cliente já possui seguro?'},
+    {'nome': 'observacoes', 'label': 'Observações'},
+]
+
+
 @login_required
-def importar_base_novo(request):
-    if request.method == 'POST' and request.FILES.get('arquivo_planilha'):
-        arquivo = request.FILES['arquivo_planilha']
+def producao_base_novo_import(request):
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
 
-        try:
-            if arquivo.name.endswith('.csv'):
-                df = pd.read_csv(arquivo, dtype=str)
-            else:
-                df = ler_excel_robusto(arquivo, dtype=str)
+        if acao == 'salvar_parametrizacao':
+            with transaction.atomic():
+                for campo in CAMPOS_BASE_NOVO:
+                    nome = campo['nome']
+                    col_excel = request.POST.get(f'map_{nome}', '').strip()
+                    val_fixo = request.POST.get(f'fixo_{nome}', '').strip()
+                    ParametrizacaoBaseNovo.objects.update_or_create(
+                        campo_sistema=nome,
+                        defaults={'coluna_excel': col_excel, 'valor_fixo': val_fixo}
+                    )
+            messages.success(request, 'Parametrização da Base Novo salva com sucesso!')
+            return redirect('producao_base_novo_import')
 
-            # Limpa os nomes das colunas
-            df.columns = df.columns.str.strip()
-            df = df.fillna('')
+        arquivo = request.FILES.get('arquivo_excel')
+        if arquivo:
+            try:
+                if arquivo.name.endswith('.csv'):
+                    df = pd.read_csv(arquivo, dtype=str)
+                else:
+                    df = ler_excel_robusto(arquivo, dtype=str)
 
-            contador_novos = 0
-            contador_atualizados = 0
-            contador_ignorados = 0
-            contador_excluidos_pulados = 0
+                df.columns = df.columns.astype(str).str.strip()
+                df = df.fillna('')
 
-            for index, row in df.iterrows():
-                # Mapeamento EXATO respeitando os cabeçalhos da planilha "Indicação Seguridade (base novo)"
-                carimbo_bruto = str(row.get('Carimbo de data/hora', '')).strip()
-
-                # Pula a linha se não tiver carimbo de data/hora (linha vazia/inválida)
-                if not carimbo_bruto:
-                    contador_ignorados += 1
-                    continue
-
-                carimbo = pd.to_datetime(carimbo_bruto, dayfirst=True, errors='coerce')
-                if pd.isna(carimbo):
-                    contador_ignorados += 1
-                    continue
-
-                email = str(row.get('Endereço de e-mail', '')).strip()
-
-                if IndicacaoExcluida.objects.filter(carimbo_data_hora=carimbo, email=email).exists():
-                    contador_excluidos_pulados += 1
-                    continue
-
-                defaults_data = {
-                    'email_indicador_outro': str(row.get('E-mail do indicador caso não seja você mesmo', '')).strip(),
-                    'matricula_indicador': str(row.get('Matrícula do indicador', '')).strip(),
-                    'nome_indicador': str(row.get('Nome completo do indicador', '')).strip(),
-                    'cid_agencia': str(row.get('CID da agência', '')).strip(),
-                    'telefone_indicador': str(row.get('Telefone ou celular do indicador', '')).strip(),
-                    'enviar_orcamento_para': str(row.get('Enviar orçamento para', '')).strip(),
-                    'nome_cliente': str(row.get('Nome completo do cliente', '')).strip(),
-                    'telefone_cliente': str(row.get('Telefone ou celular do cliente', '')).strip(),
-                    'cpf_cliente': str(row.get('CPF do cliente', '')).strip(),
-                    'email_cliente': str(row.get('E-mail do cliente', '')).strip(),
-                    'produto': str(row.get('Produto', '')).strip(),
-                    'dados_veiculo': str(row.get('Se Automóvel, informe os dados do veículo (modelo, ano e placa)', '')).strip(),
-                    'possui_seguro': str(row.get('Cliente já possui seguro?', '')).strip(),
-                    'observacoes': str(row.get('Observações', '')).strip(),
+                parametros_salvos_db = {
+                    p.campo_sistema: {'col': p.coluna_excel, 'fixo': p.valor_fixo}
+                    for p in ParametrizacaoBaseNovo.objects.all()
                 }
 
-                # Considera duplicada a mesma resposta
-                indicacao, criada = Indicacao.objects.update_or_create(
-                    carimbo_data_hora=carimbo,
-                    email=email,
-                    defaults=defaults_data
-                )
+                mapeamento = {}
+                for campo in CAMPOS_BASE_NOVO:
+                    nome_campo = campo['nome']
+                    salvo_db = parametros_salvos_db.get(nome_campo, {'col': '', 'fixo': ''})
+                    col_excel = (salvo_db['col'] if salvo_db['col'] else request.POST.get(f'map_{nome_campo}', '')).strip()
+                    val_fixo = (salvo_db['fixo'] if salvo_db['fixo'] else request.POST.get(f'fixo_{nome_campo}', '')).strip()
+                    mapeamento[nome_campo] = {'col_excel': col_excel, 'val_fixo': val_fixo}
 
-                if criada:
-                    contador_novos += 1
-                else:
-                    contador_atualizados += 1
+                def coluna_da_planilha(nome_campo):
+                    """Lê a coluna inteira de uma vez (mais rápido que célula a célula)."""
+                    origem = mapeamento[nome_campo]
+                    if origem['col_excel'] and origem['col_excel'] in df.columns:
+                        return df[origem['col_excel']].astype(str).str.strip()
+                    return pd.Series(origem['val_fixo'], index=df.index)
 
-            msg = f'Importação concluída! {contador_novos} novas indicações criadas e {contador_atualizados} atualizadas.'
-            if contador_ignorados:
-                msg += f' {contador_ignorados} linha(s) ignorada(s) por falta de carimbo de data/hora válido.'
-            if contador_excluidos_pulados:
-                msg += f' {contador_excluidos_pulados} linha(s) ignorada(s) por já terem sido excluídas manualmente antes.'
-            messages.success(request, msg)
+                contador_ignorados = 0
+                contador_excluidos_pulados = 0
+                campos_atualizaveis = [
+                    campo['nome'] for campo in CAMPOS_BASE_NOVO
+                    if campo['nome'] not in ('carimbo_data_hora', 'email')
+                ]
 
-            registrar_auditoria_backend(usuario=request.user, acao="Importou", detalhe="Base Novo (Indicação)")
-        except Exception as e:
-            messages.error(request, f'Erro ao processar a planilha: {str(e)}. Verifique os cabeçalhos.')
+                # Converte as datas em lote (bem mais rápido que uma a uma).
+                carimbos_brutos = coluna_da_planilha('carimbo_data_hora')
+                carimbos = pd.to_datetime(carimbos_brutos, dayfirst=True, errors='coerce')
+                if carimbos.dt.tz is None:
+                    # Precisa do fuso horário certo pra comparar depois em memória.
+                    carimbos = carimbos.dt.tz_localize(timezone.get_current_timezone())
 
-    return redirect('base_processamentos')
+                emails = coluna_da_planilha('email')
+                colunas_atualizaveis = {campo: coluna_da_planilha(campo).tolist() for campo in campos_atualizaveis}
+                carimbos_lista = carimbos.tolist()
+                emails_lista = emails.tolist()
+                carimbos_brutos_lista = carimbos_brutos.tolist()
+
+                # Monta tudo em memória primeiro e só depois vai ao banco em lote.
+                dados_por_chave = {}
+                ordem_chaves = []
+                for i in range(len(df)):
+                    if not carimbos_brutos_lista[i]:
+                        contador_ignorados += 1
+                        continue
+
+                    carimbo = carimbos_lista[i]
+                    if pd.isna(carimbo):
+                        contador_ignorados += 1
+                        continue
+                    carimbo = carimbo.to_pydatetime()
+
+                    email = emails_lista[i]
+                    defaults_data = {campo: valores[i] for campo, valores in colunas_atualizaveis.items()}
+
+                    # Se repetir na planilha, a última linha vence.
+                    chave = (carimbo, email)
+                    if chave not in dados_por_chave:
+                        ordem_chaves.append(chave)
+                    dados_por_chave[chave] = defaults_data
+
+                with transaction.atomic():
+                    chaves_excluidas = set(IndicacaoExcluida.objects.values_list('carimbo_data_hora', 'email'))
+
+                    chaves_validas = [c for c in ordem_chaves if c not in chaves_excluidas]
+                    contador_excluidos_pulados = len(ordem_chaves) - len(chaves_validas)
+
+                    timestamps = {carimbo for carimbo, email in chaves_validas}
+                    existentes = {
+                        (ind.carimbo_data_hora, ind.email): ind
+                        for ind in Indicacao.objects.filter(carimbo_data_hora__in=timestamps)
+                    }
+
+                    novos = []
+                    atualizados = []
+                    for chave in chaves_validas:
+                        carimbo, email = chave
+                        defaults_data = dados_por_chave[chave]
+                        obj_existente = existentes.get(chave)
+                        if obj_existente:
+                            for campo, valor in defaults_data.items():
+                                setattr(obj_existente, campo, valor)
+                            atualizados.append(obj_existente)
+                        else:
+                            novo = Indicacao(carimbo_data_hora=carimbo, email=email, **defaults_data)
+                            novo.chave_unica = Indicacao.montar_chave_unica(
+                                novo.seguradora_id, novo.ramo_id, novo.tipo_documento_id,
+                                novo.numero_contrato, novo.numero_endosso
+                            )
+                            novos.append(novo)
+
+                    if novos:
+                        Indicacao.objects.bulk_create(novos, batch_size=500)
+                    if atualizados:
+                        # UPDATE em lote direto no banco (bulk_update do Django é bem mais lento aqui).
+                        colunas_sql = [Indicacao._meta.get_field(campo).column for campo in campos_atualizaveis]
+                        set_clause = ', '.join(f'"{coluna}" = %s' for coluna in colunas_sql)
+                        sql = f'UPDATE "{Indicacao._meta.db_table}" SET {set_clause} WHERE "id" = %s'
+                        params = [
+                            [getattr(obj, campo) for campo in campos_atualizaveis] + [obj.pk]
+                            for obj in atualizados
+                        ]
+                        with connection.cursor() as cursor:
+                            cursor.executemany(sql, params)
+
+                contador_novos = len(novos)
+                contador_atualizados = len(atualizados)
+
+                msg = f'Importação concluída! {contador_novos} novas indicações criadas e {contador_atualizados} atualizadas.'
+                if contador_ignorados:
+                    msg += f' {contador_ignorados} linha(s) ignorada(s) por falta de carimbo de data/hora válido.'
+                if contador_excluidos_pulados:
+                    msg += f' {contador_excluidos_pulados} linha(s) ignorada(s) por já terem sido excluídas manualmente antes.'
+                messages.success(request, msg)
+
+                registrar_auditoria_backend(usuario=request.user, acao="Importou", detalhe="Base Novo (Indicação)")
+                return redirect('lista_base_novo')
+            except Exception as e:
+                messages.error(request, f'A importação falhou: [{str(e)}]')
+                return redirect('producao_base_novo_import')
+
+    parametros_salvos = {
+        p.campo_sistema: {'col': p.coluna_excel, 'fixo': p.valor_fixo}
+        for p in ParametrizacaoBaseNovo.objects.all()
+    }
+
+    return render(request, 'core/producao/processamentos/importacao_base_novo.html', {
+        'campos_destino': CAMPOS_BASE_NOVO,
+        'parametros_salvos': parametros_salvos,
+    })
 
 @login_required
 def importar_colaboradores(request):
@@ -1443,22 +1527,8 @@ def sair_do_sistema(request):
     return redirect('login') 
 
 
-# --- NOVO CARD DE TIPOS DE PESSOA ---
-
-
 def _ids_duplicados_no_lote(fase_origem, agrupamento):
-    """
-    Verifica, dentro dos registos de `fase_origem` (Importados ou Pendentes) de um
-    agrupamento, quais resultariam em chave_unica repetida caso avançassem de fase.
-
-    Considera repetido tanto quando dois registos do próprio lote batem entre si
-    quanto quando a chave já existe na fase seguinte (checagem em cascata: Importados
-    só olha para o que já está em Pendentes; Pendentes só olha para o que já está em
-    Emitidos - nunca pula fase).
-
-    Retorna um set com os ids dos RegistroProducao (da fase_origem) que precisam
-    ser apagados ou editados antes de liberar a passagem de fase.
-    """
+    
     registros = RegistroProducao.objects.filter(
         agrupamento=agrupamento, fase__iexact=fase_origem
     ).prefetch_related('endossos_extras')
