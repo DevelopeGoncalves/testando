@@ -234,7 +234,7 @@
                             </td>
 
                             <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
-                            <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
+                            <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel_demanda|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
                             <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
                             <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
                             <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
