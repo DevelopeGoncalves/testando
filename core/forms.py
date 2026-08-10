@@ -302,6 +302,10 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             for nome, campo in self.fields.items():
                 if nome != 'observacoes':
                     campo.disabled = True
+        else:
+            # alex: Grupo/Ramo obrigatorio no backend (nao so no JS). Quando a ficha
+            # esta sendo editada de fato, sem Grupo/Ramo o salvamento e rejeitado.
+            self.fields['ramo'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
