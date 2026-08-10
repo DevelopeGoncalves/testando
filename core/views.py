@@ -7,20 +7,19 @@ from .models import (
     Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado,
     Seguradora, TipoDocumento, Cliente, Apolice, PerfilUsuario,
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
-    ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
-    MotivoNaoVenda, IndicacaoExcluida,
+    ParametrizacaoHabitacional, Indicacao, LigacaoIndicacao, MotivoNaoVenda,
+    IndicacaoExcluida,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
-from django.db import transaction, connection
+from django.db import transaction, IntegrityError
 from django.db.models import Q, Sum, OuterRef, Subquery
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.utils import timezone
-
 
 def ler_excel_robusto(arquivo, dtype=None):
     """
@@ -76,6 +75,23 @@ def home(request):
 
 @login_required  
 def base_formularios(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('base_form_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/base/formularios/base_formularios.html')
 
 # 2. LISTAGENS E CADASTROS
@@ -83,6 +99,15 @@ def base_formularios(request):
 # --- AGRUPAMENTOS ---
 @login_required
 def lista_agrupamentos(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_agrupamentos > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Agrupamento, id=item_id) if item_id else None
@@ -99,6 +124,17 @@ def lista_agrupamentos(request):
 # --- AGÊNCIAS (Antiga Unidades) ---
 @login_required
 def lista_unidades(request):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_unidade > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Unidade, id=item_id) if item_id else None
@@ -116,6 +152,16 @@ def lista_unidades(request):
 # --- PRODUTOS ---
 @login_required
 def lista_produtos(request):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_produtos > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Produto, id=item_id) if item_id else None
@@ -133,6 +179,15 @@ def lista_produtos(request):
 # --- RAMOS ---
 @login_required
 def lista_ramos(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_ramos > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Ramo, id=item_id) if item_id else None
@@ -151,6 +206,15 @@ def lista_ramos(request):
 # --- METAS ---
 @login_required
 def lista_metas(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_metas > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(MetaMensal, id=item_id) if item_id else None
@@ -168,6 +232,15 @@ def lista_metas(request):
 
 @login_required
 def excluir_em_massa(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         tipo = request.POST.get('tipo_massa')
         ids = request.POST.getlist('ids_excluir')
@@ -223,10 +296,6 @@ def excluir_em_massa(request):
 
 @login_required
 def deletar_tudo(request, tipo):
-    eh_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.nivel_acesso == 'ADMIN')
-    if not eh_admin:
-        messages.error(request, 'Acesso negado. Apenas administradores podem apagar todos os registos.')
-        return redirect('base_formularios')
 
     if request.method != 'POST':
         return redirect('base_formularios')
@@ -252,15 +321,58 @@ def deletar_tudo(request, tipo):
 
 @login_required
 def base_processamentos(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('base_proc_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/base/processamentos/importacao.html')
 
 @login_required
 def base_relatorios(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('base_rel') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/base/relatorios/index.html')
 
 
 @login_required
 def lista_colaboradores(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_colaboradores > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Colaborador, id=item_id) if item_id else None
@@ -277,6 +389,15 @@ def lista_colaboradores(request):
 
 @login_required
 def lista_contratados(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_contratados > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Contratado, id=item_id) if item_id else None
@@ -291,6 +412,16 @@ def lista_contratados(request):
 
 @login_required
 def lista_seguradoras(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_seguradoras > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Seguradora, id=item_id) if item_id else None
@@ -305,6 +436,16 @@ def lista_seguradoras(request):
 
 @login_required
 def lista_tiposdoc(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_tiposdocumento > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(TipoDocumento, id=item_id) if item_id else None
@@ -319,6 +460,15 @@ def lista_tiposdoc(request):
 
 @login_required
 def lista_clientes(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_clientes > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
         instancia = get_object_or_404(Cliente, id=item_id) if item_id else None
@@ -338,11 +488,48 @@ def lista_clientes(request):
 
 @login_required
 def producao_formularios(request):
+
+        
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('prod_form_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     agrupamentos = Agrupamento.objects.filter(inativo=False).order_by('ordem_apresentacao')
     return render(request, 'core/producao/formularios/index.html', {'agrupamentos': agrupamentos})
 
 @login_required
 def producao_formularios_painel(request, agrupamento_id):
+    
+        
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('prod_form_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
+
     # Pega o agrupamento exato que o usuário clicou na tela
     agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
     
@@ -379,6 +566,23 @@ def producao_formularios_painel(request, agrupamento_id):
 
 @login_required
 def producao_processamentos(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('prod_proc_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     if request.method == 'POST':
         agrupamento_id = request.POST.get('agrupamento_id')
         arquivo = request.FILES.get('arquivo_importacao')
@@ -399,12 +603,10 @@ def producao_processamentos(request):
                 with transaction.atomic(): # Garante que ou salva tudo ou nada
                     for index, row in df.iterrows():
                         
-                        # --- MAPA DE COLUNAS ---
-                        
                         # 1. CPF_CNPJ -> CPF / CNPJ
                         val_cpf_cnpj = str(row.get('CPF_CNPJ', '')).strip()
                         
-                        # 2. CID -> Agência
+                        # 2. CID -> Agência / Unidade
                         val_agencia = str(row.get('CID', '')).strip()
                         
                         # 3. CONTRATO -> Contrato
@@ -415,17 +617,31 @@ def producao_processamentos(request):
                         
                         # 5. VLR_SEGURO -> Vlr Seguro
                         val_vlr_seguro = row.get('VLR_SEGURO', 0)
-                        # Limpeza básica de valor monetário se for texto
                         if isinstance(val_vlr_seguro, str):
                             val_vlr_seguro = val_vlr_seguro.replace('R$', '').replace('.', '').replace(',', '.').strip()
+
+                        # --- NOVA PARTE: Buscar a Unidade no banco ---
+                        unidade_obj = None
+                        if val_agencia:
+                            # Tira zeros à esquerda para garantir que acha (ex: 0045 vira 45) e formata com zeros
+                            unidade_sem_zero = val_agencia.lstrip('0')
+                            cid_com_zero = val_agencia.zfill(4)
+                            
+                            # Busca no banco usando Q objects (import se não tiver: from django.db.models import Q)
+                            unidade_obj = Unidade.objects.filter(
+                                Q(cid_unidade=cid_com_zero) | Q(cid_unidade=val_agencia) | Q(cid_unidade=unidade_sem_zero)
+                            ).first()
+
 
                         # Gravação na nova tabela RegistroProducao
                         RegistroProducao.objects.create(
                             agrupamento_id=agrupamento_id,
-                            fase='IMPORTADOS', # smp entra como importado primeiro
+                            fase='IMPORTADOS', 
                             cpf_cnpj=val_cpf_cnpj[:30],
                             agencia=val_agencia[:100],
+                            unidade=unidade_obj,
                             contrato=val_contrato[:100],
+                            cliente=val_segurado[:200],
                             segurado=val_segurado[:200],
                             vlr_seguro=float(val_vlr_seguro) if val_vlr_seguro else 0,
                         )
@@ -445,6 +661,15 @@ def producao_processamentos(request):
 
 @login_required
 def producao_habitacional_import(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_proc_habitacional > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     campos_destino = [
         {'nome': 'mes_producao', 'label': 'Mês da produção'},
         {'nome': 'seguradora', 'label': 'Seguradora'},
@@ -479,7 +704,6 @@ def producao_habitacional_import(request):
     if request.method == 'POST':
         acao = request.POST.get('acao')
         
-        # --- AÇÕES DE SALVAR REGRAS ---
         if acao == 'salvar_compatibilidade':
             list_seg_planilha = request.POST.getlist('seg_planilha[]')
             list_seg_base_ids = request.POST.getlist('seg_base[]')
@@ -508,7 +732,6 @@ def producao_habitacional_import(request):
             messages.success(request, 'Parametrização padrão salva com sucesso!')
             return redirect('producao_habitacional_import')
 
-        # --- FLUXO DE IMPORTAÇÃO ---
         arquivo = request.FILES.get('arquivo_excel')
         agrupamento_id = request.POST.get('agrupamento_id')
 
@@ -519,14 +742,13 @@ def producao_habitacional_import(request):
                 return redirect('producao_habitacional_import')
 
             try:
-                # Limpeza de espaços em branco invisíveis no Excel
                 if arquivo.name.endswith('.csv'):
                     df = pd.read_csv(arquivo, sep=';', encoding='latin-1', dtype=str)
                 else:
                     df = ler_excel_robusto(arquivo, dtype=str)
                 
                 df = df.fillna('') 
-                df.columns = df.columns.astype(str).str.strip() # Remove espaços dos títulos das colunas
+                df.columns = df.columns.astype(str).str.strip() 
 
                 parametros_query = ParametrizacaoHabitacional.objects.all()
                 parametros_salvos_db = {p.campo_sistema: {'col': p.coluna_excel, 'fixo': p.valor_fixo} for p in parametros_query}
@@ -536,7 +758,6 @@ def producao_habitacional_import(request):
                     nome_campo = campo['nome']
                     salvo_db = parametros_salvos_db.get(nome_campo, {'col': '', 'fixo': ''})
                     
-                    # Remove espaços também dos parâmetros salvos
                     col_excel = (salvo_db['col'] if salvo_db['col'] else request.POST.get(f'map_{nome_campo}', '')).strip()
                     val_fixo = (salvo_db['fixo'] if salvo_db['fixo'] else request.POST.get(f'fixo_{nome_campo}', '')).strip()
                     
@@ -550,7 +771,13 @@ def producao_habitacional_import(request):
                 contador = 0
                 valid_fields = [f.name for f in RegistroProducao._meta.get_fields()]
 
-                # Prepara o nome correto da coluna CID na sua tabela de Unidades (cid ou cid_unidade)
+                # CAPTURA OS LIMITES REAIS DE CADA CAMPO DIRETAMENTE DO MODEL
+                max_lengths = {
+                    f.name: f.max_length 
+                    for f in RegistroProducao._meta.get_fields() 
+                    if hasattr(f, 'max_length') and f.max_length
+                }
+
                 campos_unidade = [f.name for f in Unidade._meta.get_fields()]
                 campo_busca_cid = 'cid_unidade' if 'cid_unidade' in campos_unidade else 'cid'
                 
@@ -576,7 +803,6 @@ def producao_habitacional_import(request):
                             else:
                                 valor = ''
                             
-                            # 1. Tratamento da Seguradora
                             if campo_banco == 'seguradora':
                                 if valor:
                                     valor_upper = valor.upper()
@@ -588,25 +814,24 @@ def producao_habitacional_import(request):
                                     dados_salvar['seguradora'] = None
                                 continue
 
-                            # 2. Tratamento do Grupo/Ramo (busca o objeto na base pelo texto da planilha)
                             if campo_banco == 'grupo_ramo':
                                 dados_salvar['grupo_ramo'] = Ramo.objects.filter(grupo_e_ramo__iexact=valor).first() if valor else None
                                 continue
 
-                            # 3. Tratamento do Tipo de Documento (idem)
                             if campo_banco == 'tipo_documento':
                                 dados_salvar['tipo_documento'] = TipoDocumento.objects.filter(tipo_documento__iexact=valor).first() if valor else None
                                 continue
 
-                            # 4. Restante dos campos em texto/número/data
                             if not valor: 
                                 if campo_banco in ['inicio_vigencia', 'fim_vigencia', 'qtd_parcelas', 'premio_bruto', 'premio_liquido', 'perc_comissao']:
                                     dados_salvar[campo_banco] = None
+                                elif campo_banco == 'renovacao_propria':
+                                    dados_salvar[campo_banco] = False
                                 else:
                                     dados_salvar[campo_banco] = ''
                             else:
                                 if campo_banco in ['premio_bruto', 'premio_liquido', 'perc_comissao']:
-                                    dados_salvar[campo_banco] = _parse_float(valor)
+                                    dados_salvar[campo_banco] = _parse_float(valor) # Garanta que _parse_float está definida na view
                                 elif campo_banco == 'qtd_parcelas':
                                     try: dados_salvar[campo_banco] = int(float(valor))
                                     except: dados_salvar[campo_banco] = None
@@ -615,10 +840,18 @@ def producao_habitacional_import(request):
                                         dt_val = pd.to_datetime(valor, dayfirst=True)
                                         dados_salvar[campo_banco] = dt_val.date()
                                     except: dados_salvar[campo_banco] = None
+                                elif campo_banco == 'renovacao_propria':
+                                    dados_salvar[campo_banco] = str(valor).strip().upper() in ['SIM', 'TRUE', '1', 'VERDADEIRO', 'S']
+                                elif campo_banco == 'endosso':
+                                    dados_salvar[campo_banco] = valor[:8]
                                 else:
-                                    dados_salvar[campo_banco] = valor[:150]
+                                    # CORTA EXATAMENTE NO LIMITE DO BANCO
+                                    limite = max_lengths.get(campo_banco)
+                                    if limite:
+                                        dados_salvar[campo_banco] = valor[:limite]
+                                    else:
+                                        dados_salvar[campo_banco] = valor
 
-                        #  CRUZAMENTO COM A BASE DE UNIDADES 
                         valor_unidade_planilha = dados_salvar.get('unidade')
                         
                         if valor_unidade_planilha:
@@ -628,40 +861,39 @@ def producao_habitacional_import(request):
                             unidade_sem_zero = unidade_raw.lstrip('0')
                             cid_com_zero = unidade_raw.zfill(4) if unidade_raw else ''
                             
-                            # Busca o objeto da Agência
                             filtro = Q(**{campo_busca_cid: cid_com_zero}) | Q(**{campo_busca_cid: unidade_raw}) | Q(**{campo_busca_cid: unidade_sem_zero})
                             unid_db = Unidade.objects.filter(filtro).first()
                             
                             if unid_db:
-                                # 1. Se "unidade" no model for ForeignKey, vincula o objeto. Se não, salva só o texto.
                                 is_fk = RegistroProducao._meta.get_field('unidade').get_internal_type() == 'ForeignKey'
                                 if is_fk:
                                     dados_salvar['unidade'] = unid_db
                                 else:
                                     dados_salvar['unidade'] = getattr(unid_db, 'unidade', unidade_raw)
                                 
-                                # 2. Puxa todos os relacionamentos preenchendo automaticamente
                                 dados_salvar['grupo'] = getattr(unid_db, 'grupo', '') or ''
                                 dados_salvar['superintendencia'] = getattr(unid_db, 'superintendencia', '') or ''
                                 dados_salvar['nome_unidade'] = getattr(unid_db, 'unidade', '') or ''
 
-                                # Tenta pegar o gerente (seja qual for o nome da coluna no seu banco: gerente_agencia ou matricula_gg)
                                 dados_salvar['gerente_agencia'] = getattr(unid_db, 'gerente_agencia', getattr(unid_db, 'matricula_gg', '')) or ''
-                                # Tenta pegar o super (superintendente ou matricula_superintendente)
                                 dados_salvar['superintendente'] = getattr(unid_db, 'superintendente', getattr(unid_db, 'matricula_superintendente', '')) or ''
                             else:
                                 if RegistroProducao._meta.get_field('unidade').get_internal_type() == 'ForeignKey':
                                     dados_salvar['unidade'] = None
 
-                        # CRUZAMENTO COM A BASE DE COLABORADORES (busca o nome pela matrícula)
                         matricula_colaborador = str(dados_salvar.get('colaborador') or '').strip()
                         if matricula_colaborador:
                             colaborador_db = Colaborador.objects.filter(matricula=matricula_colaborador).first()
                             dados_salvar['nome_colaborador'] = colaborador_db.colaborador if colaborador_db else ''
 
-                        # A duplicidade não é mais bloqueada aqui: todos entram em Importados
-                        RegistroProducao.objects.create(**dados_salvar)
-                        contador += 1
+                        # PROTEÇÃO CONTRA FALHAS E DUPLICATAS USANDO SAVEPOINT
+                        try:
+                            with transaction.atomic():
+                                RegistroProducao.objects.create(**dados_salvar)
+                                contador += 1
+                        except IntegrityError:
+                            # Ignora a linha que feriu as regras do banco (como duplicata) e continua o loop
+                            continue
 
                 messages.success(request, f'Sucesso! {contador} registos foram importados.')
                 return redirect('producao_formularios_painel', agrupamento_id=agrupamento_id)
@@ -670,7 +902,6 @@ def producao_habitacional_import(request):
                 messages.error(request, f'A importação falhou: [{str(e)}]')
                 return redirect('producao_habitacional_import')
 
-    # --- MÉTODO GET INTACTO --- 
     agrupamento = Agrupamento.objects.filter(agrupamento__icontains='Habitacional').first()
     produto_hab = Produto.objects.filter(agrupamento=agrupamento).first() if agrupamento else None
     mes_padrao = produto_hab.mes_producao_em_aberto if produto_hab and hasattr(produto_hab, 'mes_producao_em_aberto') else ''
@@ -700,21 +931,40 @@ def producao_habitacional_import(request):
         'aba_importados_cheia': aba_importados_cheia,
     })
 
-
 @login_required
 def producao_vendas(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('prod_vendas_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/producao/vendas/index.html')
 
 @login_required
 def vendas_banseg(request):
+
     return render(request, 'core/producao/vendas/banseg.html')
 
 @login_required
 def vendas_endosso(request):
+
     return render(request, 'core/producao/vendas/base_endosso.html')
 
 @login_required
 def vendas_novo_negocio(request):
+
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request)
         if form is None:
@@ -759,6 +1009,7 @@ def vendas_novo_negocio(request):
 
 @login_required
 def vendas_nova_renovacao(request):
+
     return render(request, 'core/producao/vendas/em_construcao.html', {
         'titulo_pagina': 'Renovação',
         'icone_pagina': 'fa-redo',
@@ -766,6 +1017,7 @@ def vendas_nova_renovacao(request):
 
 @login_required
 def vendas_novo_endosso(request):
+
     return render(request, 'core/producao/vendas/em_construcao.html', {
         'titulo_pagina': 'Endosso',
         'icone_pagina': 'fa-file-medical',
@@ -780,7 +1032,6 @@ def agora_servidor_ligacao(request):
     # horário vem sempre do servidor, nunca do relógio do navegador: o relógio do
     agora = timezone.localtime(timezone.now())
     return JsonResponse({'datahora': agora.strftime('%Y-%m-%dT%H:%M:%S')})
-
 
 # a linha vermelha trabando quem ja esta em ligacao , 
 ATENDIMENTO_TIMEOUT_SEG = 45
@@ -1086,13 +1337,9 @@ def vendas_renovacao(request):
 def vendas_outras_cias(request):
     return render(request, 'core/producao/vendas/outras_cias.html')
 
-
-@login_required
-def producao_relatorios(request):
-    return render(request, 'core/producao/relatorios/home.html')
-
 @login_required
 def importar_unidades(request):
+
     if request.method == 'POST' and request.FILES.get('arquivo_planilha'):
         arquivo = request.FILES['arquivo_planilha']
         
@@ -1151,189 +1398,88 @@ def importar_unidades(request):
 
     return redirect('base_processamentos')
 
-# Campos parametrizáveis da importação da Base Novo.
-# carimbo_data_hora + email = chave que evita duplicar a mesma resposta.
-CAMPOS_BASE_NOVO = [
-    {'nome': 'carimbo_data_hora', 'label': 'Carimbo de data/hora'},
-    {'nome': 'email', 'label': 'Endereço de e-mail'},
-    {'nome': 'email_indicador_outro', 'label': 'E-mail do indicador (se não for você)'},
-    {'nome': 'matricula_indicador', 'label': 'Matrícula do indicador'},
-    {'nome': 'nome_indicador', 'label': 'Nome completo do indicador'},
-    {'nome': 'cid_agencia', 'label': 'CID da agência'},
-    {'nome': 'telefone_indicador', 'label': 'Telefone ou celular do indicador'},
-    {'nome': 'enviar_orcamento_para', 'label': 'Enviar orçamento para'},
-    {'nome': 'nome_cliente', 'label': 'Nome completo do cliente'},
-    {'nome': 'telefone_cliente', 'label': 'Telefone ou celular do cliente'},
-    {'nome': 'cpf_cliente', 'label': 'CPF do cliente'},
-    {'nome': 'email_cliente', 'label': 'E-mail do cliente'},
-    {'nome': 'produto', 'label': 'Produto'},
-    {'nome': 'dados_veiculo', 'label': 'Dados do veículo (modelo, ano e placa)'},
-    {'nome': 'possui_seguro', 'label': 'Cliente já possui seguro?'},
-    {'nome': 'observacoes', 'label': 'Observações'},
-]
-
-
 @login_required
-def producao_base_novo_import(request):
-    if request.method == 'POST':
-        acao = request.POST.get('acao')
+def importar_base_novo(request):
 
-        if acao == 'salvar_parametrizacao':
-            with transaction.atomic():
-                for campo in CAMPOS_BASE_NOVO:
-                    nome = campo['nome']
-                    col_excel = request.POST.get(f'map_{nome}', '').strip()
-                    val_fixo = request.POST.get(f'fixo_{nome}', '').strip()
-                    ParametrizacaoBaseNovo.objects.update_or_create(
-                        campo_sistema=nome,
-                        defaults={'coluna_excel': col_excel, 'valor_fixo': val_fixo}
-                    )
-            messages.success(request, 'Parametrização da Base Novo salva com sucesso!')
-            return redirect('producao_base_novo_import')
+    if request.method == 'POST' and request.FILES.get('arquivo_planilha'):
+        arquivo = request.FILES['arquivo_planilha']
 
-        arquivo = request.FILES.get('arquivo_excel')
-        if arquivo:
-            try:
-                if arquivo.name.endswith('.csv'):
-                    df = pd.read_csv(arquivo, dtype=str)
-                else:
-                    df = ler_excel_robusto(arquivo, dtype=str)
+        try:
+            if arquivo.name.endswith('.csv'):
+                df = pd.read_csv(arquivo, dtype=str)
+            else:
+                df = ler_excel_robusto(arquivo, dtype=str)
 
-                df.columns = df.columns.astype(str).str.strip()
-                df = df.fillna('')
+            # Limpa os nomes das colunas
+            df.columns = df.columns.str.strip()
+            df = df.fillna('')
 
-                parametros_salvos_db = {
-                    p.campo_sistema: {'col': p.coluna_excel, 'fixo': p.valor_fixo}
-                    for p in ParametrizacaoBaseNovo.objects.all()
+            contador_novos = 0
+            contador_atualizados = 0
+            contador_ignorados = 0
+            contador_excluidos_pulados = 0
+
+            for index, row in df.iterrows():
+                # Mapeamento EXATO respeitando os cabeçalhos da planilha "Indicação Seguridade (base novo)"
+                carimbo_bruto = str(row.get('Carimbo de data/hora', '')).strip()
+
+                # Pula a linha se não tiver carimbo de data/hora (linha vazia/inválida)
+                if not carimbo_bruto:
+                    contador_ignorados += 1
+                    continue
+
+                carimbo = pd.to_datetime(carimbo_bruto, dayfirst=True, errors='coerce')
+                if pd.isna(carimbo):
+                    contador_ignorados += 1
+                    continue
+
+                email = str(row.get('Endereço de e-mail', '')).strip()
+
+                if IndicacaoExcluida.objects.filter(carimbo_data_hora=carimbo, email=email).exists():
+                    contador_excluidos_pulados += 1
+                    continue
+
+                defaults_data = {
+                    'email_indicador_outro': str(row.get('E-mail do indicador caso não seja você mesmo', '')).strip(),
+                    'matricula_indicador': str(row.get('Matrícula do indicador', '')).strip(),
+                    'nome_indicador': str(row.get('Nome completo do indicador', '')).strip(),
+                    'cid_agencia': str(row.get('CID da agência', '')).strip(),
+                    'telefone_indicador': str(row.get('Telefone ou celular do indicador', '')).strip(),
+                    'enviar_orcamento_para': str(row.get('Enviar orçamento para', '')).strip(),
+                    'nome_cliente': str(row.get('Nome completo do cliente', '')).strip(),
+                    'telefone_cliente': str(row.get('Telefone ou celular do cliente', '')).strip(),
+                    'cpf_cliente': str(row.get('CPF do cliente', '')).strip(),
+                    'email_cliente': str(row.get('E-mail do cliente', '')).strip(),
+                    'produto': str(row.get('Produto', '')).strip(),
+                    'dados_veiculo': str(row.get('Se Automóvel, informe os dados do veículo (modelo, ano e placa)', '')).strip(),
+                    'possui_seguro': str(row.get('Cliente já possui seguro?', '')).strip(),
+                    'observacoes': str(row.get('Observações', '')).strip(),
                 }
 
-                mapeamento = {}
-                for campo in CAMPOS_BASE_NOVO:
-                    nome_campo = campo['nome']
-                    salvo_db = parametros_salvos_db.get(nome_campo, {'col': '', 'fixo': ''})
-                    col_excel = (salvo_db['col'] if salvo_db['col'] else request.POST.get(f'map_{nome_campo}', '')).strip()
-                    val_fixo = (salvo_db['fixo'] if salvo_db['fixo'] else request.POST.get(f'fixo_{nome_campo}', '')).strip()
-                    mapeamento[nome_campo] = {'col_excel': col_excel, 'val_fixo': val_fixo}
+                # Considera duplicada a mesma resposta
+                indicacao, criada = Indicacao.objects.update_or_create(
+                    carimbo_data_hora=carimbo,
+                    email=email,
+                    defaults=defaults_data
+                )
 
-                def coluna_da_planilha(nome_campo):
-                    """Lê a coluna inteira de uma vez (mais rápido que célula a célula)."""
-                    origem = mapeamento[nome_campo]
-                    if origem['col_excel'] and origem['col_excel'] in df.columns:
-                        return df[origem['col_excel']].astype(str).str.strip()
-                    return pd.Series(origem['val_fixo'], index=df.index)
+                if criada:
+                    contador_novos += 1
+                else:
+                    contador_atualizados += 1
 
-                contador_ignorados = 0
-                contador_excluidos_pulados = 0
-                campos_atualizaveis = [
-                    campo['nome'] for campo in CAMPOS_BASE_NOVO
-                    if campo['nome'] not in ('carimbo_data_hora', 'email')
-                ]
+            msg = f'Importação concluída! {contador_novos} novas indicações criadas e {contador_atualizados} atualizadas.'
+            if contador_ignorados:
+                msg += f' {contador_ignorados} linha(s) ignorada(s) por falta de carimbo de data/hora válido.'
+            if contador_excluidos_pulados:
+                msg += f' {contador_excluidos_pulados} linha(s) ignorada(s) por já terem sido excluídas manualmente antes.'
+            messages.success(request, msg)
 
-                # Converte as datas em lote (bem mais rápido que uma a uma).
-                carimbos_brutos = coluna_da_planilha('carimbo_data_hora')
-                carimbos = pd.to_datetime(carimbos_brutos, dayfirst=True, errors='coerce')
-                if carimbos.dt.tz is None:
-                    # Precisa do fuso horário certo pra comparar depois em memória.
-                    carimbos = carimbos.dt.tz_localize(timezone.get_current_timezone())
+            registrar_auditoria_backend(usuario=request.user, acao="Importou", detalhe="Base Novo (Indicação)")
+        except Exception as e:
+            messages.error(request, f'Erro ao processar a planilha: {str(e)}. Verifique os cabeçalhos.')
 
-                emails = coluna_da_planilha('email')
-                colunas_atualizaveis = {campo: coluna_da_planilha(campo).tolist() for campo in campos_atualizaveis}
-                carimbos_lista = carimbos.tolist()
-                emails_lista = emails.tolist()
-                carimbos_brutos_lista = carimbos_brutos.tolist()
-
-                # Monta tudo em memória primeiro e só depois vai ao banco em lote.
-                dados_por_chave = {}
-                ordem_chaves = []
-                for i in range(len(df)):
-                    if not carimbos_brutos_lista[i]:
-                        contador_ignorados += 1
-                        continue
-
-                    carimbo = carimbos_lista[i]
-                    if pd.isna(carimbo):
-                        contador_ignorados += 1
-                        continue
-                    carimbo = carimbo.to_pydatetime()
-
-                    email = emails_lista[i]
-                    defaults_data = {campo: valores[i] for campo, valores in colunas_atualizaveis.items()}
-
-                    # Se repetir na planilha, a última linha vence.
-                    chave = (carimbo, email)
-                    if chave not in dados_por_chave:
-                        ordem_chaves.append(chave)
-                    dados_por_chave[chave] = defaults_data
-
-                with transaction.atomic():
-                    chaves_excluidas = set(IndicacaoExcluida.objects.values_list('carimbo_data_hora', 'email'))
-
-                    chaves_validas = [c for c in ordem_chaves if c not in chaves_excluidas]
-                    contador_excluidos_pulados = len(ordem_chaves) - len(chaves_validas)
-
-                    timestamps = {carimbo for carimbo, email in chaves_validas}
-                    existentes = {
-                        (ind.carimbo_data_hora, ind.email): ind
-                        for ind in Indicacao.objects.filter(carimbo_data_hora__in=timestamps)
-                    }
-
-                    novos = []
-                    atualizados = []
-                    for chave in chaves_validas:
-                        carimbo, email = chave
-                        defaults_data = dados_por_chave[chave]
-                        obj_existente = existentes.get(chave)
-                        if obj_existente:
-                            for campo, valor in defaults_data.items():
-                                setattr(obj_existente, campo, valor)
-                            atualizados.append(obj_existente)
-                        else:
-                            novo = Indicacao(carimbo_data_hora=carimbo, email=email, **defaults_data)
-                            novo.chave_unica = Indicacao.montar_chave_unica(
-                                novo.seguradora_id, novo.ramo_id, novo.tipo_documento_id,
-                                novo.numero_contrato, novo.numero_endosso
-                            )
-                            novos.append(novo)
-
-                    if novos:
-                        Indicacao.objects.bulk_create(novos, batch_size=500)
-                    if atualizados:
-                        # UPDATE em lote direto no banco (bulk_update do Django é bem mais lento aqui).
-                        colunas_sql = [Indicacao._meta.get_field(campo).column for campo in campos_atualizaveis]
-                        set_clause = ', '.join(f'"{coluna}" = %s' for coluna in colunas_sql)
-                        sql = f'UPDATE "{Indicacao._meta.db_table}" SET {set_clause} WHERE "id" = %s'
-                        params = [
-                            [getattr(obj, campo) for campo in campos_atualizaveis] + [obj.pk]
-                            for obj in atualizados
-                        ]
-                        with connection.cursor() as cursor:
-                            cursor.executemany(sql, params)
-
-                contador_novos = len(novos)
-                contador_atualizados = len(atualizados)
-
-                msg = f'Importação concluída! {contador_novos} novas indicações criadas e {contador_atualizados} atualizadas.'
-                if contador_ignorados:
-                    msg += f' {contador_ignorados} linha(s) ignorada(s) por falta de carimbo de data/hora válido.'
-                if contador_excluidos_pulados:
-                    msg += f' {contador_excluidos_pulados} linha(s) ignorada(s) por já terem sido excluídas manualmente antes.'
-                messages.success(request, msg)
-
-                registrar_auditoria_backend(usuario=request.user, acao="Importou", detalhe="Base Novo (Indicação)")
-                return redirect('lista_base_novo')
-            except Exception as e:
-                messages.error(request, f'A importação falhou: [{str(e)}]')
-                return redirect('producao_base_novo_import')
-
-    parametros_salvos = {
-        p.campo_sistema: {'col': p.coluna_excel, 'fixo': p.valor_fixo}
-        for p in ParametrizacaoBaseNovo.objects.all()
-    }
-
-    return render(request, 'core/producao/processamentos/importacao_base_novo.html', {
-        'campos_destino': CAMPOS_BASE_NOVO,
-        'parametros_salvos': parametros_salvos,
-    })
+    return redirect('base_processamentos')
 
 @login_required
 def importar_colaboradores(request):
@@ -1440,86 +1586,6 @@ def importar_ramos(request):
 
     return redirect('base_processamentos')
 
-
-@login_required
-def importar_usuarios(request):
-    # TRAVA BLINDADA (Só Admin)
-    eh_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.nivel_acesso == 'ADMIN')
-    if not eh_admin:
-        messages.error(request, 'Acesso Negado. Apenas Administradores podem importar usuários.')
-        return redirect('home')
-
-    if request.method == 'POST' and request.FILES.get('arquivo'):
-        arquivo = request.FILES['arquivo']
-        cadastrados = 0
-        ignorados = 0
-        nao_encontrados = 0 # Contador para matrículas que não existem em Colaborador
-        
-        try:
-            linhas_dados = [] 
-
-            # --- SE FOR EXCEL (.xlsx) ---
-            if arquivo.name.endswith('.xlsx'):
-                wb = openpyxl.load_workbook(arquivo, data_only=True)
-                planilha = wb.active
-                cabecalhos = [str(celula.value).strip() if celula.value else '' for celula in planilha[1]]
-                for linha in planilha.iter_rows(min_row=2, values_only=True):
-                    dados = dict(zip(cabecalhos, [str(v).strip() if v is not None else '' for v in linha]))
-                    linhas_dados.append(dados)
-
-            # --- SE FOR CSV (.csv) ---
-            elif arquivo.name.endswith('.csv'):
-                arquivo_decodificado = arquivo.read().decode('utf-8-sig').splitlines()
-                leitor = csv.DictReader(arquivo_decodificado, delimiter=';')
-                for linha in leitor:
-                    linhas_dados.append(linha)
-                    
-            else:
-                messages.error(request, 'Formato inválido! Envie um arquivo .xlsx ou .csv')
-                return redirect('importar_usuarios')
-
-            # --- AGORA CADASTRA TODO MUNDO ---
-            for dados in linhas_dados:
-                matricula = dados.get('MATRICULA', '').strip()
-                nome = dados.get('NOME', '').strip()
-                email = dados.get('EMAIL', '').strip()
-                cid = dados.get('CID_COORDENADORIA', '').strip()
-                
-                if matricula:
-                    # 1ª VALIDAÇÃO: Matrícula existe em Colaborador?
-                    if not Colaborador.objects.filter(matricula=matricula).exists():
-                        nao_encontrados += 1
-                        continue # Pula para a próxima linha da planilha
-                        
-                    # 2ª VALIDAÇÃO: Usuário já existe?
-                    if not User.objects.filter(username=matricula).exists():
-                        # Cria a Conta
-                        user = User.objects.create_user(
-                            username=matricula, 
-                            email=email, 
-                            password='mudar@123',
-                            first_name=nome[:150]
-                        )
-                        # Cria o Perfil
-                        PerfilUsuario.objects.create(
-                            usuario=user,
-                            nivel_acesso='COMUM',
-                            cid_coordenadoria=cid
-                        )
-                        cadastrados += 1
-                    else:
-                        ignorados += 1
-                        
-            messages.success(request, f'Importação concluída! {cadastrados} criados. {ignorados} já existiam. {nao_encontrados} ignorados por não existirem em Colaborador.')
-
-            registrar_auditoria_backend(usuario=request.user,acao="Importou", detalhe="Usuario")
-        except Exception as e:
-            messages.error(request, f'Erro ao ler a planilha. Verifique se o formato e as colunas estão corretos. Erro: {str(e)}')
-            
-        return redirect('importar_usuarios')
-        
-    return render(request, 'core/administracao/importar_usuarios.html')
-
     
 # SAIR DO SISTEMA (LOGOUT CUSTOMIZADO)
 def sair_do_sistema(request):
@@ -1527,8 +1593,22 @@ def sair_do_sistema(request):
     return redirect('login') 
 
 
+# --- NOVO CARD DE TIPOS DE PESSOA ---
+
+
 def _ids_duplicados_no_lote(fase_origem, agrupamento):
-    
+    """
+    Verifica, dentro dos registos de `fase_origem` (Importados ou Pendentes) de um
+    agrupamento, quais resultariam em chave_unica repetida caso avançassem de fase.
+
+    Considera repetido tanto quando dois registos do próprio lote batem entre si
+    quanto quando a chave já existe na fase seguinte (checagem em cascata: Importados
+    só olha para o que já está em Pendentes; Pendentes só olha para o que já está em
+    Emitidos - nunca pula fase).
+
+    Retorna um set com os ids dos RegistroProducao (da fase_origem) que precisam
+    ser apagados ou editados antes de liberar a passagem de fase.
+    """
     registros = RegistroProducao.objects.filter(
         agrupamento=agrupamento, fase__iexact=fase_origem
     ).prefetch_related('endossos_extras')
@@ -1567,6 +1647,16 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
 
 @login_required
 def producao_lista_fase(request, agrupamento_id, fase):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_form_habitacional > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
     fase_banco = fase.upper()
 
@@ -1778,8 +1868,9 @@ def producao_lista_fase(request, agrupamento_id, fase):
             campos_identificacao = [
                 'agrupamento', 'seguradora', 'tipo_documento', 'documento', 'tipo_pessoa',
                 'cpf_cnpj', 'cliente', 'nome_social', 'celular', 'telefone', 'email',
-                'agencia', 'contrato', 'segurado', 'vlr_seguro', 'grupo_ramo',
+                'agencia', 'contrato', 'segurado', 'vlr_seguro', 'grupo_ramo', 'unidade'
             ]
+            
             registos_pendentes = RegistroProducao.objects.filter(
                 agrupamento=agrupamento, fase__iexact='PENDENTES'
             ).exclude(id__in=ids_duplicados).prefetch_related('endossos_extras')
@@ -1812,13 +1903,16 @@ def producao_lista_fase(request, agrupamento_id, fase):
                         novo.nome_colaborador = end.nome_colaborador
                         novo.gerente_agencia = end.gerente_agencia
                         novo.superintendente = end.superintendente
-
-                        novo.unidade = None
+                        
+                        if end.unidade:
+                            unidade_end = Unidade.objects.filter(cid_unidade=end.unidade).first()
+                            if unidade_end:
+                                novo.unidade = unidade_end
+                        
                         novo.save()
                         total_emitidos += 1
 
                     reg.endossos_extras.all().delete()
-                    reg.unidade = None
                     reg.fase = 'EMITIDOS'
                     reg.save()
                     total_emitidos += 1
@@ -1880,6 +1974,16 @@ def producao_lista_fase(request, agrupamento_id, fase):
 
 @login_required
 def tipo_pessoa_lista(request):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_tipopessoa > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     if request.method == 'POST':
         acao = request.POST.get('acao')
         
@@ -1922,10 +2026,30 @@ import calendar
 
 @login_required
 def estagiarios(request):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and (user.perfil.admin_feriasestagiarios > 0 or user.perfil.admin_listaestagiarios > 0))):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     return render(request, 'core/administracao/estagiarios/estagiarios.html')
 
 @login_required
 def lista_estagiarios(request):
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_listaestagiarios > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
+
     estagiarios_filtrados = Colaborador.objects.filter(
         Q(matricula__startswith='70') | Q(matricula__startswith='72')
     ).order_by('colaborador')
@@ -1939,6 +2063,16 @@ def lista_estagiarios(request):
 
 @login_required
 def ferias_estagiarios(request):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_feriasestagiarios > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
 
     if request.method == 'POST':
         matricula = request.POST.get('matricula_selecionada')
@@ -2002,6 +2136,18 @@ def ferias_estagiarios(request):
 
 @login_required
 def lista_auditoria(request):
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_aud > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
+
+
     lista_auditados = AuditoriaExportacao.objects.all().order_by('-data_hora')
     
     context = {
@@ -2051,28 +2197,130 @@ def registrar_auditoria_backend(usuario, acao, detalhe):
 
 @login_required
 def producao_relatorios(request):
+
+        
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('prod_rel') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/producao/relatorios/index.html')
 
 @login_required
 def financeiro_processamentos(request):
+
+        
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('fin_proc_') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/financeiro/processamentos/index.html')
 
 @login_required
 def financeiro_formularios(request):
+
+        
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('fin_form') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+    
     return render(request, 'core/financeiro/formularios/index.html')
 
 @login_required
 def financeiro_relatorios(request):
+
+        
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+    tem_permissao_base = False
+
+    if not user.is_superuser and hasattr(user, 'perfil'):
+        tem_permissao_base = any(
+            valor > 0 
+            for campo, valor in user.perfil.__dict__.items() 
+            if campo.startswith('fin_rel') and isinstance(valor, int)
+        )
+
+    if not (user.is_superuser or tem_permissao_base):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- ----
+
     return render(request, 'core/financeiro/relatorios/index.html')
 
 
 
+PERMISSOES_CAMPOS = [
+    # BASE
+    'base_form_unidade', 'base_form_colaboradores', 'base_form_contratados',
+    'base_form_seguradoras', 'base_form_tiposdocumento', 'base_form_ramos',
+    'base_form_produtos', 'base_form_agrupamentos', 'base_form_metas',
+    'base_form_tipopessoa', 'base_form_clientes', 'base_proc_unidade',
+    'base_proc_colaboradores', 'base_proc_ramos', 'base_rel',
+    
+    # PRODUÇÃO
+    'prod_vendas_novo', 'prod_vendas_renovacao', 'prod_vendas_endosso',
+    'prod_vendas_basenovo', 'prod_vendas_baserenovacao', 'prod_vendas_baseendosso',
+    'prod_form_vida', 'prod_form_bap', 'prod_form_prestamista',
+    'prod_form_patrimonialedemais', 'prod_form_consorcio', 'prod_form_odonto',
+    'prod_form_previdencia', 'prod_form_banescap', 'prod_form_saude',
+    'prod_form_habitacional', 'prod_proc_vida', 'prod_proc_bap',
+    'prod_proc_prestamista', 'prod_proc_patrimonialedemais', 'prod_proc_consorcio',
+    'prod_proc_odonto', 'prod_proc_previdencia', 'prod_proc_banescap',
+    'prod_proc_saude', 'prod_proc_habitacional', 'prod_proc_basenovo', 'prod_rel',
+    
+    # FINANCEIRO
+    'fin_form', 'fin_proc_habitacional', 'fin_rel',
+    
+    # ADMINISTRAÇÃO E AUDITORIA
+    'admin_usuario', 'admin_listaestagiarios', 'admin_feriasestagiarios', 'aud'
+]
+
 @login_required
 def listar_usuarios(request):
-    eh_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.nivel_acesso == 'ADMIN')
-    if not eh_admin:
-        messages.error(request, 'Acesso Negado. Apenas Administradores podem acessar.')
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_usuario > 0)):
+        messages.error(request, 'Acesso Negado.')
         return redirect('home')
+    # ---- ---------------------------------- -----
 
     query = request.GET.get('q', '') 
     if query:
@@ -2092,12 +2340,16 @@ def listar_usuarios(request):
 
 @login_required
 def form_usuario(request, id=None):
-    eh_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.nivel_acesso == 'ADMIN')
-    if not eh_admin:
+
+
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_usuario > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
+    # ---- ---------------------------------- -----
 
-    # Se recebemos um ID, é edição. Senão, é criação.
     if id:
         usuario_edit = get_object_or_404(User, id=id)
         perfil = getattr(usuario_edit, 'perfil', None)
@@ -2114,14 +2366,12 @@ def form_usuario(request, id=None):
             matricula = form.cleaned_data['matricula']
             senha = form.cleaned_data['password']
 
-
             colaborador_obj = Colaborador.objects.filter(matricula=matricula).first()
             if not colaborador_obj:
                 messages.error(request, f'Erro: A matrícula {matricula} não existe na base.')
                 return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
 
             if usuario_edit:
-
                 usuario_edit.username = login
                 if senha:
                     usuario_edit.set_password(senha)
@@ -2131,31 +2381,14 @@ def form_usuario(request, id=None):
 
                 if perfil:
                     perfil.colaborador = colaborador_obj
-                    perfil.nivel_acesso = form.cleaned_data['nivel_acesso']
 
-                    perfil.sub_base_formularios = form.cleaned_data['sub_base_formularios']
-                    perfil.sub_base_processamentos = form.cleaned_data['sub_base_processamentos']
-                    perfil.sub_base_relatorios = form.cleaned_data['sub_base_relatorios']
-
-                    perfil.sub_prod_vendas = form.cleaned_data['sub_prod_vendas']
-                    perfil.sub_prod_formularios = form.cleaned_data['sub_prod_formularios']
-                    perfil.sub_prod_processamentos = form.cleaned_data['sub_prod_processamentos']
-                    perfil.sub_prod_relatorios = form.cleaned_data['sub_prod_relatorios']
-
-                    perfil.sub_fin_formularios = form.cleaned_data['sub_fin_formularios']
-                    perfil.sub_fin_processamentos = form.cleaned_data['sub_fin_processamentos']
-                    perfil.sub_fin_relatorios = form.cleaned_data['sub_fin_relatorios']
-
-                    perfil.sub_admin_criar = form.cleaned_data['sub_admin_criar']
-                    perfil.sub_admin_estagiarios = form.cleaned_data['sub_admin_estagiarios']
-
-                    perfil.aba_auditoria = form.cleaned_data['aba_auditoria']
+                    for campo in PERMISSOES_CAMPOS:
+                        setattr(perfil, campo, form.cleaned_data[campo])
 
                     perfil.save()
                 
                 messages.success(request, 'Usuário atualizado com sucesso!')
             else:
-
                 if User.objects.filter(username=login).exists():
                     messages.error(request, 'Este login já está em uso no sistema.')
                     return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
@@ -2165,75 +2398,59 @@ def form_usuario(request, id=None):
                     return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
 
                 user = User.objects.create_user(username=login, password=senha)
+                
+                permissoes_dit = {campo: form.cleaned_data[campo] for campo in PERMISSOES_CAMPOS}
+                
                 PerfilUsuario.objects.create(
                     usuario=user,
                     colaborador=colaborador_obj,
-                    nivel_acesso=form.cleaned_data['nivel_acesso'],
-                    
-                    sub_base_formularios=form.cleaned_data['sub_base_formularios'],
-                    sub_base_processamentos=form.cleaned_data['sub_base_processamentos'],
-                    sub_base_relatorios=form.cleaned_data['sub_base_relatorios'],
-
-                    sub_prod_vendas=form.cleaned_data['sub_prod_vendas'],
-                    sub_prod_formularios=form.cleaned_data['sub_prod_formularios'],
-                    sub_prod_processamentos=form.cleaned_data['sub_prod_processamentos'],
-                    sub_prod_relatorios=form.cleaned_data['sub_prod_relatorios'],
-
-                    sub_fin_formularios=form.cleaned_data['sub_fin_formularios'],
-                    sub_fin_processamentos=form.cleaned_data['sub_fin_processamentos'],
-                    sub_fin_relatorios=form.cleaned_data['sub_fin_relatorios'],
-
-                    sub_admin_criar=form.cleaned_data['sub_admin_criar'],
-                    sub_admin_estagiarios=form.cleaned_data['sub_admin_estagiarios'],
-
-                    aba_auditoria=form.cleaned_data['aba_auditoria']
+                    **permissoes_dit
                 )
+                
                 messages.success(request, f'Sucesso! Usuário "{login}" foi criado.')
                 registrar_auditoria_backend(usuario=request.user, acao="Criou usuário", detalhe=login)
 
             return redirect('listar_usuarios')
     else:
-
         if usuario_edit:
             dados_iniciais = {
                 'login': usuario_edit.username,
                 'matricula': perfil.colaborador.matricula if perfil and perfil.colaborador else '',
-                'nivel_acesso': perfil.nivel_acesso if perfil else 'COMUM',
                 'is_active': usuario_edit.is_active,
-
-                'sub_base_formularios': perfil.sub_base_formularios if perfil else False,
-                'sub_base_processamentos': perfil.sub_base_processamentos if perfil else False,
-                'sub_base_relatorios': perfil.sub_base_relatorios if perfil else False,
-
-                'sub_prod_vendas': perfil.sub_prod_vendas if perfil else False,
-                'sub_prod_formularios': perfil.sub_prod_formularios if perfil else False,
-                'sub_prod_processamentos': perfil.sub_prod_processamentos if perfil else False,
-                'sub_prod_relatorios': perfil.sub_prod_relatorios if perfil else False,
-
-                'sub_fin_formularios': perfil.sub_fin_formularios if perfil else False,
-                'sub_fin_processamentos': perfil.sub_fin_processamentos if perfil else False,
-                'sub_fin_relatorios': perfil.sub_fin_relatorios if perfil else False,
-
-                'sub_admin_criar': perfil.sub_admin_criar if perfil else False,
-                'sub_admin_estagiarios': perfil.sub_admin_estagiarios if perfil else False,
-
-                'aba_auditoria': perfil.aba_auditoria if perfil else False,
             }
+
+            if perfil:
+                for campo in PERMISSOES_CAMPOS:
+                    dados_iniciais[campo] = getattr(perfil, campo, 0)
+                    
             form = NovoUsuarioForm(initial=dados_iniciais)
         else:
             form = NovoUsuarioForm(initial={'is_active': True})
 
     todos_perfis = PerfilUsuario.objects.select_related('usuario', 'colaborador').exclude(usuario__is_superuser=True)
+    
+    perfis_espelho_data = []
+    for p in todos_perfis:
+        perms = {f"id_{campo}": getattr(p, campo, 0) for campo in PERMISSOES_CAMPOS}
+        label = f"{p.usuario.username} - {p.colaborador.matricula}" if p.colaborador else p.usuario.username
+        
+        perfis_espelho_data.append({
+            "id": p.usuario.id,
+            "label": label,
+            "perms": perms
+        })
 
     return render(request, 'core/administracao/usuarios/form_usuario.html', {
         'form': form,
         'usuario_edit': usuario_edit,
         'colaboradores': colaboradores,
-        'todos_perfis': todos_perfis
+        'perfis_espelho_json': json.dumps(perfis_espelho_data) # Enviamos pronto pro JS
     })
 
 @login_required
-def excluir_usuarios(request):
+def excluir_usuarios(request):  
+
+
     if request.method == 'POST':
         ids_para_excluir = request.POST.getlist('usuarios_ids') 
         
@@ -2255,6 +2472,16 @@ def excluir_usuarios(request):
 
 @login_required
 def financeiro_habitacional(request):
+
+            
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.fin_proc_habitacional > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+
     # Pega apenas os meses que JÁ FORAM PROCESSADOS (ignora os nulos/vazios) para popular o Modal
     meses_disponiveis = FinanceiroHabitacional.objects.exclude(
         Q(data_processamento__isnull=True) | Q(data_processamento__exact='')
@@ -2276,6 +2503,15 @@ def financeiro_habitacional(request):
 
 @login_required
 def processar_mensal_habitacional(request):
+       
+    # ---- Parte de negar acesso quem não pode ----
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.fin_proc_habitacional > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ---- ---------------------------------- -----
+    
     agora = timezone.localtime(timezone.now())
     mes_ano_atual = agora.strftime('%m/%Y')
     mes_str = agora.strftime('%m')

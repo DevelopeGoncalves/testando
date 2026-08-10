@@ -20,15 +20,13 @@
                 <div class="login-header">
                     <i class="fas fa-shield-alt fa-3x mb-3"></i>
                     <h3 class="fw-bold">Integra Banescor</h3>
-                    <p class="mb-0 text-white-50">Acesso Restrito</p>
                 </div>
                 <div class="card-body p-4">
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label text-muted fw-bold">Matrícula / Usuário Admin</label>
+                            <label class="form-label text-muted">Usuário</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
                                 <input type="text" name="username" class="form-control" placeholder="Digite sua matrícula" required autofocus>
                             </div>
                         </div>
@@ -36,7 +34,7 @@
                             <label class="form-label text-muted">Senha</label>
                             <input type="password" name="password" class="form-control" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar no Sistema</button>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar</button>
                     </form>
                 </div>
             </div>

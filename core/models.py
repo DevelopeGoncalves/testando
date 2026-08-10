@@ -2,8 +2,7 @@ from django.db import models, transaction
 from django.db.models import F
 from django.contrib.auth.models import User
 from django.utils import timezone
-
-from . import lib_eib
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Colaborador(models.Model):
     # Ligação com a tabela de Agências
@@ -317,7 +316,7 @@ class Indicacao(models.Model):
 class IndicacaoExcluida(models.Model):
     """Guarda a chave (carimbo de data/hora + e-mail) de uma Indicação apagada
     manualmente na Base Novo. A importação da planilha usa essa mesma chave
-    para localizar/atualizar registros (ver producao_base_novo_import); sem esse
+    para localizar/atualizar registros (ver importar_base_novo); sem esse
     registro, reimportar a planilha de origem recriaria uma indicação que o
     usuário já removeu de propósito."""
     carimbo_data_hora = models.DateTimeField("Carimbo de data/hora")
@@ -401,34 +400,74 @@ class PerfilUsuario(models.Model):
     colaborador = models.ForeignKey('Colaborador', on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios_vinculados')
 
     # Outros
-    nivel_acesso = models.CharField(max_length=10, choices=lib_eib.NIVEIS_ACESSO, default='COMUM')
     cid_coordenadoria = models.CharField('CID Coordenadoria', max_length=100, blank=True, null=True)
 
-    # Permissões Base
-    sub_base_formularios = models.BooleanField('↳ Base - Formulários', default=False)
-    sub_base_processamentos = models.BooleanField('↳ Base - Processamentos', default=False)
-    sub_base_relatorios = models.BooleanField('↳ Base - Relatórios', default=False)
+    # PERMISSÕES BASE
+    base_form_unidade = models.IntegerField('Base_Form_Unidade', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_colaboradores = models.IntegerField('Base_Form_Colaboradores', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_contratados = models.IntegerField('Base_Form_Contratados', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_seguradoras = models.IntegerField('Base_Form_Seguradoras', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_tiposdocumento = models.IntegerField('Base_Form_TiposDocumento', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_ramos = models.IntegerField('Base_Form_Ramos', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_produtos = models.IntegerField('Base_Form_Produtos', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_agrupamentos = models.IntegerField('Base_Form_Agrupamentos', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_metas = models.IntegerField('Base_Form_Metas', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_tipopessoa = models.IntegerField('Base_Form_TipoPessoa', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_clientes = models.IntegerField('Base_Form_Clientes', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
-    # Permissões Produção
-    sub_prod_vendas = models.BooleanField('↳ Produção - Vendas', default=False)
-    sub_prod_formularios = models.BooleanField('↳ Produção - Formulários', default=False)
-    sub_prod_processamentos = models.BooleanField('↳ Produção - Processamentos', default=False)
-    sub_prod_relatorios = models.BooleanField('↳ Produção - Relatórios', default=False)
+    base_proc_unidade = models.IntegerField('Base_Proc_Unidade', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_proc_colaboradores = models.IntegerField('Base_Proc_Colaboradores', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_proc_ramos = models.IntegerField('Base_Proc_Ramos', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
-    # Permissões Financeiro
-    sub_fin_formularios = models.BooleanField('↳ Financeiro - Formulários', default=False)
-    sub_fin_processamentos = models.BooleanField('↳ Financeiro - Processamentos', default=False)
-    sub_fin_relatorios = models.BooleanField('↳ Financeiro - Relatórios', default=False)
+    base_rel = models.IntegerField('Base_Rel', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
-    # Permissões Administração
-    sub_admin_criar = models.BooleanField('↳ Administração - Criar Usuários', default=False)
-    sub_admin_estagiarios = models.BooleanField('↳ Administração - Gestão Estagiários', default=False)
+    # PERMISSÕES PRODUÇÃO
+    prod_vendas_novo = models.IntegerField('Prod_Vendas_Novo', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_renovacao = models.IntegerField('Prod_Vendas_Renovacao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_endosso = models.IntegerField('Prod_Vendas_Endosso', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_basenovo = models.IntegerField('Prod_Vendas_BaseNovo', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_baserenovacao = models.IntegerField('Prod_Vendas_BaseRenovacao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_baseendosso = models.IntegerField('Prod_Vendas_BaseEndosso', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
-    # Permissões Auditoria
-    aba_auditoria = models.BooleanField('Acessar Aba Auditoria', default=False)
+    prod_form_vida = models.IntegerField('Prod_Form_Vida', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_bap = models.IntegerField('Prod_Form_BAP', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_prestamista = models.IntegerField('Prod_Form_Prestamista', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_patrimonialedemais = models.IntegerField('Prod_Form_PatrimonialEDemais', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_consorcio = models.IntegerField('Prod_Form_Consorcio', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_odonto = models.IntegerField('Prod_Form_Odonto', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_previdencia = models.IntegerField('Prod_Form_Previdencia', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_banescap = models.IntegerField('Prod_Form_Banescap', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_saude = models.IntegerField('Prod_Form_Saude', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_form_habitacional = models.IntegerField('Prod_Form_Habitacional', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+
+    prod_proc_vida = models.IntegerField('Prod_Proc_Vida', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_bap = models.IntegerField('Prod_Proc_BAP', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_prestamista = models.IntegerField('Prod_Proc_Prestamista', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_patrimonialedemais = models.IntegerField('Prod_Proc_PatrimonialEDemais', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_consorcio = models.IntegerField('Prod_Proc_Consorcio', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_odonto = models.IntegerField('Prod_Proc_Odonto', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_previdencia = models.IntegerField('Prod_Proc_Previdencia', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_banescap = models.IntegerField('Prod_Proc_Banescap', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_saude = models.IntegerField('Prod_Proc_Saude', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_habitacional = models.IntegerField('Prod_Proc_Habitacional', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_basenovo = models.IntegerField('Prod_Proc_Basenovo', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+
+    prod_rel = models.IntegerField('Prod_Rel', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+
+    # PERMISSÕES FINANCEIRO
+    fin_form = models.IntegerField('Fin_Form', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    fin_proc_habitacional = models.IntegerField('Fin_Proc_Habitacional', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    fin_rel = models.IntegerField('Fin_Rel', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+
+    # PERMISSÕES ADMINISTRAÇÃO E AUDITORIA
+    admin_usuario = models.IntegerField('Admin_Usuario', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    admin_listaestagiarios = models.IntegerField('Admin_ListaEstagiarios', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    admin_feriasestagiarios = models.IntegerField('Admin_FeriasEstagiarios', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    
+    aud = models.IntegerField('Aud', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
     def __str__(self):
-        return f"{self.usuario.username} - {self.get_nivel_acesso_display()}"
+        return f"{self.usuario.username}"
 
 class RegistroProducao(models.Model):
     # --- Controles de Sistema ---
@@ -445,7 +484,7 @@ class RegistroProducao(models.Model):
     grupo_ramo = models.ForeignKey('Ramo', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Grupo/Ramo')
     tipo_documento = models.ForeignKey('TipoDocumento', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Tipo documento')
     documento = models.CharField('Documento', max_length=100, null=True, blank=True)
-    endosso = models.CharField('Endosso', max_length=100, null=True, blank=True)
+    endosso = models.CharField('Endosso', max_length=8, null=False, blank=True)
     motivo_endosso = models.CharField('Motivo do endosso', max_length=200, null=True, blank=True)
     # chave para nao duplicar 
     chave_unica = models.CharField('Chave única', max_length=255, null=True, blank=True, db_index=True)
@@ -479,7 +518,7 @@ class RegistroProducao(models.Model):
     
     # --- Campos Auxiliares ---
     realizado = models.CharField('Realizado', max_length=100, null=True, blank=True)
-    renovacao_propria = models.CharField('Renovação Própria', max_length=50, null=True, blank=True)
+    renovacao_propria = models.BooleanField('Renovação Própria', default=False, null=True, blank=True)
     observacoes = models.TextField('Observações', null=True, blank=True)
     
     # --- Campos de legados (do seu outro importador no views.py) ---
@@ -522,7 +561,7 @@ class EndossoAdicional(models.Model):
     inicio_vigencia = models.DateField('Início de vigência', null=True, blank=True)
     fim_vigencia = models.DateField('Fim de vigência', null=True, blank=True)
     qtd_parcelas = models.IntegerField('Quantidade de parcelas', null=True, blank=True)
-    renovacao_propria = models.CharField('Renovação própria', max_length=100, null=True, blank=True)
+    renovacao_propria = models.BooleanField('Renovação Própria', default=False, null=True, blank=True)
     premio_bruto = models.DecimalField('Prêmio bruto', max_digits=15, decimal_places=2, null=True, blank=True)
     premio_liquido = models.DecimalField('Prêmio líquido', max_digits=15, decimal_places=2, null=True, blank=True)
     perc_comissao = models.DecimalField('% de comissão', max_digits=5, decimal_places=2, null=True, blank=True)
@@ -560,15 +599,6 @@ class CompatibilidadeSeguradora(models.Model):
     
 '''vou parametrizar a coluna que adriel pediu ligacao com a views'''
 class ParametrizacaoHabitacional(models.Model):
-    campo_sistema = models.CharField(max_length=100, unique=True)
-    coluna_excel = models.CharField(max_length=150, blank=True, null=True)
-    valor_fixo = models.CharField(max_length=150, blank=True, null=True)
-
-    def __str__(self):
-        return self.campo_sistema
-
-
-class ParametrizacaoBaseNovo(models.Model):
     campo_sistema = models.CharField(max_length=100, unique=True)
     coluna_excel = models.CharField(max_length=150, blank=True, null=True)
     valor_fixo = models.CharField(max_length=150, blank=True, null=True)

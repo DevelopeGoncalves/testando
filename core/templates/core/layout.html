@@ -251,7 +251,7 @@
         <ul class="sidebar-nav">
 
             <!-- Base -->
-            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_base_formularios or request.user.perfil.sub_base_processamentos or request.user.perfil.sub_base_relatorios %}
+            {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 or request.user.perfil.base_proc_unidade > 0 or request.user.perfil.base_proc_colaboradores > 0 or request.user.perfil.base_proc_ramos > 0 or request.user.perfil.base_rel > 0 %}
             <li class="nav-item" id="nav-base">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuBase', this)">
                     <i class="fas fa-th-large icon-main"></i><span>Base</span>
@@ -260,15 +260,15 @@
 
                 <ul id="submenuBase" class="submenu">
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_base_formularios %}
+                    {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 %}
                         <li><a href="{% url 'base_formularios' %}"><i class="far fa-circle"></i> Formulários</a></li>
                     {% endif %}
                     
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_base_processamentos %}
+                    {% if request.user.is_superuser or request.user.perfil.base_proc_unidade > 0 or request.user.perfil.base_proc_colaboradores > 0 or request.user.perfil.base_proc_ramos > 0 %}
                         <li><a href="{% url 'base_processamentos' %}"><i class="far fa-circle"></i> Processamentos</a></li>
                     {% endif %}
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_base_relatorios %}
+                    {% if request.user.is_superuser or request.user.perfil.base_rel > 0 %}
                         <li><a href="{% url 'base_relatorios' %}"><i class="far fa-circle"></i> Relatórios</a></li>
                     {% endif %}
                 </ul>
@@ -277,7 +277,7 @@
             {% endif %}
             
             <!-- Produção -->
-            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_prod_vendas or request.user.perfil.sub_prod_formularios or request.user.perfil.sub_prod_processamentos or request.user.perfil.sub_prod_relatorios %}
+            {% if request.user.is_superuser or request.user.perfil.prod_vendas_novo > 0 or request.user.perfil.prod_vendas_renovacao > 0 or request.user.perfil.prod_vendas_endosso > 0 or request.user.perfil.prod_vendas_basenovo > 0 or request.user.perfil.prod_vendas_baserenovacao > 0 or request.user.perfil.prod_vendas_baseendosso > 0 or request.user.perfil.prod_form_vida > 0 or request.user.perfil.prod_form_bap > 0 or request.user.perfil.prod_form_prestamista > 0 or request.user.perfil.prod_form_patrimonialedemais > 0 or request.user.perfil.prod_form_consorcio > 0 or request.user.perfil.prod_form_odonto > 0 or request.user.perfil.prod_form_previdencia > 0 or request.user.perfil.prod_form_banescap > 0 or request.user.perfil.prod_form_saude > 0 or request.user.perfil.prod_form_habitacional > 0 or request.user.perfil.prod_proc_vida > 0 or request.user.perfil.prod_proc_bap > 0 or request.user.perfil.prod_proc_prestamista > 0 or request.user.perfil.prod_proc_patrimonialedemais > 0 or request.user.perfil.prod_proc_consorcio > 0 or request.user.perfil.prod_proc_odonto > 0 or request.user.perfil.prod_proc_previdencia > 0 or request.user.perfil.prod_proc_banescap > 0 or request.user.perfil.prod_proc_saude > 0 or request.user.perfil.prod_proc_habitacional > 0 or request.user.perfil.prod_proc_basenovo > 0 or request.user.perfil.prod_rel > 0 %}
             <li class="nav-item" id="nav-producao">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuProducao', this)">
                     <i class="fas fa-users-cog icon-main"></i><span>Produção</span>
@@ -286,19 +286,19 @@
 
                 <ul id="submenuProducao" class="submenu">
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_prod_vendas %}
+                    {% if request.user.is_superuser or request.user.perfil.prod_vendas_novo > 0 or request.user.perfil.prod_vendas_renovacao > 0 or request.user.perfil.prod_vendas_endosso > 0 or request.user.perfil.prod_vendas_basenovo > 0 or request.user.perfil.prod_vendas_baserenovacao > 0 or request.user.perfil.prod_vendas_baseendosso > 0 %}
                     <li><a href="{% url 'producao_vendas' %}"><i class="far fa-circle"></i> Vendas</a></li>
                     {% endif %}
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_prod_formularios %}
+                    {% if request.user.is_superuser or request.user.perfil.prod_form_vida > 0 or request.user.perfil.prod_form_bap > 0 or request.user.perfil.prod_form_prestamista > 0 or request.user.perfil.prod_form_patrimonialedemais > 0 or request.user.perfil.prod_form_consorcio > 0 or request.user.perfil.prod_form_odonto > 0 or request.user.perfil.prod_form_previdencia > 0 or request.user.perfil.prod_form_banescap > 0 or request.user.perfil.prod_form_saude > 0 or request.user.perfil.prod_form_habitacional > 0 %}
                         <li><a href="{% url 'producao_formularios' %}"><i class="far fa-circle"></i> Formulários</a></li>
                     {% endif %}
                     
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_prod_processamentos %}
+                    {% if request.user.is_superuser or request.user.perfil.prod_proc_vida > 0 or request.user.perfil.prod_proc_bap > 0 or request.user.perfil.prod_proc_prestamista > 0 or request.user.perfil.prod_proc_patrimonialedemais > 0 or request.user.perfil.prod_proc_consorcio > 0 or request.user.perfil.prod_proc_odonto > 0 or request.user.perfil.prod_proc_previdencia > 0 or request.user.perfil.prod_proc_banescap > 0 or request.user.perfil.prod_proc_saude > 0 or request.user.perfil.prod_proc_habitacional > 0 or request.user.perfil.prod_proc_basenovo > 0 %}
                     <li><a href="{% url 'producao_processamentos' %}"><i class="far fa-circle"></i> Processamentos</a></li>
                     {% endif %}
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_prod_relatorios %}
+                    {% if request.user.is_superuser or request.user.perfil.prod_rel > 0 %}
                     <li><a href="{% url 'producao_relatorios' %}"><i class="far fa-circle"></i> Relatórios</a></li>
                     {% endif %}
 
@@ -308,7 +308,7 @@
             {% endif %}
 
             <!-- Financeiro -->
-            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_formularios or request.user.perfil.sub_fin_processamentos or request.user.perfil.sub_fin_relatorios %}
+            {% if request.user.is_superuser or request.user.perfil.fin_form > 0 or request.user.perfil.fin_proc_habitacional > 0 or request.user.perfil.fin_rel > 0 %}
             <li class="nav-item" id="nav-financeiro">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuFin', this)">
                     <i class="fas fa-file-invoice-dollar icon-main"></i><span>Financeiro</span>
@@ -317,15 +317,15 @@
 
                 <ul id="submenuFin" class="submenu">
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_formularios %}
+                    {% if request.user.is_superuser or request.user.perfil.fin_form > 0 %}
                     <li><a href="{% url 'financeiro_formularios' %}"><i class="far fa-circle"></i> Formulários</a></li>
                     {% endif %}
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_processamentos %}
+                    {% if request.user.is_superuser or request.user.perfil.fin_proc_habitacional > 0 %}
                     <li><a href="{% url 'financeiro_processamentos' %}"><i class="far fa-circle"></i> Processamentos</a></li>
                     {% endif %}
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_fin_relatorios %}
+                    {% if request.user.is_superuser or request.user.perfil.fin_rel > 0 %}
                     <li><a href="{% url 'financeiro_relatorios' %}"><i class="far fa-circle"></i> Relatórios</a></li>
                     {% endif %}
 
@@ -335,7 +335,7 @@
             {% endif %}
 
             <!-- Adminstração -->
-            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_admin_criar or request.user.perfil.sub_admin_estagiarios %}
+            {% if request.user.is_superuser or request.user.perfil.admin_usuario > 0 or request.user.perfil.admin_listaestagiarios > 0 or request.user.perfil.admin_feriasestagiarios > 0 %}
             <li class="nav-item" id="nav-admin">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuAdmin', this)">
                     <i class="fas fa-cogs icon-main"></i><span>Administração</span>
@@ -343,16 +343,12 @@
                 </a>
                 <ul id="submenuAdmin" class="submenu">
 
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_admin_criar %}
-                    <li><a href="{% url 'listar_usuarios' %}"><i class="fas fa-users"></i> Gerenciar Usuários</a></li>
+                    {% if request.user.is_superuser or request.user.perfil.admin_usuario > 0 %}
+                    <li><a href="{% url 'listar_usuarios' %}"><i class="fas fa-users"></i> Usuários</a></li>
                     {% endif %}
 
-                    {% if request.user.is_superuser %}
-                    <li><a href="{% url 'importar_usuarios' %}"><i class="fas fa-file-import"></i> Importar Usuários</a></li>
-                    {% endif %}
-
-                    {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.sub_admin_estagiarios %}
-                    <li><a href="{% url 'estagiarios' %}"><i class="fas fa-user-tie"></i> Gestão Estagiários</a></li>
+                    {% if request.user.is_superuser or request.user.perfil.admin_listaestagiarios > 0 or request.user.perfil.admin_feriasestagiarios > 0 %}
+                    <li><a href="{% url 'estagiarios' %}"><i class="fas fa-user-tie"></i> Estagiários</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser %}
@@ -364,7 +360,7 @@
             {% endif %}
 
             <!-- Auditoria -->
-            {% if request.user.perfil.nivel_acesso in "ADMIN,MASTER" or request.user.is_superuser or request.user.perfil.aba_auditoria %}
+            {% if request.user.is_superuser or request.user.perfil.aud > 0 %}
             <li class="nav-item" id="nav-auditoria">
 
                 <a class="nav-link-custom" href="{% url 'auditoria' %}">
@@ -376,7 +372,7 @@
 
             <li class="nav-item" id="nav-exportar">
                 <a class="nav-link-custom" href="{% url 'logout' %}">
-                    <i class="fas fa-sign-out-alt icon-main text-danger"></i><span class="text-danger">Sair do Sistema</span>
+                    <i class="fas fa-sign-out-alt icon-main"></i><span class="">Sair</span>
                 </a>
             </li>
 
@@ -386,7 +382,7 @@
     <div id="page-content-wrapper">
         <nav class="top-navbar">
             <button class="btn-menu" id="menu-toggle"><i class="fas fa-bars"></i></button>
-            <div><span class="me-3 small">Admin</span><i class="fas fa-user-circle fa-lg"></i></div>
+            <div><span class="me-3 small">{{ user.username }}</span><i class="fas fa-user-circle fa-lg"></i></div>
         </nav>
         <div class="breadcrumb-bar">
             <h4 class="m-0 breadcrumb-text">
@@ -565,11 +561,8 @@
             columnDefs: columnDefs,
 
             // --- Aumentar o numero de linha por pagina para 50 ---
-            pageLength: 50,
-
-            // Só monta a linha na tela quando ela for aparecer (evita travar com muitos registros).
-            deferRender: true,
-
+            pageLength: 50, 
+            
             dom: 't<"mt-3 d-flex justify-content-between align-items-center"ip>',
             
             initComplete: function () {
@@ -629,8 +622,9 @@
             }
         });
         
-        // atualizarListasDeFiltro só roda ao aplicar/limpar filtro (aplicarFiltro/limparFiltros),
-        // não em todo "draw" — rodar a cada página virada travava tabelas grandes.
+        tableInstance.on('draw', function() { 
+             atualizarListasDeFiltro(tableInstance); 
+        });
 
         $(document).on('click', '.excel-dropdown-menu', function (e) { e.stopPropagation(); });
     }
@@ -781,7 +775,7 @@
         }
 
         tableInstance.column(colIndex).search(searchStr, true, false).draw();
-
+        
         var headerBtn = $(tableInstance.column(colIndex).header()).find('.excel-header-btn');
         if (searchStr !== '' && searchStr !== '^$') {
             headerBtn.addClass('header-filtered');
@@ -789,9 +783,8 @@
             headerBtn.removeClass('header-filtered');
         }
 
-        $('[data-bs-toggle="dropdown"]').dropdown('hide');
+        $('[data-bs-toggle="dropdown"]').dropdown('hide'); 
         currentFilterColumn = null; // Reseta para as listas atualizarem direito
-        atualizarListasDeFiltro(tableInstance);
         verificarEstadoFiltros();
     };
     

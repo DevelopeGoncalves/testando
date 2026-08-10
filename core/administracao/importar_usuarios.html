@@ -1,0 +1,60 @@
+{% extends 'core/layout.html' %}
+{% block title %}Importar Usuários{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow border-0">
+            <div class="card-header bg-success text-white fw-bold">
+                <i class="fas fa-file-excel me-2"></i> Importar Usuários em Massa
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">
+                    Envie a sua planilha do Excel <strong>(.xlsx)</strong> ou arquivo CSV.<br>
+                    O arquivo deve conter a primeira linha como cabeçalho com os nomes exatos:
+                    <br><span class="badge bg-secondary mt-2">MATRICULA</span> 
+                    <span class="badge bg-secondary mt-2">NOME</span> 
+                    <span class="badge bg-secondary mt-2">EMAIL</span> 
+                    <span class="badge bg-secondary mt-2">CID_COORDENADORIA</span>
+                </p>
+
+                <form method="post" enctype="multipart/form-data" id="form-importacao">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Selecione a Planilha (.xlsx ou .csv)</label>
+                        <input class="form-control form-control-lg" type="file" name="arquivo" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                    </div>
+                    
+                    <div class="alert alert-warning small">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Atenção:</strong> 
+                        Todos os usuários importados receberão a senha padrão <strong>mudar@123</strong> e acesso nível COMUM (com todas as abas bloqueadas).
+                    </div>
+
+                    <button type="submit" id="btn-importar" class="btn btn-success w-100 py-2 fw-bold">
+                        <i id="icone-btn" class="fas fa-cloud-upload-alt me-2"></i> 
+                        <span id="texto-btn">Iniciar Importação</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.getElementById('form-importacao').addEventListener('submit', function() {
+        var btn = document.getElementById('btn-importar');
+        var icone = document.getElementById('icone-btn');
+        var texto = document.getElementById('texto-btn');
+        
+        // Desativa o botão para não enviar duas vezes
+        btn.disabled = true;
+        btn.classList.replace('btn-success', 'btn-secondary');
+        
+        // Troca o ícone da nuvem por uma rodinha girando
+        icone.className = 'fas fa-spinner fa-spin me-2';
+        
+        // Muda o texto
+        texto.innerText = 'Lendo planilha e importando... Por favor, aguarde.';
+    });
+</script>
+{% endblock %}

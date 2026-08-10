@@ -1,0 +1,111 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Vendas - Base Novo{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <span class="text-primary">Produção</span> / 
+        <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> / 
+        <span>Base Novo</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div id="tela-novo">
+    <div id="lista-novo">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> Base Novo</h4>
+            <div>
+                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')">
+                    <i class="fas fa-file-csv"></i> Exportar
+                </button> 
+                <button class="btn btn-danger me-1">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <button class="btn btn-info text-white">
+                    <i class="fas fa-plus"></i> Novo
+                </button>
+            </div>
+        </div>
+        
+        <div class="tabela-container table-responsive">
+            <table class="table table-striped table-hover mb-0" id="tabela-novo" style="width:100%; font-size: 0.85rem; white-space: nowrap;">
+                
+                {% if agrup_selecionado and 'habitacional' in agrup_selecionado.agrupamento|lower %}
+                <thead class="table-light">
+                    <tr>
+                        <th width="2%" class="text-center"><input type="checkbox"></th>
+                        <th>DATA_FINANCIAM</th>
+                        <th>CONTRATO</th>
+                        <th>NR_PN</th>
+                        <th>SEGURADORA</th>
+                        <th>Ramo</th>
+                        <th>PRODUTO</th>
+                        <th>CPF_CNPJ</th>
+                        <th>MUTUARIO</th>
+                        <th>CID</th>
+                        <th>MTR_ANGARIADOR</th>
+                        <th>VLR_SEGURO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in apolices %}
+                    <tr class="tr-clickable">
+                        <td class="text-center"><input type="checkbox" name="ids_excluir" value="{{ a.id }}" class="chk-row"></td>
+                        <td>{{ a.dt_venc|date:'d/m/Y'|default:'-' }}</td> <td>{{ a.contrato|default:'-' }}</td>            <td>{{ a.item|default:'-' }}</td>                <td>{{ a.usuario|default:'-' }}</td>             <td>{{ a.ramo.ramo|default:'-' }}</td>           <td>{{ a.agrupamento.agrupamento|default:'-' }}</td> <td>{{ a.cpf_cnpj|default:'-' }}</td>            <td>{{ a.nome|default:'-' }}</td>                <td>{{ a.cid|default:'-' }}</td>                 <td>{{ a.ordem|default:'-' }}</td>               <td>{% if a.premio_liquido %}{{ a.premio_liquido }}{% else %}-{% endif %}</td> </tr>
+                    {% empty %}
+                    <tr><td colspan="12" class="text-center text-muted py-4">Nenhuma apólice encontrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                {% else %}
+                <thead class="table-light">
+                    <tr>
+                        <th width="2%" class="text-center"><input type="checkbox"></th>
+                        <th>Fim Vigência</th>
+                        <th>Contrato</th>
+                        <th>Item</th>
+                        <th>Seguradora</th>
+                        <th>Ramo</th>
+                        <th>Produto</th>
+                        <th>CPF/CNPJ</th>
+                        <th>Nome/Razão Social</th>
+                        <th>CID</th>
+                        <th>Ordem</th>
+                        <th>Prêmio Líquido</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in apolices %}
+                    <tr class="tr-clickable">
+                        <td class="text-center"><input type="checkbox" name="ids_excluir" value="{{ a.id }}" class="chk-row"></td>
+                        <td>{{ a.dt_venc|date:'d/m/Y'|default:'-' }}</td>
+                        <td>{{ a.contrato|default:'-' }}</td>
+                        <td>{{ a.item|default:'-' }}</td>
+                        <td>{{ a.usuario|default:'-' }}</td>
+                        <td>{{ a.ramo.ramo|default:'-' }}</td>
+                        <td>{{ a.agrupamento.agrupamento|default:'-' }}</td>
+                        <td>{{ a.cpf_cnpj|default:'-' }}</td>
+                        <td>{{ a.nome|default:'-' }}</td>
+                        <td>{{ a.cid|default:'-' }}</td>
+                        <td>{{ a.ordem|default:'-' }}</td>
+                        <td>{% if a.premio_liquido %}R$ {{ a.premio_liquido }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="12" class="text-center text-muted py-4">Nenhuma apólice encontrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() { 
+        iniciarTabelaExcel('tabela-novo'); 
+    });
+</script>
+{% endblock %}

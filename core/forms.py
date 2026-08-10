@@ -1,6 +1,6 @@
 from django import forms
 from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao
-from . import lib_eib
+
 
 class BootstrapMixin:
     def __init__(self, *args, **kwargs):
@@ -321,12 +321,18 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
         return cleaned_data
 
 
+"""                             HENRIQUE                                                                    """
+
+def criar_campo_permissao(label):
+    return forms.IntegerField(label=label,min_value=0,max_value=3,required=False,initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '0', 'max': '3'}))
+
 class NovoUsuarioForm(BootstrapMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('label_suffix', '')
         super().__init__(*args, **kwargs)
-                         
+                          
     matricula = forms.CharField(
         label="Matrícula do Colaborador", 
         max_length=50,
@@ -349,37 +355,77 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
         widget=forms.PasswordInput, 
         required=False
     )
-
-    nivel_acesso = forms.ChoiceField(label="Nível de Acesso", choices=lib_eib.NIVEIS_ACESSO)
     
-    is_active = forms.BooleanField(label="Usuário ativo", required=False,widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+    is_active = forms.BooleanField(
+        label="Usuário ativo", 
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
 
-    # Base
-    aba_base = forms.BooleanField(label="Acessar Aba Base", required=False)
-    sub_base_formularios = forms.BooleanField(label="↳ Base - Formulários", required=False)
-    sub_base_processamentos = forms.BooleanField(label="↳ Base - Processamentos", required=False)
-    sub_base_relatorios = forms.BooleanField(label="↳ Base - Relatórios", required=False)
+    # --- BASE ---
+    base_form_unidade = criar_campo_permissao("↳ Form - Unidade")
+    base_form_colaboradores = criar_campo_permissao("↳ Form - Colaboradores")
+    base_form_contratados = criar_campo_permissao("↳ Form - Contratados")
+    base_form_seguradoras = criar_campo_permissao("↳ Form - Seguradoras")
+    base_form_tiposdocumento = criar_campo_permissao("↳ Form - Tipos Documento")
+    base_form_ramos = criar_campo_permissao("↳ Form - Ramos")
+    base_form_produtos = criar_campo_permissao("↳ Form - Produtos")
+    base_form_agrupamentos = criar_campo_permissao("↳ Form - Agrupamentos")
+    base_form_metas = criar_campo_permissao("↳ Form - Metas")
+    base_form_tipopessoa = criar_campo_permissao("↳ Form - Tipo Pessoa")
+    base_form_clientes = criar_campo_permissao("↳ Form - Clientes")
 
-    # Producao
-    aba_producao = forms.BooleanField(label="Acessar Aba Produção", required=False)
-    sub_prod_vendas = forms.BooleanField(label="↳ Vendas", required=False)
-    sub_prod_formularios = forms.BooleanField(label="↳ Formulários", required=False)
-    sub_prod_processamentos = forms.BooleanField(label="↳ Processamentos", required=False)
-    sub_prod_relatorios = forms.BooleanField(label="↳ Relatórios", required=False)
+    base_proc_unidade = criar_campo_permissao("↳ Proc - Unidade")
+    base_proc_colaboradores = criar_campo_permissao("↳ Proc - Colaboradores")
+    base_proc_ramos = criar_campo_permissao("↳ Proc - Ramos")
 
-    # Financeiro
-    aba_financeiro = forms.BooleanField(label="Acessar Aba Financeiro", required=False)
-    sub_fin_formularios = forms.BooleanField(label="↳ Formulários", required=False)
-    sub_fin_processamentos = forms.BooleanField(label="↳ Processamentos", required=False)
-    sub_fin_relatorios = forms.BooleanField(label="↳ Relatórios", required=False)
+    base_rel = criar_campo_permissao("↳ Relatórios Base")
 
-    # Administração
-    aba_admin = forms.BooleanField(label="Acessar Aba Administração", required=False)
-    sub_admin_criar = forms.BooleanField(label="↳ Criar Usuários", required=False)
-    sub_admin_estagiarios = forms.BooleanField(label="↳ Gestão Estagiários", required=False)
+    # --- PRODUÇÃO ---
+    prod_vendas_novo = criar_campo_permissao("↳ Vendas - Novo")
+    prod_vendas_renovacao = criar_campo_permissao("↳ Vendas - Renovação")
+    prod_vendas_endosso = criar_campo_permissao("↳ Vendas - Endosso")
+    prod_vendas_basenovo = criar_campo_permissao("↳ Vendas - Base Novo")
+    prod_vendas_baserenovacao = criar_campo_permissao("↳ Vendas - Base Renovação")
+    prod_vendas_baseendosso = criar_campo_permissao("↳ Vendas - Base Endosso")
 
-    # Auditoria
-    aba_auditoria = forms.BooleanField(label="Acessar Aba Auditoria", required=False)
+    prod_form_vida = criar_campo_permissao("↳ Form - Vida")
+    prod_form_bap = criar_campo_permissao("↳ Form - BAP")
+    prod_form_prestamista = criar_campo_permissao("↳ Form - Prestamista")
+    prod_form_patrimonialedemais = criar_campo_permissao("↳ Form - Patrimonial e Demais")
+    prod_form_consorcio = criar_campo_permissao("↳ Form - Consórcio")
+    prod_form_odonto = criar_campo_permissao("↳ Form - Odonto")
+    prod_form_previdencia = criar_campo_permissao("↳ Form - Previdência")
+    prod_form_banescap = criar_campo_permissao("↳ Form - Banescap")
+    prod_form_saude = criar_campo_permissao("↳ Form - Saúde")
+    prod_form_habitacional = criar_campo_permissao("↳ Form - Habitacional")
+
+    prod_proc_vida = criar_campo_permissao("↳ Proc - Vida")
+    prod_proc_bap = criar_campo_permissao("↳ Proc - BAP")
+    prod_proc_prestamista = criar_campo_permissao("↳ Proc - Prestamista")
+    prod_proc_patrimonialedemais = criar_campo_permissao("↳ Proc - Patrimonial e Demais")
+    prod_proc_consorcio = criar_campo_permissao("↳ Proc - Consórcio")
+    prod_proc_odonto = criar_campo_permissao("↳ Proc - Odonto")
+    prod_proc_previdencia = criar_campo_permissao("↳ Proc - Previdência")
+    prod_proc_banescap = criar_campo_permissao("↳ Proc - Banescap")
+    prod_proc_saude = criar_campo_permissao("↳ Proc - Saúde")
+    prod_proc_habitacional = criar_campo_permissao("↳ Proc - Habitacional")
+    prod_proc_basenovo = criar_campo_permissao("↳ Proc - Base Novo")
+
+    prod_rel = criar_campo_permissao("↳ Relatórios Prod")
+
+    # --- FINANCEIRO ---
+    fin_form = criar_campo_permissao("↳ Form - Financeiro")
+    fin_proc_habitacional = criar_campo_permissao("↳ Proc - Habitacional")
+    fin_rel = criar_campo_permissao("↳ Relatórios Fin")
+
+    # --- ADMINISTRAÇÃO ---
+    admin_usuario = criar_campo_permissao("↳ Admin - Usuário")
+    admin_listaestagiarios = criar_campo_permissao("↳ Admin - Lista Estagiários")
+    admin_feriasestagiarios = criar_campo_permissao("↳ Admin - Férias Estagiários")
+
+    # --- AUDITORIA ---
+    aud = criar_campo_permissao("Acessar Aba Auditoria")
 
     def clean(self):
         cleaned_data = super().clean()
@@ -389,9 +435,11 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
         if senha and senha != confirmar:
             self.add_error('confirmar_senha', "As senhas não coincidem. Tente novamente.")
             
+        # Como usamos required=False nos campos numéricos, garantimos que campos vazios se tornem 0
+        for campo in cleaned_data:
+            if campo not in ['matricula', 'login', 'password', 'confirmar_senha', 'is_active']:
+                if cleaned_data.get(campo) is None:
+                    cleaned_data[campo] = 0
+
         return cleaned_data
 
-
-    
-       
-"""                             HENRIQUE                                                                    """

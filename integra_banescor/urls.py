@@ -14,6 +14,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     
     path('importar/unidades/', views.importar_unidades, name='importar_unidades'),
+    path('importar/base-novo/', views.importar_base_novo, name='importar_base_novo'),
 
     # 2. ROTA DO PAINEL DE CARDS
     path('base/formularios/', views.base_formularios, name='base_formularios'),
@@ -51,7 +52,6 @@ urlpatterns = [
     path('tipos-documentos/', views.lista_tiposdoc, name='lista_tiposdoc'),
     
     path('producao/processamentos/habitacional/', views.producao_habitacional_import, name='producao_habitacional_import'),
-    path('producao/processamentos/base-novo/', views.producao_base_novo_import, name='producao_base_novo_import'),
     
     
     path('producao/formularios/<int:agrupamento_id>/<str:fase>/', views.producao_lista_fase, name='producao_lista_fase'),
@@ -64,9 +64,6 @@ urlpatterns = [
     # 7.1 TELA LOGIN 
     path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    
-    # 8. ROTA DO PAINEL DE ENTRADA DE USUARIOS
-    path('administracao/usuarios/importar/', views.importar_usuarios, name='importar_usuarios'),
        
     # 9. ROTA DO PAINEL DE PRODUÇÃO
     path('producao/formularios/', views.producao_formularios, name='producao_formularios'),
@@ -87,6 +84,7 @@ urlpatterns = [
     path('producao/vendas/atendimento/<int:id>/iniciar/', views.marcar_atendimento, name='marcar_atendimento'),
     path('producao/vendas/atendimento/<int:id>/encerrar/', views.encerrar_atendimento, name='encerrar_atendimento'),
     path('producao/vendas/atendimentos-ativos/', views.atendimentos_ativos, name='atendimentos_ativos'),
+
 
     # 10. Rotas para cada Card específico de vendas
     path('producao/vendas/banseg/', views.vendas_banseg, name='vendas_banseg'),
