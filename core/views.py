@@ -983,7 +983,7 @@ def vendas_novo_negocio(request):
     ).filter(
         Q(ultima_central__isnull=True)
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
-    ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento').prefetch_related('ligacoes__motivo_nao_venda')
+    ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda').prefetch_related('ligacoes__motivo_nao_venda')
 
     indicacoes = list(indicacoes)
     # Mapa CID -> nome da agência (tabela Unidade), para exibir "CID - Nome" concatenado
@@ -1005,6 +1005,9 @@ def vendas_novo_negocio(request):
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': MotivoNaoVenda.objects.all(),
         'apenas_pendentes': True,
+        # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
+        'usuario_gestor': _usuario_e_gestor(request.user),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
 
 @login_required
@@ -1073,6 +1076,30 @@ def atendimentos_ativos(request):
           .exclude(atendimento_por__exact='')
           .values('id', 'atendimento_por'))
     return JsonResponse({'atendimentos': {str(r['id']): r['atendimento_por'] for r in qs}})
+
+# alex: "Gestor" no novo sistema de permissões = nível 3 (Gestor) em Produção/Vendas/Novo,
+# ou superusuário. Só ele pode indicar o responsável pela demanda.
+def _usuario_e_gestor(user):
+    if user.is_superuser:
+        return True
+    perfil = getattr(user, 'perfil', None)
+    return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) == 3)
+
+@login_required
+def definir_responsavel_demanda(request, id):
+    """alex: Gestor indica (ou tira) o responsável pela demanda de um registro.
+    Colaborador vem de Base/Formulários/Colaborador. Sem indicar -> fica 'Em aberto'."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    if not _usuario_e_gestor(request.user):
+        return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem indicar o responsável.'}, status=403)
+    ind = get_object_or_404(Indicacao, id=id)
+    col_id = request.POST.get('colaborador') or None
+    ind.responsavel_demanda_id = col_id
+    ind.save(update_fields=['responsavel_demanda'])
+    ind.refresh_from_db()
+    nome = str(ind.responsavel_demanda) if ind.responsavel_demanda_id else ''
+    return JsonResponse({'ok': True, 'nome': nome, 'id': ind.responsavel_demanda_id or ''})
 
 def _parse_valor_moeda_brl(valor_str):
     if not valor_str: return None
@@ -1253,7 +1280,7 @@ def lista_base_novo(request):
 
     indicacoes = list(
         Indicacao.objects.all().order_by('-id')
-        .select_related('seguradora', 'ramo', 'tipo_documento')
+        .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
         .prefetch_related('ligacoes__motivo_nao_venda')
     )
     # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo.
@@ -1271,6 +1298,9 @@ def lista_base_novo(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': MotivoNaoVenda.objects.all(),
+        # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
+        'usuario_gestor': _usuario_e_gestor(request.user),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
 
 @login_required
@@ -1295,7 +1325,7 @@ def vendas_emissao(request):
         ).filter(
             Q(ultima_central=True) | Q(ultima_agn=True)
         ).order_by('-id')
-        .select_related('seguradora', 'ramo', 'tipo_documento')
+        .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
         .prefetch_related('ligacoes__motivo_nao_venda')
     )
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
@@ -1311,6 +1341,9 @@ def vendas_emissao(request):
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': MotivoNaoVenda.objects.all(),
         'modo_emissao': True,
+        # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
+        'usuario_gestor': _usuario_e_gestor(request.user),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
 
 @login_required

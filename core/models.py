@@ -287,6 +287,11 @@ class Indicacao(models.Model):
     atendimento_por = models.CharField("Em atendimento por", max_length=150, blank=True, null=True)
     atendimento_em = models.DateTimeField("Em atendimento desde", blank=True, null=True)
 
+    # alex: responsável pela DEMANDA (o registro/indicação), indicado por um usuário "Gestor"
+    # (nível 3 em Produção/Vendas/Novo). Diferente do responsável de cada ligação (cadastrado_por).
+    # Em branco = demanda "Em aberto". Relacionamento com Colaborador (Base/Formulários).
+    responsavel_demanda = models.ForeignKey('Colaborador', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandas_responsavel', verbose_name="Responsável pela demanda")
+
     @staticmethod
     def montar_chave_unica(seguradora_id, ramo_id, tipo_documento_id, numero_contrato, numero_endosso):
         partes = [

@@ -183,6 +183,8 @@
                         <tr class="tr-clickable{% if i.atendimento_ativo %} em-atendimento{% endif %}" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
                             data-id="{{ i.id }}"
                             data-atendimento="{{ i.atendimento_por|default:'' }}"
+                            data-responsavel-demanda="{{ i.responsavel_demanda_id|default:'' }}"
+                            data-responsavel-demanda-nome="{{ i.responsavel_demanda|default:'' }}"
                             data-carimbo="{{ i.carimbo_data_hora|date:'Y-m-d\TH:i'|default:'' }}"
                             data-email="{{ i.email|default:'' }}"
                             data-email-indicador-outro="{{ i.email_indicador_outro|default:'' }}"
@@ -285,9 +287,50 @@
     </div>
 
     <div id="form-base-novo" style="display:none;">
-        <div class="mb-3 mt-2">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 mt-2">
             <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+            <!-- alex: Responsável pela DEMANDA (indicado por Gestor). "Em aberto" se ninguém.
+                 É diferente do "Responsável" da lista, que é da ligação. -->
+            <div class="d-flex align-items-center">
+                <span class="me-2 text-muted small">Responsável:</span>
+                <span id="resp-demanda-nome" class="fw-bold text-dark">Em aberto</span>
+                {% if usuario_gestor %}
+                <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="abrirModalResponsavel()">
+                    <i class="fas fa-user-check"></i> Indicar responsável
+                </button>
+                {% endif %}
+            </div>
         </div>
+
+        {% if usuario_gestor %}
+        <!-- alex: pop-up para o Gestor indicar o responsável (Colaborador). Só renderiza para Gestor. -->
+        <div class="modal fade" id="modalResponsavel" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-user-check"></i> Indicar Responsável pela Demanda</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label small fw-bold mb-1">Colaborador responsável</label>
+                        <input type="text" class="form-control" id="resp-demanda-input" list="lista-colaboradores-demanda"
+                               placeholder="Pesquisar colaborador..." autocomplete="off" oninput="resolverColaboradorDemanda(this)">
+                        <input type="hidden" id="resp-demanda-id-sel">
+                        <datalist id="lista-colaboradores-demanda">
+                            {% for c in colaboradores_demanda %}
+                            <option value="{{ c.nome_social|default:c.colaborador }}"></option>
+                            {% endfor %}
+                        </datalist>
+                        <div class="form-text">Deixe em branco e salve para deixar a demanda "Em aberto".</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" onclick="salvarResponsavel()"><i class="fas fa-check"></i> Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="card shadow-sm border-0">
             <form method="post">
@@ -587,6 +630,11 @@
     const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
     const URL_MARCAR_ATEND = "{% url 'marcar_atendimento' 0 %}";
     const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
+    // alex: responsável pela demanda (indicado por Gestor)
+    const URL_RESP_DEMANDA = "{% url 'definir_responsavel_demanda' 0 %}";
+    const LISTA_COLABORADORES_DEMANDA = [
+        {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.nome_social|default:c.colaborador|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
 
     const listaBaseNovoSeguradoras = [
         {% for s in form_indicacao.seguradora.field.queryset %}
@@ -812,6 +860,62 @@
 
     let modalHistorico = null;
     let modalEditarDados = null;      // pop-up de edição dos dados do registro
+    let modalResponsavel = null;      // alex: pop-up de indicar responsável pela demanda (Gestor)
+
+    // alex: mostra na ficha o responsável atual da demanda (ou "Em aberto").
+    function mostrarResponsavelDemanda(nome) {
+        var el = document.getElementById('resp-demanda-nome');
+        if (el) el.textContent = (nome && nome.trim()) ? nome : 'Em aberto';
+    }
+    function abrirModalResponsavel() {
+        if (!modalResponsavel) return;
+        var atual = document.getElementById('resp-demanda-nome');
+        var nomeAtual = (atual && atual.textContent.trim() !== 'Em aberto') ? atual.textContent.trim() : '';
+        document.getElementById('resp-demanda-input').value = nomeAtual;
+        document.getElementById('resp-demanda-id-sel').value = '';
+        if (nomeAtual) resolverColaboradorDemanda(document.getElementById('resp-demanda-input'));
+        modalResponsavel.show();
+    }
+    // Descobre o id do colaborador pelo texto digitado (mesmo esquema da seguradora).
+    function resolverColaboradorDemanda(input) {
+        var hidden = document.getElementById('resp-demanda-id-sel');
+        var texto = (input.value || '').trim().toLowerCase();
+        var item = LISTA_COLABORADORES_DEMANDA.find(function(c) {
+            return String(c.texto).trim().toLowerCase() === texto;
+        });
+        hidden.value = item ? item.id : '';
+    }
+    function salvarResponsavel() {
+        var idReg = $('#base_novo_id_hidden').val();
+        if (!idReg) return;
+        var txt = (document.getElementById('resp-demanda-input').value || '').trim();
+        var colId = document.getElementById('resp-demanda-id-sel').value || '';
+        if (txt && !colId) {
+            avisoElegante('Selecione um colaborador válido da lista, ou apague o campo para deixar "Em aberto".', 'Colaborador não encontrado');
+            return;
+        }
+        $.ajax({
+            url: URL_RESP_DEMANDA.replace('/0/', '/' + idReg + '/'),
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfAtendimento() },
+            data: { colaborador: colId }
+        }).done(function(resp) {
+            if (resp && resp.ok) {
+                mostrarResponsavelDemanda(resp.nome);
+                var tr = document.querySelector('#tabela-base-novo tbody tr[data-id="' + idReg + '"]');
+                if (tr) {
+                    tr.setAttribute('data-responsavel-demanda', resp.id || '');
+                    tr.setAttribute('data-responsavel-demanda-nome', resp.nome || '');
+                }
+                if (modalResponsavel) modalResponsavel.hide();
+            } else {
+                avisoElegante((resp && resp.erro) || 'Não foi possível salvar o responsável.', 'Ação não permitida');
+            }
+        }).fail(function(xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível salvar o responsável.';
+            avisoElegante(msg, 'Ação não permitida');
+        });
+    }
 
     // Abre o pop-up de edição do bloco de dados 
     function abrirEdicaoDados() {
@@ -901,6 +1005,9 @@
             var elEditar = document.getElementById('modalEditarDados');
             if (elEditar) modalEditarDados = new bootstrap.Modal(elEditar);
         }
+
+        var elResp = document.getElementById('modalResponsavel');
+        if (elResp) modalResponsavel = new bootstrap.Modal(elResp);
 
         var elHist = document.getElementById('modalHistoricoLigacoes');
         if (elHist) {
@@ -1352,6 +1459,7 @@
                 $('#disp-agencia').val('');
                 var _histFicha = document.getElementById('historico-ligacoes-ficha');
                 if (_histFicha) { _histFicha.innerHTML = ''; _histFicha.style.display = 'none'; }
+                mostrarResponsavelDemanda('');  // alex: cadastro novo começa "Em aberto"
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
             }
         } else {
@@ -1381,6 +1489,8 @@
         $('#base_novo_id_hidden').val(id);
         // ao abrir um registro a linha fica vermelha e bloqueada para o proxumo usuario abrir
         if (PODE_REGISTRAR_LIGACAO) { marcarAtendimento(id); iniciarHeartbeatAtendimento(id); }
+        // alex: mostra o responsável já indicado para essa demanda (ou "Em aberto").
+        mostrarResponsavelDemanda(row.getAttribute('data-responsavel-demanda-nome'));
 
         $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
         $('#id_email').val(row.getAttribute('data-email'));
