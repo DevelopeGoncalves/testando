@@ -1098,7 +1098,7 @@ def definir_responsavel_demanda(request, id):
     ind.responsavel_demanda_id = col_id
     ind.save(update_fields=['responsavel_demanda'])
     ind.refresh_from_db()
-    nome = str(ind.responsavel_demanda) if ind.responsavel_demanda_id else ''
+    nome = ind.responsavel_demanda.matricula_nome if ind.responsavel_demanda_id else ''
     return JsonResponse({'ok': True, 'nome': nome, 'id': ind.responsavel_demanda_id or ''})
 
 def _parse_valor_moeda_brl(valor_str):

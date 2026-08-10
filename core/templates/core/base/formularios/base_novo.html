@@ -184,7 +184,7 @@
                             data-id="{{ i.id }}"
                             data-atendimento="{{ i.atendimento_por|default:'' }}"
                             data-responsavel-demanda="{{ i.responsavel_demanda_id|default:'' }}"
-                            data-responsavel-demanda-nome="{{ i.responsavel_demanda|default:'' }}"
+                            data-responsavel-demanda-nome="{{ i.responsavel_demanda.matricula_nome|default:'' }}"
                             data-carimbo="{{ i.carimbo_data_hora|date:'Y-m-d\TH:i'|default:'' }}"
                             data-email="{{ i.email|default:'' }}"
                             data-email-indicador-outro="{{ i.email_indicador_outro|default:'' }}"
@@ -234,7 +234,7 @@
                             </td>
 
                             <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
-                            <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel_demanda|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
+                            <td class="text-center">{% if apenas_pendentes %}{{ i.responsavel_demanda.matricula_nome|default:'-' }}{% else %}{{ i.email|default:'-' }}{% endif %}</td>
                             <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
                             <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
                             <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
@@ -246,7 +246,7 @@
                             <td class="text-center">{{ i.telefone_cliente|default:'-' }}</td>
                             <td class="text-center">{{ i.cpf_cliente|default:'-' }}</td>
                             <td class="text-center">{{ i.email_cliente|default:'-' }}</td>
-                            <td class="text-center">{{ i.ramo.grupo_e_ramo|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.produto|default:'-' }}</td>
                             <td class="text-start">{{ i.dados_veiculo|default:'-' }}</td>
                             <td class="text-center">{{ i.possui_seguro|default:'-' }}</td>
                             <td class="text-center">{{ i.seguradora.seguradora|default:'-' }}</td>
@@ -318,7 +318,7 @@
                         <input type="hidden" id="resp-demanda-id-sel">
                         <datalist id="lista-colaboradores-demanda">
                             {% for c in colaboradores_demanda %}
-                            <option value="{{ c.nome_social|default:c.colaborador }}"></option>
+                            <option value="{{ c.matricula_nome }}"></option>
                             {% endfor %}
                         </datalist>
                         <div class="form-text">Deixe em branco e salve para deixar a demanda "Em aberto".</div>
@@ -633,7 +633,7 @@
     // alex: responsável pela demanda (indicado por Gestor)
     const URL_RESP_DEMANDA = "{% url 'definir_responsavel_demanda' 0 %}";
     const LISTA_COLABORADORES_DEMANDA = [
-        {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.nome_social|default:c.colaborador|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+        {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
     ];
 
     const listaBaseNovoSeguradoras = [
@@ -937,6 +937,12 @@
 
     // vai salvar e  marcaa
     function salvarEdicaoDados() {
+        // alex: Grupo/Ramo é obrigatório
+        var ramo = document.getElementById('base_novo_ramo_val');
+        if (!ramo || !ramo.value) {
+            avisoElegante('O campo "Grupo/Ramo" é obrigatório. Selecione um Grupo/Ramo antes de salvar.', 'Campo obrigatório');
+            return;
+        }
         var flag = document.getElementById('editar_dados_flag');
         if (flag) flag.value = '1';
         var form = document.querySelector('#form-base-novo form');

@@ -32,6 +32,12 @@ class Colaborador(models.Model):
         # Mostra o nome social se tiver, senão mostra o nome de registro
         return self.nome_social if self.nome_social else self.colaborador
 
+    # alex: "matrícula - nome" para o campo de responsável (pesquisa por matrícula ou nome)
+    @property
+    def matricula_nome(self):
+        nome = self.nome_social or self.colaborador
+        return f"{self.matricula} - {nome}" if self.matricula else nome
+
 class Contratado(models.Model):
     TIPO_PESSOA_CHOICES = [
         ('F', 'Física'),
