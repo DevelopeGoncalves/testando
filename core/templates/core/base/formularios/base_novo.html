@@ -246,7 +246,7 @@
                             <td class="text-center">{{ i.telefone_cliente|default:'-' }}</td>
                             <td class="text-center">{{ i.cpf_cliente|default:'-' }}</td>
                             <td class="text-center">{{ i.email_cliente|default:'-' }}</td>
-                            <td class="text-center">{{ i.produto|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.grupo_e_ramo|default:'-' }}</td>
                             <td class="text-start">{{ i.dados_veiculo|default:'-' }}</td>
                             <td class="text-center">{{ i.possui_seguro|default:'-' }}</td>
                             <td class="text-center">{{ i.seguradora.seguradora|default:'-' }}</td>
