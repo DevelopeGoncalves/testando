@@ -132,7 +132,10 @@
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                {% if not apenas_pendentes %}
+                <!-- alex: excluir registros só no Base Novo (e Emissão). No card Novo não apaga. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
+                {% endif %}
                 {% if not modo_emissao %}
                 <!-- alex: botão "Novo" também na tela Novo (Ligação Novo), igual ao Base Novo. -->
                 <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
@@ -152,7 +155,7 @@
                 <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
                     <thead class="table-light">
                         <tr>
-                            <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
+                            {% if not apenas_pendentes %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
                             <th style="display:none;"></th>
                             <th class="text-center">Carimbo de data/hora</th> <!-- 1 -->
                             <th class="text-center">{% if apenas_pendentes %}Responsável{% else %}E-mail{% endif %}</th> <!-- 2 -->
@@ -177,6 +180,7 @@
                             <th class="text-center">Nº Endosso</th> <!-- 21 -->
                             <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 22 -->
                             <th class="text-start">Observações</th> <!-- 23 -->
+                            <th class="text-center">Status</th> <!-- 24 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -210,9 +214,11 @@
                             data-endosso="{{ i.numero_endosso|default:'' }}"
                             data-obs="{{ i.observacoes|default:'' }}">
 
+                            {% if not apenas_pendentes %}
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
                             </td>
+                            {% endif %}
 
                             <td style="display:none;" class="dados-ligacoes-extras">
                                 {% for l in i.ligacoes.all %}
@@ -279,6 +285,11 @@
                                 {% endif %}
                             </td>
                             <td class="text-start">{{ i.observacoes|default:'-' }}</td>
+                            <td class="text-center">
+                                {% if 'Não venda' in i.status_fechamento %}<span class="badge bg-danger">{{ i.status_fechamento }}</span>
+                                {% elif 'Venda' in i.status_fechamento %}<span class="badge bg-success">{{ i.status_fechamento }}</span>
+                                {% else %}<span class="badge bg-secondary">{{ i.status_fechamento|default:'Em aberto' }}</span>{% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -345,7 +356,7 @@
                          Botão fica na linha do "Bloco Apólice" (canto direito), sem espaço em branco acima.
                          alex: perfil Editor (nível 2) ou Gestor (nível 3), além de superusuário, pode editar os dados.
                          O botão de editar uma LIGAÇÃO continua só para Gestor. -->
-                    <button type="button" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
+                    <button type="button" id="btn-editar-dados" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
                         <i class="fas fa-pencil-alt"></i> Editar dados
                     </button>
                     {% endif %}
@@ -646,6 +657,8 @@
     const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
     // alex: agora também no Base Novo, não só no Novo (não no modo Emissão).
     const PODE_REGISTRAR_LIGACAO = {% if not modo_emissao %}true{% else %}false{% endif %};
+    // alex: card "Novo" (Ligação Novo). Nele NÃO se edita um registro existente (só criar novo/ligações).
+    const APENAS_PENDENTES = {% if apenas_pendentes %}true{% else %}false{% endif %};
     // alex: só perfil Gestor (nível 3) ou superusuário pode editar uma ligação já salva.
     const USUARIO_GESTOR = {% if usuario_gestor %}true{% else %}false{% endif %};
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
@@ -949,13 +962,28 @@
         });
     }
 
-    // Abre o pop-up de edição do bloco de dados 
+    // alex: mostra/esconde o botão "Editar dados". No card "Novo" não se edita um
+    // registro EXISTENTE (só criar novo cadastro ou registrar ligações).
+    function atualizarBotaoEditarDados(ehExistente) {
+        var btn = document.getElementById('btn-editar-dados');
+        if (!btn) return;
+        btn.style.display = (APENAS_PENDENTES && ehExistente) ? 'none' : '';
+    }
+
+    // alex: guarda os valores para desfazer se o usuário Cancelar (só salva no botão Salvar).
+    var _snapshotDadosEdicao = null;
+
+    // Abre o pop-up de edição do bloco de dados
     function abrirEdicaoDados() {
         if (!modalEditarDados) return;
         var bloco = document.getElementById('bloco-dados-editaveis');
         var corpo = document.getElementById('modal-editar-dados-corpo');
         if (bloco && corpo) {
-            corpo.appendChild(bloco);       
+            _snapshotDadosEdicao = [];
+            bloco.querySelectorAll('input, select, textarea').forEach(function(el) {
+                _snapshotDadosEdicao.push({ el: el, value: el.value, checked: el.checked });
+            });
+            corpo.appendChild(bloco);
             bloco.classList.remove('dados-travados'); // destrava para edição
         }
         modalEditarDados.show();
@@ -963,6 +991,11 @@
 
     // vai cancelar devolve o bloco para a ficha e trava de novo, sem salvar.
     function cancelarEdicaoDados() {
+        // alex: desfaz qualquer alteração não salva.
+        if (_snapshotDadosEdicao) {
+            _snapshotDadosEdicao.forEach(function(s) { s.el.value = s.value; s.el.checked = s.checked; });
+            _snapshotDadosEdicao = null;
+        }
         devolverBlocoDadosParaFicha();
         if (modalEditarDados) modalEditarDados.hide();
     }
@@ -1049,7 +1082,7 @@
         });
 
         //ocultar tabela 
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 23]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 24]);
         
 
         atualizarAtendimentos();
@@ -1518,6 +1551,7 @@
                 if (_histFicha) { _histFicha.innerHTML = ''; _histFicha.style.display = 'none'; }
                 mostrarResponsavelDemanda('');  // alex: cadastro novo começa "Em aberto"
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
+                atualizarBotaoEditarDados(false);  // alex: cadastro NOVO pode editar os dados
             }
         } else {
             {% if form_indicacao.errors %}
@@ -1544,6 +1578,7 @@
         }
 
         $('#base_novo_id_hidden').val(id);
+        atualizarBotaoEditarDados(true);  // alex: registro EXISTENTE -> no card Novo não pode editar dados
         // ao abrir um registro a linha fica vermelha e bloqueada para o proxumo usuario abrir
         if (PODE_REGISTRAR_LIGACAO) { marcarAtendimento(id); iniciarHeartbeatAtendimento(id); }
         // alex: mostra o responsável já indicado para essa demanda (ou "Em aberto").

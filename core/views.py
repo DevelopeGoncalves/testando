@@ -1001,6 +1001,7 @@ def vendas_novo_negocio(request):
         ind.proxima_ligacao = ultima.proximo_contato if ultima else None
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
@@ -1097,6 +1098,23 @@ def _usuario_pode_editar_dados(user):
         return True
     perfil = getattr(user, 'perfil', None)
     return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) >= 2)
+
+def _status_fechamento_indicacao(ind):
+    """Status de fechamento do registro, com base na ÚLTIMA ligação:
+    - Venda Central / Venda Agência (venda fechada)
+    - Não venda: <motivo> (encerrado sem venda)
+    - Em aberto (sem ligação ou última ligação ainda não conclui nada)."""
+    ligs = list(ind.ligacoes.all())
+    if not ligs:
+        return 'Em aberto'
+    ult = max(ligs, key=lambda l: l.id or 0)
+    if ult.venda_central:
+        return 'Venda Central'
+    if ult.agn:
+        return 'Venda Agência'
+    if ult.motivo_nao_venda:
+        return 'Não venda: ' + ult.motivo_nao_venda
+    return 'Em aberto'
 
 @login_required
 def definir_responsavel_demanda(request, id):
@@ -1288,8 +1306,10 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 @login_required
 def lista_base_novo(request):
     if request.method == 'POST':
-        # trava os dados base novo igual do novo 
-        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False, travar_dados=True)
+        # trava os dados (só salvam via "Editar dados"), mas PROCESSA as ligações:
+        # assim, ao editar/desmarcar uma ligação no Base Novo (ex.: tirar o "Motivo Não
+        # Venda" ou desfazer a venda), a alteração é gravada e o registro volta para o Novo.
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=True)
         if form is None:
             return redirect('lista_base_novo')
     else:
@@ -1310,6 +1330,7 @@ def lista_base_novo(request):
     for ind in indicacoes:
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
@@ -1355,6 +1376,7 @@ def vendas_emissao(request):
     for ind in indicacoes:
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
