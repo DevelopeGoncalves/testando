@@ -286,16 +286,11 @@ class Indicacao(models.Model):
     # chave para nao duplicar a mesma apólice/endosso (mesmo padrão do RegistroProducao)
     chave_unica = models.CharField("Chave única", max_length=255, null=True, blank=True, db_index=True)
 
-    # Trava de atendimento: quando alguém abre o registro para registrar uma ligação no
-    # card "Novo", ele fica "em atendimento" (linha vermelha na lista para todos). Some ao
-    # salvar/cancelar. 'atendimento_em' permite expirar travas esquecidas (registro que
-    # ficou aberto e o usuário fechou o navegador sem salvar/cancelar).
+    # nao pode abrir outra ligacao enquanto estiver uma aberta 
     atendimento_por = models.CharField("Em atendimento por", max_length=150, blank=True, null=True)
     atendimento_em = models.DateTimeField("Em atendimento desde", blank=True, null=True)
 
-    # alex: responsável pela DEMANDA (o registro/indicação), indicado por um usuário "Gestor"
-    # (nível 3 em Produção/Vendas/Novo). Diferente do responsável de cada ligação (cadastrado_por).
-    # Em branco = demanda "Em aberto". Relacionamento com Colaborador (Base/Formulários).
+    # indicacao de uma ligacao somente que e o usuario nivel permitido
     responsavel_demanda = models.ForeignKey('Colaborador', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandas_responsavel', verbose_name="Responsável pela demanda")
 
     @staticmethod
@@ -325,11 +320,6 @@ class Indicacao(models.Model):
 
 
 class IndicacaoExcluida(models.Model):
-    """Guarda a chave (carimbo de data/hora + e-mail) de uma Indicação apagada
-    manualmente na Base Novo. A importação da planilha usa essa mesma chave
-    para localizar/atualizar registros (ver importar_base_novo); sem esse
-    registro, reimportar a planilha de origem recriaria uma indicação que o
-    usuário já removeu de propósito."""
     carimbo_data_hora = models.DateTimeField("Carimbo de data/hora")
     email = models.EmailField("Endereço de e-mail", blank=True, default='')
     excluido_em = models.DateTimeField("Excluído em", auto_now_add=True)
@@ -426,7 +416,7 @@ class PerfilUsuario(models.Model):
     # Outros
     cid_coordenadoria = models.CharField('CID Coordenadoria', max_length=100, blank=True, null=True)
 
-    # PERMISSÕES BASE
+    # PERMISSÕES BASE henrique 
     base_form_unidade = models.IntegerField('Base_Form_Unidade', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_form_colaboradores = models.IntegerField('Base_Form_Colaboradores', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_form_contratados = models.IntegerField('Base_Form_Contratados', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
@@ -452,6 +442,7 @@ class PerfilUsuario(models.Model):
     prod_vendas_basenovo = models.IntegerField('Prod_Vendas_BaseNovo', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_vendas_baserenovacao = models.IntegerField('Prod_Vendas_BaseRenovacao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_vendas_baseendosso = models.IntegerField('Prod_Vendas_BaseEndosso', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_emissao = models.IntegerField('Prod_Vendas_Emissao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
     prod_form_vida = models.IntegerField('Prod_Form_Vida', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_form_bap = models.IntegerField('Prod_Form_BAP', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
