@@ -399,11 +399,19 @@
                             <div class="row g-3">
                                 <div class="col-md-4" id="disp-ind-col">
                                     <label class="fw-bold small mb-1">Indicador</label>
-                                    <input type="text" id="disp-indicador" name="indicador_combo" class="form-control" placeholder="matrícula - nome">
+                                    <!-- alex: autocomplete do Colaborador (matrícula - nome). Digitando a matrícula OU o nome aparece a sugestão. -->
+                                    <input type="text" id="disp-indicador" name="indicador_combo" class="form-control" placeholder="matrícula - nome" list="lista-colab-indicador" autocomplete="off">
+                                    <datalist id="lista-colab-indicador">
+                                        {% for c in colaboradores_demanda %}<option value="{{ c.matricula_nome }}"></option>{% endfor %}
+                                    </datalist>
                                 </div>
                                 <div class="col-md-4" id="disp-ag-col">
                                     <label class="fw-bold small mb-1">Agência</label>
-                                    <input type="text" id="disp-agencia" name="agencia_combo" class="form-control" placeholder="CID - nome da agência">
+                                    <!-- alex: autocomplete da Unidade (CID - nome da agência). Digitando o CID OU o nome aparece a sugestão. -->
+                                    <input type="text" id="disp-agencia" name="agencia_combo" class="form-control" placeholder="CID - nome da agência" list="lista-agencias" autocomplete="off">
+                                    <datalist id="lista-agencias">
+                                        {% for u in unidades_agencia %}<option value="{{ u.cid_unidade }} - {{ u.unidade }}"></option>{% endfor %}
+                                    </datalist>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="fw-bold small mb-1">Telefone</label>

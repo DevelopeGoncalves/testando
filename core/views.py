@@ -1012,6 +1012,8 @@ def vendas_novo_negocio(request):
         'usuario_gestor': _usuario_e_gestor(request.user),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        # alex: autocomplete do campo Agência (Unidade: "CID - nome")
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
     })
 
 @login_required
@@ -1318,6 +1320,8 @@ def lista_base_novo(request):
         'usuario_gestor': _usuario_e_gestor(request.user),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        # alex: autocomplete do campo Agência (Unidade: "CID - nome")
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
     })
 
 @login_required
@@ -1362,6 +1366,8 @@ def vendas_emissao(request):
         'usuario_gestor': _usuario_e_gestor(request.user),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        # alex: autocomplete do campo Agência (Unidade: "CID - nome")
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
     })
 
 @login_required
