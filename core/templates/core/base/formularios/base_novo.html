@@ -225,7 +225,7 @@
                                       data-venda-central="{{ l.venda_central|yesno:'1,0' }}"
                                       data-premio-total="{{ l.premio_total|floatformat:'2u' }}"
                                       data-agn="{{ l.agn|yesno:'1,0' }}"
-                                      data-motivo="{{ l.motivo_nao_venda_id|default:'' }}"
+                                      data-motivo="{{ l.motivo_nao_venda|default:'' }}"
                                       data-seguradora="{{ l.seguradora_id|default:'' }}"
                                       data-seguradora-nome="{{ l.seguradora.seguradora|default:'' }}"
                                       data-comissao="{{ l.comissao|floatformat:'2u'|default:'' }}"
@@ -292,8 +292,8 @@
             <!-- alex: Responsável pela DEMANDA (indicado por Gestor). "Em aberto" se ninguém.
                  É diferente do "Responsável" da lista, que é da ligação. -->
             <div class="d-flex align-items-center">
-                <span class="me-2 text-muted small">Responsável:</span>
-                <span id="resp-demanda-nome" class="fw-bold text-dark">Em aberto</span>
+                <span class="me-2 fw-bold text-dark">Responsável:</span>
+                <span id="resp-demanda-nome" class="text-muted">Em aberto</span>
                 {% if usuario_gestor %}
                 <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="abrirModalResponsavel()">
                     <i class="fas fa-user-check"></i> Indicar responsável
@@ -313,14 +313,12 @@
                     </div>
                     <div class="modal-body">
                         <label class="form-label small fw-bold mb-1">Colaborador responsável</label>
-                        <input type="text" class="form-control" id="resp-demanda-input" list="lista-colaboradores-demanda"
-                               placeholder="Pesquisar colaborador..." autocomplete="off" oninput="resolverColaboradorDemanda(this)">
-                        <input type="hidden" id="resp-demanda-id-sel">
-                        <datalist id="lista-colaboradores-demanda">
-                            {% for c in colaboradores_demanda %}
-                            <option value="{{ c.matricula_nome }}"></option>
-                            {% endfor %}
-                        </datalist>
+                        <div class="input-container">
+                            <input type="text" class="form-control" id="resp-demanda-input"
+                                   placeholder="Pesquisar colaborador..." autocomplete="off">
+                            <input type="hidden" id="resp-demanda-id-sel">
+                            <div id="resp-demanda-dropdown" class="lista-suspensa d-none"></div>
+                        </div>
                         <div class="form-text">Deixe em branco e salve para deixar a demanda "Em aberto".</div>
                     </div>
                     <div class="modal-footer">
@@ -341,15 +339,16 @@
 
                 <div class="card-body p-4 position-relative" style="font-size: 0.95rem;">
 
-                    {% if apenas_pendentes %}
-                    <!-- No Novo os dados ficam travados; o lápis abre o pop-up para editar.
-                         Botão fica na linha do "Bloco Apólice" (canto direito), sem espaço em branco acima. -->
+                    {% if not modo_emissao and usuario_gestor %}
+                    <!-- No Novo e no Base Novo os dados ficam travados; o lápis abre o pop-up para editar.
+                         Botão fica na linha do "Bloco Apólice" (canto direito), sem espaço em branco acima.
+                         alex: só perfil Gestor (nível 3) ou superusuário pode editar os dados. -->
                     <button type="button" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
                         <i class="fas fa-pencil-alt"></i> Editar dados
                     </button>
                     {% endif %}
 
-                    <div id="bloco-dados-editaveis"{% if apenas_pendentes %} class="dados-travados"{% endif %}>
+                    <div id="bloco-dados-editaveis"{% if not modo_emissao %} class="dados-travados"{% endif %}>
 
                     <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
                     <div class="row g-3">
@@ -446,9 +445,10 @@
 
                     </div><!-- /#bloco-dados-editaveis -->
 
-                    {% if apenas_pendentes %}
+                    {% if not modo_emissao %}
                     <!-- POP-UP de edição dos dados do registro (o conteúdo #bloco-dados-editaveis é
-                         movido para cá quando o usuário clica no lápis, e volta ao cancelar). -->
+                         movido para cá quando o usuário clica no lápis, e volta ao cancelar).
+                         alex: agora também no Base Novo, não só no Novo. -->
                     <div class="modal fade" id="modalEditarDados" tabindex="-1" aria-labelledby="modalEditarDadosLabel"
                          data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
                         <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -471,8 +471,9 @@
                     <!-- onde o histórico vai aparecer fora do modal -->
                     <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
 
-                    {% if apenas_pendentes %}
-                    <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação -->
+                    {% if not modo_emissao %}
+                    <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação
+                         alex: agora também no Base Novo, não só no Novo. -->
 
                     <div class="mt-4 text-end border-bottom pb-4">
                         <span id="resumo-ligacoes" class="text-success fw-bold me-3"></span>
@@ -543,8 +544,8 @@
                                                         <label class="fw-small mb-1">Motivo Não Venda</label>
                                                         <select class="form-select form-select-sm" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
                                                             <option value="">-- Selecione --</option>
-                                                            {% for m in motivos_nao_venda %}
-                                                            <option value="{{ m.id }}">{{ m.motivo }}</option>
+                                                            {% for valor, rotulo in motivos_nao_venda %}
+                                                            <option value="{{ valor }}">{{ rotulo }}</option>
                                                             {% endfor %}
                                                         </select>
                                                     </div>
@@ -624,7 +625,10 @@
 <script>
     let contadorLigacoes = 1;
     const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
-    const PODE_REGISTRAR_LIGACAO = {% if apenas_pendentes %}true{% else %}false{% endif %};
+    // alex: agora também no Base Novo, não só no Novo (não no modo Emissão).
+    const PODE_REGISTRAR_LIGACAO = {% if not modo_emissao %}true{% else %}false{% endif %};
+    // alex: só perfil Gestor (nível 3) ou superusuário pode editar uma ligação já salva.
+    const USUARIO_GESTOR = {% if usuario_gestor %}true{% else %}false{% endif %};
     const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
     const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
     const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
@@ -761,7 +765,7 @@
                 <div class="card mb-3 bg-light border-0 shadow-sm">
                     <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span></span>
-                        <button type="button" class="btn btn-sm btn-light py-0 px-2" title="Editar esta ligação" onclick="editarLigacaoHistorico(${numero})"><i class="fas fa-pencil-alt"></i></button>
+                        ${USUARIO_GESTOR ? '<button type="button" class="btn btn-sm btn-light py-0 px-2" title="Editar esta ligação" onclick="editarLigacaoHistorico(' + numero + ')"><i class="fas fa-pencil-alt"></i></button>' : ''}
                     </div>
                     <div class="card-body py-2" style="font-size: 0.9rem;">
                         <div class="row g-2">
@@ -959,7 +963,7 @@
         }
     }
     const MOTIVOS_NAO_VENDA = {
-        {% for m in motivos_nao_venda %}"{{ m.id }}": "{{ m.motivo|escapejs }}",{% endfor %}
+        {% for valor, rotulo in motivos_nao_venda %}"{{ valor|escapejs }}": "{{ rotulo|escapejs }}",{% endfor %}
     };
 
     // Mapa id -> nome da seguradora, para mostrar o nome no histórico.
@@ -989,6 +993,12 @@
             'base_novo_dropdown_tipo_documento',
             listaBaseNovoTiposDocumento
         );
+        inicializarDropdownRelacionamento(
+            'resp-demanda-input',
+            'resp-demanda-id-sel',
+            'resp-demanda-dropdown',
+            LISTA_COLABORADORES_DEMANDA
+        );
         inicializarSeguradoraLigacao(document.getElementById('ligacao-1'));
 
         $(document).on('click', function(e) {
@@ -998,7 +1008,7 @@
         });
 
         //ocultar tabela 
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 21, 22, 23]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 23]);
         
 
         atualizarAtendimentos();

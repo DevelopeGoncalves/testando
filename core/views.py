@@ -7,7 +7,7 @@ from .models import (
     Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado,
     Seguradora, TipoDocumento, Cliente, Apolice, PerfilUsuario,
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
-    ParametrizacaoHabitacional, Indicacao, LigacaoIndicacao, MotivoNaoVenda,
+    ParametrizacaoHabitacional, Indicacao, LigacaoIndicacao,
     IndicacaoExcluida,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm
@@ -979,11 +979,11 @@ def vendas_novo_negocio(request):
     indicacoes = Indicacao.objects.annotate(
         ultima_central=Subquery(ultima_ligacao.values('venda_central')[:1]),
         ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
-        ultima_motivo=Subquery(ultima_ligacao.values('motivo_nao_venda_id')[:1]),
+        ultima_motivo=Subquery(ultima_ligacao.values('motivo_nao_venda')[:1]),
     ).filter(
         Q(ultima_central__isnull=True)
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
-    ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda').prefetch_related('ligacoes__motivo_nao_venda')
+    ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda').prefetch_related('ligacoes')
 
     indicacoes = list(indicacoes)
     # Mapa CID -> nome da agência (tabela Unidade), para exibir "CID - Nome" concatenado
@@ -1003,7 +1003,7 @@ def vendas_novo_negocio(request):
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
-        'motivos_nao_venda': MotivoNaoVenda.objects.all(),
+        'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         'apenas_pendentes': True,
         # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
         'usuario_gestor': _usuario_e_gestor(request.user),
@@ -1156,9 +1156,13 @@ def _falta_premio_total_venda_central(request):
     return False
 
 
-def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
+def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=None):
     """Processa o POST de cadastro/edição da ficha de Indicação (Base Novo e o card
     'Novo', que sao a mesma fincha"""
+    # alex: por padrão o travamento segue processar_ligacoes (comportamento antigo do Novo),
+    # mas Base Novo passa travar_dados=True explicitamente mesmo sem processar ligações.
+    if travar_dados is None:
+        travar_dados = processar_ligacoes
     item_id = request.POST.get('item_id')
     instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
 
@@ -1173,8 +1177,8 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
         if 'agencia_combo' in dados_post:
             dados_post['cid_agencia'] = (dados_post.get('agencia_combo') or '').strip().partition(' - ')[0].strip()
 
-    # No Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de edição
-    somente_leitura = processar_ligacoes and request.POST.get('editar_dados') != '1'
+    # No Novo e no Base Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de edição
+    somente_leitura = travar_dados and request.POST.get('editar_dados') != '1'
     form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
 
     # os campos "Vendas Central" obriga o preenchimento do "Prêmio Total".  se nao da erro
@@ -1243,7 +1247,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
             venda_central=venda_central_val,
             premio_total=premio_total_val,
             agn=agn_val,
-            motivo_nao_venda_id=motivo_val or None,
+            motivo_nao_venda=motivo_val or None,
             seguradora_id=seguradora_val or None,
             comissao=comissao_val,
             # sempre gravado com o usuário logado no momento do salvamento,
@@ -1271,7 +1275,8 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True):
 @login_required
 def lista_base_novo(request):
     if request.method == 'POST':
-        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False)
+        # alex: Base Novo agora trava os dados igual ao Novo (só edita via pop-up "Editar dados").
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False, travar_dados=True)
         if form is None:
             return redirect('lista_base_novo')
     else:
@@ -1281,7 +1286,7 @@ def lista_base_novo(request):
     indicacoes = list(
         Indicacao.objects.all().order_by('-id')
         .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
-        .prefetch_related('ligacoes__motivo_nao_venda')
+        .prefetch_related('ligacoes')
     )
     # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo.
     # Necessário aqui também porque, ao encerrar a ligação, o registro sai do Novo e passa a
@@ -1297,7 +1302,7 @@ def lista_base_novo(request):
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
-        'motivos_nao_venda': MotivoNaoVenda.objects.all(),
+        'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
         'usuario_gestor': _usuario_e_gestor(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
@@ -1326,7 +1331,7 @@ def vendas_emissao(request):
             Q(ultima_central=True) | Q(ultima_agn=True)
         ).order_by('-id')
         .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
-        .prefetch_related('ligacoes__motivo_nao_venda')
+        .prefetch_related('ligacoes')
     )
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
@@ -1339,7 +1344,7 @@ def vendas_emissao(request):
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
-        'motivos_nao_venda': MotivoNaoVenda.objects.all(),
+        'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         'modo_emissao': True,
         # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
         'usuario_gestor': _usuario_e_gestor(request.user),

@@ -366,6 +366,18 @@ class LigacaoIndicacao(models.Model):
         ('Reagendar', 'Reagendar'),
     ]
 
+    MOTIVO_NAO_VENDA = [
+        ('Condições comerciais (preço)', 'Condições comerciais (preço)'),
+        ('Condições financeiras', 'Condições financeiras'),
+        ('Condições técnicas', 'Condições técnicas'),
+        ('Desistiu', 'Desistiu'),
+        ('Efetivou com o corretor atual', 'Efetivou com o corretor atual'),
+        ('Falta de retorno do cliente/indicador', 'Falta de retorno do cliente/indicador'),
+        ('Mal atendimento Seguradora', 'Mal atendimento Seguradora'),
+        ('Operação Empréstimo', 'Operação Empréstimo'),
+        ('Venda do bem', 'Venda do bem'),
+    ]
+
     indicacao = models.ForeignKey(Indicacao, on_delete=models.CASCADE, related_name='ligacoes')
     protocolo = models.CharField("Protocolo", max_length=20, unique=True, blank=True, null=True)
     data_ligacao = models.DateTimeField("Data/Hora da ligação", null=True, blank=True)
@@ -378,7 +390,8 @@ class LigacaoIndicacao(models.Model):
     # Só é preenchido quando a ligação é marcada como "Vendas Central" (regra na view/ficha)
     premio_total = models.DecimalField("Prêmio Total", max_digits=15, decimal_places=2, null=True, blank=True)
     agn = models.BooleanField("Agn", default=False)
-    motivo_nao_venda = models.ForeignKey('MotivoNaoVenda', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Motivo Não Venda")
+    # Lista fixa no Python (igual "Origem da informação"), não depende de tabela/seed no banco.
+    motivo_nao_venda = models.CharField("Motivo Não Venda", max_length=50, choices=MOTIVO_NAO_VENDA, blank=True, null=True)
     # Seguradora escolhida no momento da ligação (usada principalmente quando a venda é
     # fechada, para a Emissão). Relacionamento com a tabela de Seguradoras.
     seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
