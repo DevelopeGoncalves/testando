@@ -657,7 +657,6 @@ def producao_processamentos(request):
     agrupamentos = Agrupamento.objects.filter(inativo=False).order_by('ordem_apresentacao')
     return render(request, 'core/producao/processamentos/importacao.html', {
         'agrupamentos': agrupamentos,
-        # alex victorino: comente BASE_NOVO_PARAMETRIZACAO_VISIVEL lá embaixo no arquivo pra sumir com o card.
         'base_novo_parametrizacao_visivel': globals().get('BASE_NOVO_PARAMETRIZACAO_VISIVEL', False),
     })
 
@@ -1009,7 +1008,7 @@ def vendas_novo_negocio(request):
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         'apenas_pendentes': True,
-        # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
+        # indicar o responsavel da demandar por usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
@@ -1081,8 +1080,7 @@ def atendimentos_ativos(request):
           .values('id', 'atendimento_por'))
     return JsonResponse({'atendimentos': {str(r['id']): r['atendimento_por'] for r in qs}})
 
-# alex: "Gestor" no novo sistema de permissões = nível 3 (Gestor) em Produção/Vendas/Novo,
-# ou superusuário. Só ele pode indicar o responsável pela demanda.
+# indicar o responsavel da demandar pelo ao nivei do usuario
 def _usuario_e_gestor(user):
     if user.is_superuser:
         return True
@@ -1091,8 +1089,7 @@ def _usuario_e_gestor(user):
 
 @login_required
 def definir_responsavel_demanda(request, id):
-    """alex: Gestor indica (ou tira) o responsável pela demanda de um registro.
-    Colaborador vem de Base/Formulários/Colaborador. Sem indicar -> fica 'Em aberto'."""
+    """somente o usuario pode tirar ou indicar o responsavel pela demanda '."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     if not _usuario_e_gestor(request.user):
@@ -1163,8 +1160,6 @@ def _falta_premio_total_venda_central(request):
 def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=None):
     """Processa o POST de cadastro/edição da ficha de Indicação (Base Novo e o card
     'Novo', que sao a mesma fincha"""
-    # alex: por padrão o travamento segue processar_ligacoes (comportamento antigo do Novo),
-    # mas Base Novo passa travar_dados=True explicitamente mesmo sem processar ligações.
     if travar_dados is None:
         travar_dados = processar_ligacoes
     item_id = request.POST.get('item_id')
@@ -1279,7 +1274,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 @login_required
 def lista_base_novo(request):
     if request.method == 'POST':
-        # alex: Base Novo agora trava os dados igual ao Novo (só edita via pop-up "Editar dados").
+        # trava os dados base novo igual do novo 
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False, travar_dados=True)
         if form is None:
             return redirect('lista_base_novo')
@@ -1307,7 +1302,7 @@ def lista_base_novo(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
-        # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
+        # responsavel pela a demanda de acorodo com o nivel do usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
@@ -1350,7 +1345,7 @@ def vendas_emissao(request):
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         'modo_emissao': True,
-        # alex: responsável pela demanda (Gestor indica; Colaborador é o relacionamento)
+        # segue o padrao do nivel do usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
@@ -1440,12 +1435,10 @@ def importar_unidades(request):
 
     return redirect('base_processamentos')
 
-# alex victorino: comente a linha abaixo para ocultar a Parametrização/Importação
-# da Base Novo do site (o card some da tela e a URL para de funcionar).
-BASE_NOVO_PARAMETRIZACAO_VISIVEL = True
+# ocultar base novo
+#BASE_NOVO_PARAMETRIZACAO_VISIVEL = True
 
-# alex: campos importáveis da planilha "Indicação Seguridade (base novo)". carimbo_data_hora
-# e email são a chave (update_or_create); os labels aqui são só pra tela de parametrização.
+# campos da importacao parametrizar
 CAMPOS_BASE_NOVO = [
     {'nome': 'carimbo_data_hora', 'label': 'Carimbo de data/hora'},
     {'nome': 'email', 'label': 'Endereço de e-mail'},
@@ -1470,8 +1463,6 @@ CAMPOS_BASE_NOVO = [
 @login_required
 def producao_base_novo_import(request):
 
-    # alex victorino: se a linha da BASE_NOVO_PARAMETRIZACAO_VISIVEL lá em cima estiver
-    # comentada, a tela fica indisponível mesmo por acesso direto à URL.
     if not globals().get('BASE_NOVO_PARAMETRIZACAO_VISIVEL', False):
         return redirect('producao_processamentos')
 
@@ -1755,22 +1746,11 @@ def sair_do_sistema(request):
     return redirect('login') 
 
 
-# --- NOVO CARD DE TIPOS DE PESSOA ---
+# ---CARD TIPOS DE PESSOA ---
 
 
 def _ids_duplicados_no_lote(fase_origem, agrupamento):
-    """
-    Verifica, dentro dos registos de `fase_origem` (Importados ou Pendentes) de um
-    agrupamento, quais resultariam em chave_unica repetida caso avançassem de fase.
 
-    Considera repetido tanto quando dois registos do próprio lote batem entre si
-    quanto quando a chave já existe na fase seguinte (checagem em cascata: Importados
-    só olha para o que já está em Pendentes; Pendentes só olha para o que já está em
-    Emitidos - nunca pula fase).
-
-    Retorna um set com os ids dos RegistroProducao (da fase_origem) que precisam
-    ser apagados ou editados antes de liberar a passagem de fase.
-    """
     registros = RegistroProducao.objects.filter(
         agrupamento=agrupamento, fase__iexact=fase_origem
     ).prefetch_related('endossos_extras')
@@ -2446,7 +2426,7 @@ def financeiro_relatorios(request):
     return render(request, 'core/financeiro/relatorios/index.html')
 
 
-
+# permisao henrique 
 PERMISSOES_CAMPOS = [
     # BASE
     'base_form_unidade', 'base_form_colaboradores', 'base_form_contratados',
@@ -2456,7 +2436,7 @@ PERMISSOES_CAMPOS = [
     'base_proc_colaboradores', 'base_proc_ramos', 'base_rel',
     
     # PRODUÇÃO
-    'prod_vendas_novo', 'prod_vendas_renovacao', 'prod_vendas_endosso',
+    'prod_vendas_novo', 'prod_vendas_renovacao', 'prod_vendas_endosso', 'prod_vendas_emissao',
     'prod_vendas_basenovo', 'prod_vendas_baserenovacao', 'prod_vendas_baseendosso',
     'prod_form_vida', 'prod_form_bap', 'prod_form_prestamista',
     'prod_form_patrimonialedemais', 'prod_form_consorcio', 'prod_form_odonto',
@@ -2476,7 +2456,7 @@ PERMISSOES_CAMPOS = [
 @login_required
 def listar_usuarios(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # Parte de negar acesso quem não pode
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_usuario > 0)):
