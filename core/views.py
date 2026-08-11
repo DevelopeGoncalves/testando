@@ -1010,6 +1010,7 @@ def vendas_novo_negocio(request):
         'apenas_pendentes': True,
         # indicar o responsavel da demandar por usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
 
@@ -1086,6 +1087,14 @@ def _usuario_e_gestor(user):
         return True
     perfil = getattr(user, 'perfil', None)
     return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) == 3)
+
+def _usuario_pode_editar_dados(user):
+    """Editor (2) ou Gestor (3) podem editar os dados da ficha. O botão de editar
+    uma ligação continua sendo só do Gestor (tratado no template)."""
+    if user.is_superuser:
+        return True
+    perfil = getattr(user, 'perfil', None)
+    return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) >= 2)
 
 @login_required
 def definir_responsavel_demanda(request, id):
@@ -1177,7 +1186,10 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
             dados_post['cid_agencia'] = (dados_post.get('agencia_combo') or '').strip().partition(' - ')[0].strip()
 
     # No Novo e no Base Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de edição
-    somente_leitura = travar_dados and request.POST.get('editar_dados') != '1'
+    # e apenas para quem pode editar (Editor ou Gestor).
+    somente_leitura = travar_dados and (
+        request.POST.get('editar_dados') != '1' or not _usuario_pode_editar_dados(request.user)
+    )
     form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
 
     # os campos "Vendas Central" obriga o preenchimento do "Prêmio Total".  se nao da erro
@@ -1304,6 +1316,7 @@ def lista_base_novo(request):
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         # responsavel pela a demanda de acorodo com o nivel do usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
 
@@ -1347,6 +1360,7 @@ def vendas_emissao(request):
         'modo_emissao': True,
         # segue o padrao do nivel do usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
     })
 

@@ -339,10 +339,11 @@
 
                 <div class="card-body p-4 position-relative" style="font-size: 0.95rem;">
 
-                    {% if not modo_emissao and usuario_gestor %}
+                    {% if not modo_emissao and usuario_pode_editar %}
                     <!-- No Novo e no Base Novo os dados ficam travados; o lápis abre o pop-up para editar.
                          Botão fica na linha do "Bloco Apólice" (canto direito), sem espaço em branco acima.
-                         alex: só perfil Gestor (nível 3) ou superusuário pode editar os dados. -->
+                         alex: perfil Editor (nível 2) ou Gestor (nível 3), além de superusuário, pode editar os dados.
+                         O botão de editar uma LIGAÇÃO continua só para Gestor. -->
                     <button type="button" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
                         <i class="fas fa-pencil-alt"></i> Editar dados
                     </button>
@@ -382,7 +383,7 @@
                         <div class="col-md-2"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
                     </div>
 
-                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user"></i> Dados do Cliente</h5>
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
                     <div class="row g-3">
                         <div class="col-md-3"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">CPF</label>{{ form_indicacao.cpf_cliente }}</div>
@@ -391,7 +392,7 @@
                         <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                     </div>
 
-                    <h5 class="text-success border-bottom pb-2 mb-3 mt-5"><i class="fas fa-user-tie"></i> Dados do Indicador</h5>
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
                     <div class="row g-3">
                         
                         <div class="col-md-8">
