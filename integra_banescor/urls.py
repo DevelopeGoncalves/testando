@@ -14,7 +14,6 @@ urlpatterns = [
     path('', views.home, name='home'),
     
     path('importar/unidades/', views.importar_unidades, name='importar_unidades'),
-    path('importar/base-novo/', views.importar_base_novo, name='importar_base_novo'),
 
     # 2. ROTA DO PAINEL DE CARDS
     path('base/formularios/', views.base_formularios, name='base_formularios'),
@@ -52,7 +51,8 @@ urlpatterns = [
     path('tipos-documentos/', views.lista_tiposdoc, name='lista_tiposdoc'),
     
     path('producao/processamentos/habitacional/', views.producao_habitacional_import, name='producao_habitacional_import'),
-    
+    path('producao/processamentos/base-novo/', views.producao_base_novo_import, name='producao_base_novo_import'),
+
     
     path('producao/formularios/<int:agrupamento_id>/<str:fase>/', views.producao_lista_fase, name='producao_lista_fase'),
     

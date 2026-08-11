@@ -128,49 +128,21 @@
         </div>
         {% endfor %}
 
+        {% if base_novo_parametrizacao_visivel %}
         {% if request.user.is_superuser or request.user.perfil.prod_proc_basenovo > 0 %}
         <!-- Importação da Base Novo (indicações de seguridade), no mesmo padrão roxo -->
         <div class="col-md-3 mb-4">
-            <div class="card shadow-sm h-100 card-hover" style="border-top: 4px solid #6f42c1; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalImportarBaseNovo">
-                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-5">
-                    <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
-                    <h5 class="card-title text-dark fw-bold mb-0">Base Novo</h5>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Modal de importação da Base Novo -->
-<div class="modal fade" id="modalImportarBaseNovo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-light border-bottom-0 pb-0">
-                <h5 class="modal-title fw-bold text-dark">
-                    <i class="fas fa-file-import me-2" style="color: #6f42c1;"></i> Importar Base Novo
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body bg-light pt-4 pb-4">
-                <div class="row justify-content-center text-center px-3">
-                    <div class="col-md-8">
-                        <div class="card border-0 shadow-sm p-4" style="border-top: 4px solid #6f42c1 !important;">
-                            <h6 class="fw-bold mb-4" style="color: #6f42c1;">
-                                <i class="fas fa-file-excel fa-2x mb-2"></i><br>Selecione a planilha das indicações de seguridade
-                            </h6>
-                            <form action="{% url 'importar_base_novo' %}" method="post" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                <input class="form-control mb-3" type="file" name="arquivo_planilha" accept=".xlsx, .xls, .csv" required>
-                                <button type="submit" class="btn w-100 fw-bold text-white" style="background-color: #6f42c1;">
-                                    <i class="fas fa-upload"></i> Iniciar Importação
-                                </button>
-                            </form>
-                        </div>
+            <a href="{% url 'producao_base_novo_import' %}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm h-100 card-hover" style="border-top: 4px solid #6f42c1; cursor: pointer;">
+                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-5">
+                        <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
+                        <h5 class="card-title text-dark fw-bold mb-0">Base Novo</h5>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
+        {% endif %}
+        {% endif %}
     </div>
 </div>
 

@@ -630,6 +630,14 @@ class ParametrizacaoHabitacional(models.Model):
     def __str__(self):
         return self.campo_sistema
 
+class ParametrizacaoBaseNovo(models.Model):
+    campo_sistema = models.CharField(max_length=100, unique=True)
+    coluna_excel = models.CharField(max_length=150, blank=True, null=True)
+    valor_fixo = models.CharField(max_length=150, blank=True, null=True)
+
+    def __str__(self):
+        return self.campo_sistema
+
 
 """                             HENRIQUE                                                                    """
 from datetime import timedelta
