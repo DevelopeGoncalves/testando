@@ -240,7 +240,8 @@ def excluir_em_massa(request):
     # Vendas (indicacao): pode excluir Gestor (nível 3) ou superusuário.
     # Demais tabelas (Base/Formulários): continua só superusuário.
     if tipo == 'indicacao':
-        if not _usuario_pode_excluir(user):
+        # A lixeira aparece no Base Novo e na Emissão: aceita Gestor em qualquer um dos dois.
+        if not (_usuario_pode_excluir(user, 'prod_vendas_basenovo') or _usuario_pode_excluir(user, 'prod_vendas_emissao')):
             messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
             return redirect('lista_base_novo')
     elif not user.is_superuser:
@@ -975,7 +976,7 @@ def vendas_endosso(request):
 def vendas_novo_negocio(request):
 
     if request.method == 'POST':
-        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request)
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, campo_permissao='prod_vendas_novo')
         if form is None:
             return redirect('vendas_novo_negocio')
     else:
@@ -1016,10 +1017,10 @@ def vendas_novo_negocio(request):
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         'apenas_pendentes': True,
-        # indicar o responsavel da demandar por usuario
-        'usuario_gestor': _usuario_e_gestor(request.user),
-        'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
-        'usuario_pode_excluir': _usuario_pode_excluir(request.user),
+        # Permissões deste card usam o campo do "Novo" (prod_vendas_novo).
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_novo'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_novo'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_novo'),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
@@ -1093,25 +1094,35 @@ def atendimentos_ativos(request):
     return JsonResponse({'atendimentos': {str(r['id']): r['atendimento_por'] for r in qs}})
 
 # indicar o responsavel da demandar pelo ao nivei do usuario
-def _usuario_e_gestor(user):
+def _nivel_vendas(user, campo='prod_vendas_novo'):
+    """Nível (0-3) do usuário para UM card de Vendas específico.
+    Cada card tem seu próprio campo de permissão no PerfilUsuario:
+      Novo -> 'prod_vendas_novo' | Base Novo -> 'prod_vendas_basenovo'
+      Emissão -> 'prod_vendas_emissao'. Superusuário é sempre 3 (Gestor)."""
     if user.is_superuser:
-        return True
+        return 3
     perfil = getattr(user, 'perfil', None)
-    return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) == 3)
+    if not perfil:
+        return 0
+    try:
+        return int(getattr(perfil, campo, 0) or 0)
+    except (TypeError, ValueError):
+        return 0
 
-def _usuario_pode_editar_dados(user):
-    """Editor (2) ou Gestor (3) podem editar os dados da ficha. O botão de editar
-    uma ligação continua sendo só do Gestor (tratado no template).
-    Leitor (1) fica apenas com leitura (não edita nada em Vendas)."""
-    if user.is_superuser:
-        return True
-    perfil = getattr(user, 'perfil', None)
-    return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) >= 2)
+def _usuario_e_gestor(user, campo='prod_vendas_novo'):
+    """Gestor (nível 3) no card indicado."""
+    return _nivel_vendas(user, campo) == 3
 
-def _usuario_pode_excluir(user):
-    """Apenas Gestor (nível 3) ou superusuário podem EXCLUIR registros de Vendas.
-    Editor edita mas não apaga; Leitor não faz nada além de ler."""
-    return _usuario_e_gestor(user)
+def _usuario_pode_editar_dados(user, campo='prod_vendas_novo'):
+    """Editor (2) ou Gestor (3) podem editar os dados da ficha no card indicado.
+    O botão de editar uma ligação continua só do Gestor (tratado no template).
+    Leitor (1) fica apenas com leitura."""
+    return _nivel_vendas(user, campo) >= 2
+
+def _usuario_pode_excluir(user, campo='prod_vendas_novo'):
+    """Apenas Gestor (nível 3) pode EXCLUIR no card indicado.
+    Editor edita mas não apaga; Leitor só lê."""
+    return _nivel_vendas(user, campo) == 3
 
 def _status_fechamento_indicacao(ind):
     """Status de fechamento do registro, com base na ÚLTIMA ligação:
@@ -1143,7 +1154,8 @@ def definir_responsavel_demanda(request, id):
     """somente o usuario pode tirar ou indicar o responsavel pela demanda '."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
-    if not _usuario_e_gestor(request.user):
+    # O botão aparece na ficha do Novo e do Base Novo: aceita Gestor em qualquer um dos dois.
+    if not (_usuario_e_gestor(request.user, 'prod_vendas_novo') or _usuario_e_gestor(request.user, 'prod_vendas_basenovo')):
         return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem indicar o responsável.'}, status=403)
     ind = get_object_or_404(Indicacao, id=id)
     col_id = request.POST.get('colaborador') or None
@@ -1208,15 +1220,18 @@ def _falta_premio_total_venda_central(request):
     return False
 
 
-def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=None):
+def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=None,
+                                 campo_permissao='prod_vendas_novo'):
     """Processa o POST de cadastro/edição da ficha de Indicação (Base Novo e o card
-    'Novo', que sao a mesma fincha"""
+    'Novo', que sao a mesma fincha). campo_permissao = campo do card (Novo/Base Novo/
+    Emissão) usado para checar se o usuário pode editar."""
     if travar_dados is None:
         travar_dados = processar_ligacoes
 
+    pode_editar = _usuario_pode_editar_dados(request.user, campo_permissao)
     # Leitor (nível 1) não pode gravar nada em Vendas: nem dados, nem ligações.
     # (o "somente_leitura" abaixo já trava os dados; aqui travamos também as ligações.)
-    if not _usuario_pode_editar_dados(request.user):
+    if not pode_editar:
         processar_ligacoes = False
     item_id = request.POST.get('item_id')
     instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
@@ -1235,7 +1250,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
     # No Novo e no Base Novo, os dados do registro só são gravados quando o salvamento vem do pop-up de edição
     # e apenas para quem pode editar (Editor ou Gestor).
     somente_leitura = travar_dados and (
-        request.POST.get('editar_dados') != '1' or not _usuario_pode_editar_dados(request.user)
+        request.POST.get('editar_dados') != '1' or not pode_editar
     )
     form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
 
@@ -1358,7 +1373,7 @@ def lista_base_novo(request):
         # trava os dados (só salvam via "Editar dados"), mas PROCESSA as ligações:
         # assim, ao editar/desmarcar uma ligação no Base Novo (ex.: tirar o "Motivo Não
         # Venda" ou desfazer a venda), a alteração é gravada e o registro volta para o Novo.
-        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=True)
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=True, campo_permissao='prod_vendas_basenovo')
         if form is None:
             return redirect('lista_base_novo')
     else:
@@ -1387,10 +1402,10 @@ def lista_base_novo(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
-        # responsavel pela a demanda de acorodo com o nivel do usuario
-        'usuario_gestor': _usuario_e_gestor(request.user),
-        'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
-        'usuario_pode_excluir': _usuario_pode_excluir(request.user),
+        # Permissões deste card usam o campo do "Base Novo" (prod_vendas_basenovo).
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_basenovo'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_basenovo'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_basenovo'),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
@@ -1403,7 +1418,7 @@ def vendas_emissao(request):
     filtrada dos mesmos dados da Base Novo - nada é duplicado no banco. Reaproveita a
     mesma tela (base_novo.html) no modo de consulta/edição, igual à Base Novo."""
     if request.method == 'POST':
-        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False)
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False, campo_permissao='prod_vendas_emissao')
         if form is None:
             return redirect('vendas_emissao')
     else:
@@ -1436,10 +1451,10 @@ def vendas_emissao(request):
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
         'modo_emissao': True,
-        # segue o padrao do nivel do usuario
-        'usuario_gestor': _usuario_e_gestor(request.user),
-        'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
-        'usuario_pode_excluir': _usuario_pode_excluir(request.user),
+        # Permissões deste card usam o campo da "Emissão" (prod_vendas_emissao).
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_emissao'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_emissao'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_emissao'),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
