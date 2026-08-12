@@ -132,13 +132,13 @@
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
-                {% if not apenas_pendentes %}
-                <!-- alex: excluir registros só no Base Novo (e Emissão). No card Novo não apaga. -->
-                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
-                {% endif %}
                 {% if not modo_emissao %}
                 <!-- alex: botão "Novo" também na tela Novo (Ligação Novo), igual ao Base Novo. -->
-                <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
+                <button class="btn btn-info text-white me-1" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
+                {% endif %}
+                {% if not apenas_pendentes %}
+                <!-- alex: lixeira vem depois do "Novo". Excluir registros só no Base Novo (e Emissão); no card Novo não apaga. -->
+                <button class="btn btn-danger" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
             </div>
         </div>
@@ -527,7 +527,9 @@
                                                 <div class="row g-2">
                                                     <div class="col-md-3">
                                                         <label class="fw-small mb-1">Data/Hora da Ligação</label>
-                                                        <input type="datetime-local" step="1" class="form-control form-control-sm" name="ligacao_data" id="edit_ligacao_data">
+                                                        <!-- alex: inativo; a data/hora é gerada automaticamente ao informar o ramal (ou outro campo).
+                                                             readonly (não disabled) para não ser reativado ao abrir o bloco e ainda ser enviado no submit. -->
+                                                        <input type="datetime-local" step="1" class="form-control form-control-sm bg-light" name="ligacao_data" id="edit_ligacao_data" readonly tabindex="-1" style="pointer-events:none;">
                                                     </div>
 
                                                     <div class="col-md-2">
@@ -1082,7 +1084,13 @@
         });
 
         //ocultar tabela 
+        {% if apenas_pendentes %}
+        // Card "Novo" (Ligação Novo): colunas visíveis (edite SÓ para o Novo).
         iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 24]);
+        {% else %}
+        // Card "Base Novo" (e Emissão): colunas visíveis (edite SÓ para o Base Novo).
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 24]);
+        {% endif %}
         
 
         atualizarAtendimentos();
