@@ -1243,6 +1243,12 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 
     indicacao = form.save()
 
+    # alex: "Data/hora do cadastro" é automática. Se um registro novo vier sem ela
+    # (ex.: JS não preencheu), grava a data/hora atual do servidor.
+    if indicacao.carimbo_data_hora is None:
+        indicacao.carimbo_data_hora = timezone.now()
+        indicacao.save(update_fields=['carimbo_data_hora'])
+
     # Ao salvar, libera a trava de "uso" do registro (quem salvou terminou de mexer).
     if indicacao.atendimento_por or indicacao.atendimento_em:
         indicacao.atendimento_por = None

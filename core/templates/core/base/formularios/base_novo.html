@@ -1005,10 +1005,20 @@
 
     // vai salvar e  marcaa
     function salvarEdicaoDados() {
-        // alex: Grupo/Ramo é obrigatório
+        // alex: campos obrigatórios (mesma regra do backend em IndicacaoForm.CAMPOS_OBRIGATORIOS).
         var ramo = document.getElementById('base_novo_ramo_val');
         if (!ramo || !ramo.value) {
             avisoElegante('O campo "Grupo/Ramo" é obrigatório. Selecione um Grupo/Ramo antes de salvar.', 'Campo obrigatório');
+            return;
+        }
+        var nome = document.getElementById('id_nome_cliente');
+        if (!nome || !nome.value.trim()) {
+            avisoElegante('O campo "Nome" é obrigatório.', 'Campo obrigatório');
+            return;
+        }
+        var cpf = document.getElementById('id_cpf_cliente');
+        if (!cpf || !cpf.value.trim()) {
+            avisoElegante('O campo "CPF" é obrigatório.', 'Campo obrigatório');
             return;
         }
         var flag = document.getElementById('editar_dados_flag');
@@ -1561,6 +1571,12 @@
                 mostrarResponsavelDemanda('');  // alex: cadastro novo começa "Em aberto"
                 $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
                 atualizarBotaoEditarDados(false);  // alex: cadastro NOVO pode editar os dados
+                // alex: gera automaticamente a "Data/hora do cadastro" (data/hora do servidor).
+                // O campo fica inativo; o usuário não precisa preencher.
+                $.get(URL_AGORA_SERVIDOR, function(resposta) {
+                    var campoCarimbo = document.getElementById('id_carimbo_data_hora');
+                    if (campoCarimbo && !campoCarimbo.value) { campoCarimbo.value = resposta.datahora; }
+                });
             }
         } else {
             {% if form_indicacao.errors %}
@@ -1896,14 +1912,6 @@
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
-
-        // alex: ao registrar uma NOVA ligação, já gera protocolo e a Data/Hora
-        // automaticamente (o campo Data/Hora fica inativo). Só no bloco novo (não salvo).
-        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
-        let blocoNovo = blocos[blocos.length - 1];
-        if (blocoNovo && !blocoNovo.classList.contains('ligacao-salva')) {
-            gerarProtocoloEDataSeNecessario($(blocoNovo));
-        }
     }
 
     var ligacaoEmEdicao = null;

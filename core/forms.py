@@ -285,7 +285,12 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             'observacoes',
         ]
         widgets = {
-            'carimbo_data_hora': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            # alex: "Data/hora do cadastro" é gerada automaticamente ao criar um novo
+            # registro e fica INATIVA (readonly). Continua sendo enviada no salvamento.
+            'carimbo_data_hora': forms.DateTimeInput(attrs={
+                'type': 'datetime-local', 'readonly': 'readonly', 'tabindex': '-1',
+                'style': 'pointer-events:none; background-color:#f3f4f6;',
+            }),
             'observacoes': forms.Textarea(attrs={'rows': 3}),
         }
 
@@ -320,10 +325,11 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             #   'origem_informacao', 'observacoes'
             # ============================================================
             CAMPOS_OBRIGATORIOS = [
-                'ramo',   # Grupo/Ramo
+                'ramo',           # Grupo/Ramo
+                'nome_cliente',   # Nome (Dados do Cliente)
+                'cpf_cliente',    # CPF (Dados do Cliente)
                 # adicione aqui os outros campos que quiser obrigar, ex.:
                 # 'seguradora',
-                # 'nome_cliente',
             ]
             for nome in CAMPOS_OBRIGATORIOS:
                 if nome in self.fields:
