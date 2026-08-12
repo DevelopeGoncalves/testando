@@ -161,11 +161,11 @@
                         <tr>
                             {% if not apenas_pendentes and usuario_pode_excluir %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
                             <th style="display:none;"></th>
-                            <th class="text-center">Data/hora do cadastro</th> <!-- 1 -->
+                            <th class="text-center">Cadastrado em</th> <!-- 1 -->
                             <th class="text-center">Responsável</th> <!-- 2 -->
                             <th class="text-center">Em uso por</th> <!-- 3 -->
                             <th class="text-center">E-mail do indicador (outro)</th> <!-- 4 -->
-                            <th class="text-center">Matrícula do indicador</th> <!-- 5 -->
+                            <th class="text-center">Indicador</th> <!-- 5 -->
                             <th class="text-center">Indicador</th> <!-- 6 -->
                             <th class="text-center">Agência</th> <!-- 7 -->
                             <th class="text-center">Telefone do indicador</th> <!-- 8 -->
@@ -185,7 +185,7 @@
                             <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 22 -->
                             <th class="text-start">Observações</th> <!-- 23 -->
                             <th class="text-center">Status</th> <!-- 24 -->
-                            <th class="text-center">Responsável da ligação</th> <!-- 25 -->
+                            <th class="text-center">Atendente</th> <!-- 25 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -358,10 +358,7 @@
                 <div class="card-body p-4 position-relative" style="font-size: 0.95rem;">
 
                     {% if not modo_emissao and usuario_pode_editar %}
-                    <!-- No Novo e no Base Novo os dados ficam travados; o lápis abre o pop-up para editar.
-                         Botão fica na linha do "Bloco Apólice" (canto direito), sem espaço em branco acima.
-                         alex: perfil Editor (nível 2) ou Gestor (nível 3), além de superusuário, pode editar os dados.
-                         O botão de editar uma LIGAÇÃO continua só para Gestor. -->
+                    <!-- no card novo e base novo o pop up aparece pra editar -->
                     <button type="button" id="btn-editar-dados" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
                         <i class="fas fa-pencil-alt"></i> Editar dados
                     </button>
@@ -380,7 +377,7 @@
                             </div>
                         </div>
                         <div class="col-md-2">
-                            <label class="fw-bold small mb-1">Grupo/Ramo</label>
+                            <label class="fw-bold small mb-1">Grupo/Ramo *</label>
                             <div class="input-container">
                                 <input type="hidden" name="ramo" id="base_novo_ramo_val">
                                 <input type="text" id="base_novo_ramo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
@@ -396,16 +393,16 @@
                             </div>
                         </div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1 ">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
                         <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
                     </div>
 
                     <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
                     <div class="row g-3">
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF</label>{{ form_indicacao.cpf_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF *</label>{{ form_indicacao.cpf_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone *</label>{{ form_indicacao.telefone_cliente }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
                         <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                     </div>
@@ -698,6 +695,8 @@
         { id: "{{ t.id }}", texto: "{{ t.tipo_documento|escapejs }}" }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
+
+
 
     // alex: Indicador (Colaborador) e Agência (Unidade) concatenados, para o dropdown pesquisável.
     const listaIndicadores = [
@@ -1102,13 +1101,11 @@
 
         //ocultar tabela 
         {% if apenas_pendentes %}
-        // Card "Novo" (Ligação Novo): colunas visíveis (edite SÓ para o Novo).
-        // 25 = Responsável da ligação (quem abriu a última ligação).
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22, 25]);
+        // card novo
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22]);
         {% else %}
-        // Card "Base Novo" (e Emissão): colunas visíveis (edite SÓ para o Base Novo).
-        // 25 = Responsável da ligação (quem abriu a última ligação).
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22, 24, 25]);
+        // Card base novo
+        iniciarTabelaExcel('tabela-base-novo', [1, 25, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
         {% endif %}
         
 
