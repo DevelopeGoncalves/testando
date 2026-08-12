@@ -235,14 +235,20 @@ def excluir_em_massa(request):
 
     # ---- Parte de negar acesso quem não pode ----
     user = request.user
+    tipo = request.POST.get('tipo_massa')
 
-    if not (user.is_superuser):
+    # Vendas (indicacao): pode excluir Gestor (nível 3) ou superusuário.
+    # Demais tabelas (Base/Formulários): continua só superusuário.
+    if tipo == 'indicacao':
+        if not _usuario_pode_excluir(user):
+            messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
+            return redirect('lista_base_novo')
+    elif not user.is_superuser:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
     # ---- ---------------------------------- -----
 
     if request.method == 'POST':
-        tipo = request.POST.get('tipo_massa')
         ids = request.POST.getlist('ids_excluir')
         rota_destino = 'base_formularios' 
 
@@ -1012,6 +1018,7 @@ def vendas_novo_negocio(request):
         # indicar o responsavel da demandar por usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
@@ -1093,11 +1100,17 @@ def _usuario_e_gestor(user):
 
 def _usuario_pode_editar_dados(user):
     """Editor (2) ou Gestor (3) podem editar os dados da ficha. O botão de editar
-    uma ligação continua sendo só do Gestor (tratado no template)."""
+    uma ligação continua sendo só do Gestor (tratado no template).
+    Leitor (1) fica apenas com leitura (não edita nada em Vendas)."""
     if user.is_superuser:
         return True
     perfil = getattr(user, 'perfil', None)
     return bool(perfil and getattr(perfil, 'prod_vendas_novo', 0) >= 2)
+
+def _usuario_pode_excluir(user):
+    """Apenas Gestor (nível 3) ou superusuário podem EXCLUIR registros de Vendas.
+    Editor edita mas não apaga; Leitor não faz nada além de ler."""
+    return _usuario_e_gestor(user)
 
 def _status_fechamento_indicacao(ind):
     """Status de fechamento do registro, com base na ÚLTIMA ligação:
@@ -1191,6 +1204,11 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
     'Novo', que sao a mesma fincha"""
     if travar_dados is None:
         travar_dados = processar_ligacoes
+
+    # Leitor (nível 1) não pode gravar nada em Vendas: nem dados, nem ligações.
+    # (o "somente_leitura" abaixo já trava os dados; aqui travamos também as ligações.)
+    if not _usuario_pode_editar_dados(request.user):
+        processar_ligacoes = False
     item_id = request.POST.get('item_id')
     instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
 
@@ -1340,6 +1358,7 @@ def lista_base_novo(request):
         # responsavel pela a demanda de acorodo com o nivel do usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
@@ -1387,6 +1406,7 @@ def vendas_emissao(request):
         # segue o padrao do nivel do usuario
         'usuario_gestor': _usuario_e_gestor(request.user),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),

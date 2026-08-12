@@ -132,13 +132,13 @@
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
-                {% if not modo_emissao %}
-                <!-- alex: botão "Novo" também na tela Novo (Ligação Novo), igual ao Base Novo. -->
-                <button class="btn btn-info text-white me-1" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
+                {% if not apenas_pendentes and usuario_pode_excluir %}
+                <!-- alex: lixeira logo depois do Exportar. Excluir só no Base Novo/Emissão e SÓ para Gestor. -->
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
-                {% if not apenas_pendentes %}
-                <!-- alex: lixeira vem depois do "Novo". Excluir registros só no Base Novo (e Emissão); no card Novo não apaga. -->
-                <button class="btn btn-danger" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
+                {% if not modo_emissao and usuario_pode_editar %}
+                <!-- alex: "Novo" na tela Novo e Base Novo, para quem pode editar (Editor/Gestor). -->
+                <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
                 {% endif %}
             </div>
         </div>
@@ -494,9 +494,9 @@
                     <!-- onde o histórico vai aparecer fora do modal -->
                     <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
 
-                    {% if not modo_emissao %}
-                    <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação
-                         alex: agora também no Base Novo, não só no Novo. -->
+                    {% if not modo_emissao and usuario_pode_editar %}
+                    <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação.
+                         alex: agora também no Base Novo; só para quem pode editar (Editor/Gestor). -->
 
                     <div class="mt-4 text-end border-bottom pb-4">
                         <span id="resumo-ligacoes" class="text-success fw-bold me-3"></span>
@@ -657,8 +657,9 @@
 <script>
     let contadorLigacoes = 1;
     const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
-    // alex: agora também no Base Novo, não só no Novo (não no modo Emissão).
-    const PODE_REGISTRAR_LIGACAO = {% if not modo_emissao %}true{% else %}false{% endif %};
+    // alex: Novo e Base Novo (não Emissão) E só para quem pode editar (Editor/Gestor).
+    // Leitor não registra/edita ligação nem trava o registro (apenas leitura).
+    const PODE_REGISTRAR_LIGACAO = {% if not modo_emissao and usuario_pode_editar %}true{% else %}false{% endif %};
     // alex: card "Novo" (Ligação Novo). Nele NÃO se edita um registro existente (só criar novo/ligações).
     const APENAS_PENDENTES = {% if apenas_pendentes %}true{% else %}false{% endif %};
     // alex: só perfil Gestor (nível 3) ou superusuário pode editar uma ligação já salva.
@@ -1895,6 +1896,14 @@
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();
         modalLigacao.show();
+
+        // alex: ao registrar uma NOVA ligação, já gera protocolo e a Data/Hora
+        // automaticamente (o campo Data/Hora fica inativo). Só no bloco novo (não salvo).
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        let blocoNovo = blocos[blocos.length - 1];
+        if (blocoNovo && !blocoNovo.classList.contains('ligacao-salva')) {
+            gerarProtocoloEDataSeNecessario($(blocoNovo));
+        }
     }
 
     var ligacaoEmEdicao = null;

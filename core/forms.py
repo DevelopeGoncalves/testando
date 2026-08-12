@@ -303,8 +303,31 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
                 if nome != 'observacoes':
                     campo.disabled = True
         else:
-            # Grupo e ramo é obrigado informar 
-            self.fields['ramo'].required = True
+            # ============================================================
+            # CAMPOS OBRIGATÓRIOS DA FICHA (cards Novo / Base Novo)
+            # ------------------------------------------------------------
+            # Para tornar um campo OBRIGATÓRIO: adicione o "name" dele na
+            # lista abaixo. Para voltar a ser OPCIONAL: remova daqui.
+            # Todos os campos que NÃO estiverem na lista ficam opcionais.
+            #
+            # Nomes válidos (do formulário):
+            #   'ramo' (Grupo/Ramo), 'seguradora', 'tipo_documento',
+            #   'numero_contrato', 'numero_endosso', 'possui_seguro' (Renovação),
+            #   'carimbo_data_hora', 'nome_cliente', 'cpf_cliente',
+            #   'telefone_cliente', 'email_cliente', 'produto', 'dados_veiculo',
+            #   'matricula_indicador', 'nome_indicador', 'cid_agencia',
+            #   'telefone_indicador', 'email', 'enviar_orcamento_para',
+            #   'origem_informacao', 'observacoes'
+            # ============================================================
+            CAMPOS_OBRIGATORIOS = [
+                'ramo',   # Grupo/Ramo
+                # adicione aqui os outros campos que quiser obrigar, ex.:
+                # 'seguradora',
+                # 'nome_cliente',
+            ]
+            for nome in CAMPOS_OBRIGATORIOS:
+                if nome in self.fields:
+                    self.fields[nome].required = True
 
     def clean(self):
         cleaned_data = super().clean()
