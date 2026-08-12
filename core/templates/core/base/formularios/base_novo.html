@@ -135,8 +135,11 @@
                 <!-- alex: lixeira logo depois do Exportar. Excluir só no Base Novo/Emissão e SÓ para Gestor. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
+                {% if usuario_pode_editar %}
+                <!-- alex: Exportar só para quem pode editar (Editor/Gestor). Leitor é só leitura, não exporta. -->
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
-                
+                {% endif %}
+
                 {% if not modo_emissao and usuario_pode_editar %}
                 <!-- alex: "Novo" na tela Novo e Base Novo, para quem pode editar (Editor/Gestor). -->
                 <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
@@ -182,6 +185,7 @@
                             <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 22 -->
                             <th class="text-start">Observações</th> <!-- 23 -->
                             <th class="text-center">Status</th> <!-- 24 -->
+                            <th class="text-center">Responsável da ligação</th> <!-- 25 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -291,6 +295,7 @@
                                 {% elif 'Venda' in i.status_fechamento %}<span class="badge bg-success">{{ i.status_fechamento }}</span>
                                 {% else %}<span class="badge bg-secondary">{{ i.status_fechamento|default:'Em aberto' }}</span>{% endif %}
                             </td>
+                            <td class="text-center">{{ i.responsavel_ultima_ligacao|default:'-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -1098,10 +1103,12 @@
         //ocultar tabela 
         {% if apenas_pendentes %}
         // Card "Novo" (Ligação Novo): colunas visíveis (edite SÓ para o Novo).
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22]);
+        // 25 = Responsável da ligação (quem abriu a última ligação).
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22, 25]);
         {% else %}
         // Card "Base Novo" (e Emissão): colunas visíveis (edite SÓ para o Base Novo).
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
+        // 25 = Responsável da ligação (quem abriu a última ligação).
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22, 24, 25]);
         {% endif %}
         
 

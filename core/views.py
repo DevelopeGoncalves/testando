@@ -1008,6 +1008,7 @@ def vendas_novo_negocio(request):
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
         ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
@@ -1128,6 +1129,14 @@ def _status_fechamento_indicacao(ind):
     if ult.motivo_nao_venda:
         return 'Não venda: ' + ult.motivo_nao_venda
     return 'Em aberto'
+
+def _responsavel_ultima_ligacao(ind):
+    """Quem registrou a ligação MAIS RECENTE (cadastrado_por da última ligação)."""
+    ligs = list(ind.ligacoes.all())
+    if not ligs:
+        return ''
+    ult = max(ligs, key=lambda l: l.id or 0)
+    return ult.cadastrado_por or ''
 
 @login_required
 def definir_responsavel_demanda(request, id):
@@ -1259,6 +1268,15 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
     if not processar_ligacoes:
         return None, ''
 
+    # alex: guarda quem ABRIU cada ligação (cadastrado_por), por protocolo, ANTES de
+    # apagar/recriar. Assim, quando outra pessoa salva o registro, cada ligação mantém
+    # o responsável original; só a ligação NOVA recebe o usuário atual.
+    cadastrado_por_original = {
+        prot: cad
+        for prot, cad in indicacao.ligacoes.values_list('protocolo', 'cadastrado_por')
+        if prot
+    }
+
     indicacao.ligacoes.all().delete()
 
     def salvar_ligacao(sufixo=''):
@@ -1288,8 +1306,17 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 
         # o protocolo já vem gerado do html (ao criar a ligação), mas se
         protocolo_val = request.POST.get(f'ligacao_protocolo{sufixo}')
+        protocolo_existente = bool(protocolo_val) and protocolo_val in cadastrado_por_original
         if not protocolo_val or LigacaoIndicacao.objects.filter(protocolo=protocolo_val).exists():
             protocolo_val = LigacaoIndicacao.gerar_proximo_protocolo()
+            protocolo_existente = False
+
+        # Mantém quem abriu a ligação: se o protocolo já existia, preserva o responsável
+        # original; se é uma ligação NOVA, grava o usuário logado agora.
+        cadastrado_por_val = (
+            cadastrado_por_original.get(protocolo_val)
+            if protocolo_existente else None
+        ) or (request.user.get_full_name() or request.user.username)
 
         LigacaoIndicacao.objects.create(
             indicacao=indicacao,
@@ -1305,9 +1332,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
             motivo_nao_venda=motivo_val or None,
             seguradora_id=seguradora_val or None,
             comissao=comissao_val,
-            # sempre gravado com o usuário logado no momento do salvamento,
-            # nunca aceito vindo do POST (campo é readonly na ficha)
-            cadastrado_por=request.user.get_full_name() or request.user.username,
+            cadastrado_por=cadastrado_por_val,
         )
 
     salvar_ligacao()
@@ -1355,6 +1380,7 @@ def lista_base_novo(request):
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
         ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
@@ -1402,6 +1428,7 @@ def vendas_emissao(request):
         ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
         ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
 
     return render(request, 'core/base/formularios/base_novo.html', {
         'indicacoes': indicacoes,
