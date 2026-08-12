@@ -156,7 +156,7 @@
                 <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
                     <thead class="table-light">
                         <tr>
-                            {% if not apenas_pendentes %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
+                            {% if not apenas_pendentes and usuario_pode_excluir %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
                             <th style="display:none;"></th>
                             <th class="text-center">Data/hora do cadastro</th> <!-- 1 -->
                             <th class="text-center">Responsável</th> <!-- 2 -->
@@ -215,7 +215,7 @@
                             data-endosso="{{ i.numero_endosso|default:'' }}"
                             data-obs="{{ i.observacoes|default:'' }}">
 
-                            {% if not apenas_pendentes %}
+                            {% if not apenas_pendentes and usuario_pode_excluir %}
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
                             </td>
