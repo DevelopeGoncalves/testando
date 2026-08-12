@@ -256,6 +256,7 @@ class Indicacao(models.Model):
         ('WhatsApp', 'WhatsApp'),
         ('Planilha da internet', 'Planilha da internet'),
         ('Telefone', 'Telefone'),
+        ('E-mail', 'E-mail'),
     ]
 
     carimbo_data_hora = models.DateTimeField("Carimbo de data/hora", null=True, blank=True)
