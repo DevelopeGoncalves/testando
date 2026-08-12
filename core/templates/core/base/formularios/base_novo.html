@@ -84,7 +84,7 @@
        Como os botões saíram do rodapé (foram para o cabeçalho), damos um espaço no fim do
        modal para o dropdown ("Pesquisar...") caber sem ser cortado.
        >>> Se quiser MAIS ou MENOS espaço embaixo, mude só este número (padding-bottom). <<< */
-    #modalLigacao .modal-body { padding-bottom: 180px; }
+    #modalLigacao .modal-body { padding-bottom: 80px; }
 
     .item-lista {
         padding: 8px 12px;
@@ -526,10 +526,9 @@
                                 <h5 class="modal-title m-0" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
                                 <!-- alex: botões Cancelar/Salvar movidos para o cabeçalho azul. -->
                                 <div>
-                                    <button type="button" class="btn btn-secondary btn-sm me-2" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
-                                    <button type="button" class="btn btn-success btn-sm fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fas fa-check"></i> Salvar Ligação</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fas fa-user-check"></i> Salvar Ligação</button>                                </div>
                                 </div>
-                            </div>
                             <div class="modal-body">
                                 <div id="container-ligacoes">
                                     <div class="bloco-ligacao" id="ligacao-1">
