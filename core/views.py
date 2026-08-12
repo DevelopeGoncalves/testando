@@ -39,10 +39,6 @@ def ler_excel_robusto(arquivo, dtype=None):
         except Exception:
             continue
 
-    # Fallback: o arquivo não é um Excel de verdade, e sim uma tabela HTML
-    # (comum em exportações bancárias). Lê célula a célula como texto puro,
-    # sem deixar o pandas converter para número e comer zeros à esquerda
-    # de códigos como CID/matrícula.
     try:
         arquivo.seek(0)
         from lxml import html as lxml_html
@@ -76,7 +72,7 @@ def home(request):
 @login_required  
 def base_formularios(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesos aos perfil usuario
     user = request.user
     tem_permissao_base = False
 
@@ -90,7 +86,7 @@ def base_formularios(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+
 
     return render(request, 'core/base/formularios/base_formularios.html')
 
@@ -106,7 +102,7 @@ def lista_agrupamentos(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_agrupamentos > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -126,13 +122,13 @@ def lista_agrupamentos(request):
 def lista_unidades(request):
 
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_unidade > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+
 
 
     if request.method == 'POST':
@@ -154,13 +150,13 @@ def lista_unidades(request):
 def lista_produtos(request):
 
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_produtos > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -180,13 +176,12 @@ def lista_produtos(request):
 @login_required
 def lista_ramos(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_ramos > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -207,13 +202,13 @@ def lista_ramos(request):
 @login_required
 def lista_metas(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_metas > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    # ----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -233,12 +228,11 @@ def lista_metas(request):
 @login_required
 def excluir_em_massa(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tipo = request.POST.get('tipo_massa')
 
     # Vendas (indicacao): pode excluir Gestor (nível 3) ou superusuário.
-    # Demais tabelas (Base/Formulários): continua só superusuário.
     if tipo == 'indicacao':
         # A lixeira aparece no Base Novo e na Emissão: aceita Gestor em qualquer um dos dois.
         if not (_usuario_pode_excluir(user, 'prod_vendas_basenovo') or _usuario_pode_excluir(user, 'prod_vendas_emissao')):
@@ -247,7 +241,7 @@ def excluir_em_massa(request):
     elif not user.is_superuser:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     if request.method == 'POST':
         ids = request.POST.getlist('ids_excluir')
@@ -329,7 +323,7 @@ def deletar_tudo(request, tipo):
 @login_required
 def base_processamentos(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tem_permissao_base = False
 
@@ -343,14 +337,14 @@ def base_processamentos(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     return render(request, 'core/base/processamentos/importacao.html')
 
 @login_required
 def base_relatorios(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tem_permissao_base = False
 
@@ -372,13 +366,13 @@ def base_relatorios(request):
 @login_required
 def lista_colaboradores(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_colaboradores > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    # ----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -397,13 +391,13 @@ def lista_colaboradores(request):
 @login_required
 def lista_contratados(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_contratados > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    # ----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -420,13 +414,13 @@ def lista_contratados(request):
 @login_required
 def lista_seguradoras(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_seguradoras > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    # ----
 
 
     if request.method == 'POST':
@@ -444,13 +438,13 @@ def lista_seguradoras(request):
 @login_required
 def lista_tiposdoc(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_tiposdocumento > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    # ----
 
 
     if request.method == 'POST':
@@ -468,13 +462,13 @@ def lista_tiposdoc(request):
 @login_required
 def lista_clientes(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_clientes > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    # ----
 
     if request.method == 'POST':
         item_id = request.POST.get('item_id')
@@ -497,7 +491,7 @@ def lista_clientes(request):
 def producao_formularios(request):
 
         
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tem_permissao_base = False
 
@@ -511,7 +505,7 @@ def producao_formularios(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    # ----
 
     agrupamentos = Agrupamento.objects.filter(inativo=False).order_by('ordem_apresentacao')
     return render(request, 'core/producao/formularios/index.html', {'agrupamentos': agrupamentos})
@@ -520,7 +514,7 @@ def producao_formularios(request):
 def producao_formularios_painel(request, agrupamento_id):
     
         
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tem_permissao_base = False
 
@@ -534,7 +528,7 @@ def producao_formularios_painel(request, agrupamento_id):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    # ----
 
 
     # Pega o agrupamento exato que o usuário clicou na tela
@@ -574,7 +568,7 @@ def producao_formularios_painel(request, agrupamento_id):
 @login_required
 def producao_processamentos(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tem_permissao_base = False
 
@@ -588,7 +582,7 @@ def producao_processamentos(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     if request.method == 'POST':
         agrupamento_id = request.POST.get('agrupamento_id')
@@ -672,13 +666,13 @@ def producao_processamentos(request):
 @login_required
 def producao_habitacional_import(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_proc_habitacional > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     campos_destino = [
         {'nome': 'mes_producao', 'label': 'Mês da produção'},
@@ -944,7 +938,7 @@ def producao_habitacional_import(request):
 @login_required
 def producao_vendas(request):
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
     tem_permissao_base = False
 
@@ -958,7 +952,7 @@ def producao_vendas(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     return render(request, 'core/producao/vendas/index.html')
 
@@ -1095,10 +1089,7 @@ def atendimentos_ativos(request):
 
 # indicar o responsavel da demandar pelo ao nivei do usuario
 def _nivel_vendas(user, campo='prod_vendas_novo'):
-    """Nível (0-3) do usuário para UM card de Vendas específico.
-    Cada card tem seu próprio campo de permissão no PerfilUsuario:
-      Novo -> 'prod_vendas_novo' | Base Novo -> 'prod_vendas_basenovo'
-      Emissão -> 'prod_vendas_emissao'. Superusuário é sempre 3 (Gestor)."""
+    """Nível (0-3) do usuário para UM card de Vendas específico"""
     if user.is_superuser:
         return 3
     perfil = getattr(user, 'perfil', None)
@@ -1114,21 +1105,15 @@ def _usuario_e_gestor(user, campo='prod_vendas_novo'):
     return _nivel_vendas(user, campo) == 3
 
 def _usuario_pode_editar_dados(user, campo='prod_vendas_novo'):
-    """Editor (2) ou Gestor (3) podem editar os dados da ficha no card indicado.
-    O botão de editar uma ligação continua só do Gestor (tratado no template).
-    Leitor (1) fica apenas com leitura."""
+    """Editor (2) ou Gestor (3) podem editar os dados da ficha no card indicado"""
     return _nivel_vendas(user, campo) >= 2
 
 def _usuario_pode_excluir(user, campo='prod_vendas_novo'):
-    """Apenas Gestor (nível 3) pode EXCLUIR no card indicado.
-    Editor edita mas não apaga; Leitor só lê."""
+    """Apenas Gestor (nível 3) pode EXCLUIR no card indicado"""
     return _nivel_vendas(user, campo) == 3
 
 def _status_fechamento_indicacao(ind):
-    """Status de fechamento do registro, com base na ÚLTIMA ligação:
-    - Venda Central / Venda Agência (venda fechada)
-    - Não venda: <motivo> (encerrado sem venda)
-    - Em aberto (sem ligação ou última ligação ainda não conclui nada)."""
+    """Status de fechamento do registro, com base na ÚLTIMA ligação"""
     ligs = list(ind.ligacoes.all())
     if not ligs:
         return 'Em aberto'
@@ -1267,8 +1252,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 
     indicacao = form.save()
 
-    # alex: "Data/hora do cadastro" é automática. Se um registro novo vier sem ela
-    # (ex.: JS não preencheu), grava a data/hora atual do servidor.
+    # alex: "Data/hora do cadastro" é gerado automatica
     if indicacao.carimbo_data_hora is None:
         indicacao.carimbo_data_hora = timezone.now()
         indicacao.save(update_fields=['carimbo_data_hora'])
@@ -1283,9 +1267,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
     if not processar_ligacoes:
         return None, ''
 
-    # alex: guarda quem ABRIU cada ligação (cadastrado_por), por protocolo, ANTES de
-    # apagar/recriar. Assim, quando outra pessoa salva o registro, cada ligação mantém
-    # o responsável original; só a ligação NOVA recebe o usuário atual.
+    # salva quem ABRIU cada ligação (cadastrado_por), por protocolo
     cadastrado_por_original = {
         prot: cad
         for prot, cad in indicacao.ligacoes.values_list('protocolo', 'cadastrado_por')
@@ -1327,7 +1309,6 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
             protocolo_existente = False
 
         # Mantém quem abriu a ligação: se o protocolo já existia, preserva o responsável
-        # original; se é uma ligação NOVA, grava o usuário logado agora.
         cadastrado_por_val = (
             cadastrado_por_original.get(protocolo_val)
             if protocolo_existente else None
@@ -1370,9 +1351,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 @login_required
 def lista_base_novo(request):
     if request.method == 'POST':
-        # trava os dados (só salvam via "Editar dados"), mas PROCESSA as ligações:
-        # assim, ao editar/desmarcar uma ligação no Base Novo (ex.: tirar o "Motivo Não
-        # Venda" ou desfazer a venda), a alteração é gravada e o registro volta para o Novo.
+        # trava os dados (só salvam via "Editar dados"), mas PROCESSA as ligações
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=True, campo_permissao='prod_vendas_basenovo')
         if form is None:
             return redirect('lista_base_novo')
@@ -1385,9 +1364,7 @@ def lista_base_novo(request):
         .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
         .prefetch_related('ligacoes')
     )
-    # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo.
-    # Necessário aqui também porque, ao encerrar a ligação, o registro sai do Novo e passa a
-    # aparecer só na Base Novo - que deve manter a mesma visão concatenada.
+    # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
     limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
@@ -1545,7 +1522,7 @@ def importar_unidades(request):
 
     return redirect('base_processamentos')
 
-# ocultar base novo
+# ocultar base novo importacao
 #BASE_NOVO_PARAMETRIZACAO_VISIVEL = True
 
 # campos da importacao parametrizar
@@ -1901,13 +1878,13 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
 def producao_lista_fase(request, agrupamento_id, fase):
 
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_form_habitacional > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
     fase_banco = fase.upper()
@@ -2228,13 +2205,13 @@ def producao_lista_fase(request, agrupamento_id, fase):
 def tipo_pessoa_lista(request):
 
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_tipopessoa > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     if request.method == 'POST':
         acao = request.POST.get('acao')
@@ -2280,13 +2257,13 @@ import calendar
 def estagiarios(request):
 
 
-    # ---- Parte de negar acesso quem não pode ----
+    # negar acesso ao usuario
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and (user.perfil.admin_feriasestagiarios > 0 or user.perfil.admin_listaestagiarios > 0))):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     return render(request, 'core/administracao/estagiarios/estagiarios.html')
 
@@ -2299,7 +2276,7 @@ def lista_estagiarios(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_listaestagiarios > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
 
     estagiarios_filtrados = Colaborador.objects.filter(
@@ -2323,7 +2300,7 @@ def ferias_estagiarios(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_feriasestagiarios > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
 
     if request.method == 'POST':
@@ -2396,7 +2373,7 @@ def lista_auditoria(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_aud > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
 
 
@@ -2465,7 +2442,7 @@ def producao_relatorios(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     return render(request, 'core/producao/relatorios/index.html')
 
@@ -2487,7 +2464,7 @@ def financeiro_processamentos(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     return render(request, 'core/financeiro/processamentos/index.html')
 
@@ -2509,7 +2486,7 @@ def financeiro_formularios(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
     
     return render(request, 'core/financeiro/formularios/index.html')
 
@@ -2531,7 +2508,7 @@ def financeiro_relatorios(request):
     if not (user.is_superuser or tem_permissao_base):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- ----
+    #----
 
     return render(request, 'core/financeiro/relatorios/index.html')
 
@@ -2572,7 +2549,7 @@ def listar_usuarios(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_usuario > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     query = request.GET.get('q', '') 
     if query:
@@ -2600,7 +2577,7 @@ def form_usuario(request, id=None):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_usuario > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     if id:
         usuario_edit = get_object_or_404(User, id=id)
@@ -2732,7 +2709,7 @@ def financeiro_habitacional(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.fin_proc_habitacional > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
 
     # Pega apenas os meses que JÁ FORAM PROCESSADOS (ignora os nulos/vazios) para popular o Modal
     meses_disponiveis = FinanceiroHabitacional.objects.exclude(
@@ -2762,7 +2739,7 @@ def processar_mensal_habitacional(request):
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.fin_proc_habitacional > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    # ---- ---------------------------------- -----
+    #-----
     
     agora = timezone.localtime(timezone.now())
     mes_ano_atual = agora.strftime('%m/%Y')
