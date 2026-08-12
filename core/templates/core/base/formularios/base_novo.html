@@ -131,11 +131,12 @@
                 <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
-                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
                 {% if not apenas_pendentes and usuario_pode_excluir %}
                 <!-- alex: lixeira logo depois do Exportar. Excluir só no Base Novo/Emissão e SÓ para Gestor. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
+                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                
                 {% if not modo_emissao and usuario_pode_editar %}
                 <!-- alex: "Novo" na tela Novo e Base Novo, para quem pode editar (Editor/Gestor). -->
                 <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
@@ -157,7 +158,7 @@
                         <tr>
                             {% if not apenas_pendentes %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
                             <th style="display:none;"></th>
-                            <th class="text-center">Carimbo de data/hora</th> <!-- 1 -->
+                            <th class="text-center">Data/hora do cadastro</th> <!-- 1 -->
                             <th class="text-center">Responsável</th> <!-- 2 -->
                             <th class="text-center">Em uso por</th> <!-- 3 -->
                             <th class="text-center">E-mail do indicador (outro)</th> <!-- 4 -->
@@ -392,7 +393,7 @@
                         <div class="col-md-2"><label class="fw-bold small mb-1">Documento</label>{{ form_indicacao.numero_contrato }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1 text-primary">Endosso</label>{{ form_indicacao.numero_endosso }}</div>
                         <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Carimbo de data/hora</label>{{ form_indicacao.carimbo_data_hora }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
                     </div>
 
                     <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
@@ -1097,10 +1098,10 @@
         //ocultar tabela 
         {% if apenas_pendentes %}
         // Card "Novo" (Ligação Novo): colunas visíveis (edite SÓ para o Novo).
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 24]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22]);
         {% else %}
         // Card "Base Novo" (e Emissão): colunas visíveis (edite SÓ para o Base Novo).
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 10, 22, 24]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
         {% endif %}
         
 
