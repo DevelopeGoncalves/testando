@@ -86,6 +86,22 @@
        >>> Se quiser MAIS ou MENOS espaço embaixo, mude só este número (padding-bottom). <<< */
     #modalLigacao .modal-body { padding-bottom: 80px; }
 
+    /* alex: COR dos botões "Cancelar" e "Salvar Ligação" do cabeçalho azul.
+       O padrão segue o verde do botão "Indicar responsável", mas com fundo claro
+       para ficar legível sobre o azul do cabeçalho.
+       >>> Para mudar o TOM da cor, altere SÓ a variável --cor-botao-ligacao abaixo. <<< */
+    #modalLigacao .btn-acao-ligacao {
+        --cor-botao-ligacao: #198754;        /* verde (mesmo do "Indicar responsável") */
+        color: var(--cor-botao-ligacao);
+        background-color: #ffffff;
+        border: 1px solid var(--cor-botao-ligacao);
+    }
+    #modalLigacao .btn-acao-ligacao:hover {
+        color: #ffffff;
+        background-color: var(--cor-botao-ligacao);
+        border-color: var(--cor-botao-ligacao);
+    }
+
     .item-lista {
         padding: 8px 12px;
         cursor: pointer;
@@ -526,8 +542,8 @@
                                 <h5 class="modal-title m-0" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
                                 <!-- alex: botões Cancelar/Salvar movidos para o cabeçalho azul. -->
                                 <div>
-                                    <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
-                                    <button type="button" class="btn btn-sm btn-outline-success fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fas fa-user-check"></i> Salvar Ligação</button>                                </div>
+                                    <button type="button" class="btn btn-sm btn-acao-ligacao me-2" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-acao-ligacao fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fas fa-user-check"></i> Salvar Ligação</button>                                </div>
                                 </div>
                             <div class="modal-body">
                                 <div id="container-ligacoes">
