@@ -23,27 +23,31 @@
         
             {% if request.user.is_superuser or 'vida' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_vida > 0 or 'bap' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_bap > 0 or 'prestamista' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_prestamista > 0 or 'patrimonial' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_patrimonialedemais > 0 or 'cons' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_consorcio > 0 or 'odonto' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_odonto > 0 or 'previd' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_previdencia > 0 or 'banescap' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_banescap > 0 or 'saúd' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_saude > 0 or 'saud' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_saude > 0 or 'habitacional' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_habitacional > 0 or 'base' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_basenovo > 0 %}
             
-            <div class="col-md-3 mb-4">
-                
+            <div class="col-lg-3 col-6">
+
                 {% if 'habitacional' in agrupamento.agrupamento|lower %}
-                    
-                    <a href="{% url 'producao_habitacional_import' %}" class="text-decoration-none text-dark">
-                        <div class="card shadow-sm h-100 card-hover" style="border-top: 4px solid #6f42c1; cursor: pointer;">
-                            <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-5">
+
+                    <a href="{% url 'producao_habitacional_import' %}" class="link-card">
+                        <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
+                            <div class="card-body text-center p-4">
                                 <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
-                                <h5 class="card-title text-dark fw-bold mb-0">{{ agrupamento.agrupamento }}</h5>
+                                <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
+                                <p class="card-text text-muted small">Enviar planilha de dados</p>
                             </div>
                         </div>
                     </a>
 
                 {% else %}
-                    
-                    <div class="card shadow-sm h-100 card-hover" style="border-top: 4px solid #6f42c1; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalImport-{{ agrupamento.id }}">
-                        <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-5">
-                            <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
-                            <h5 class="card-title text-dark fw-bold mb-0">{{ agrupamento.agrupamento }}</h5>
+
+                    <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImport-{{ agrupamento.id }}">
+                        <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
+                            <div class="card-body text-center p-4">
+                                <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
+                                <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
+                                <p class="card-text text-muted small">Enviar planilha de dados</p>
+                            </div>
                         </div>
-                    </div>
+                    </a>
 
                 {% endif %}
             </div>
@@ -131,12 +135,13 @@
         {% if base_novo_parametrizacao_visivel %}
         {% if request.user.is_superuser or request.user.perfil.prod_proc_basenovo > 0 %}
         <!-- Importação da Base Novo (indicações de seguridade), no mesmo padrão roxo -->
-        <div class="col-md-3 mb-4">
-            <a href="{% url 'producao_base_novo_import' %}" class="text-decoration-none text-dark">
-                <div class="card shadow-sm h-100 card-hover" style="border-top: 4px solid #6f42c1; cursor: pointer;">
-                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center py-5">
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'producao_base_novo_import' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
+                    <div class="card-body text-center p-4">
                         <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
-                        <h5 class="card-title text-dark fw-bold mb-0">Base Novo</h5>
+                        <h5 class="card-title text-dark fw-bold">Base Novo</h5>
+                        <p class="card-text text-muted small">Importar e parametrizar planilha</p>
                     </div>
                 </div>
             </a>
@@ -145,13 +150,4 @@
         {% endif %}
     </div>
 </div>
-
-<style>
-    .card-hover { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
-    .card-hover:hover { 
-        transform: translateY(-3px); 
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; 
-        background-color: #f8f9fa !important;
-    }
-</style>
 {% endblock %}

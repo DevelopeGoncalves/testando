@@ -16,98 +16,92 @@
         </div>
     </div>
 
-    <div class="vendas-grid">
+    <div class="row">
 
-        <a href="{% url 'vendas_novo_negocio' %}" class="link-card">
-            <div class="card card-menu h-100" style="border-top-color: #28a745;">
-                <div class="card-body text-center p-3">
-                    <i class="fas fa-plus-circle fa-2x text-success mb-3"></i>
-                    <h5 class="card-title text-dark fw-bold">Novo</h5>
-                    <p class="card-text text-muted small">Ligação</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'vendas_novo_negocio' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #28a745;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-plus-circle fa-3x text-success mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Novo</h5>
+                        <p class="card-text text-muted small">Ligação</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
-        <a href="{% url 'vendas_nova_renovacao' %}" class="link-card">
-            <div class="card card-menu h-100" style="border-top-color: #fd7e14;">
-                <div class="card-body text-center p-3">
-                    <i class="fas fa-redo fa-2x mb-3" style="color: #fd7e14;"></i>
-                    <h5 class="card-title text-dark fw-bold">Renovação</h5>
-                    <p class="card-text text-muted small">Ligação</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'vendas_nova_renovacao' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #fd7e14;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-redo fa-3x mb-3" style="color: #fd7e14;"></i>
+                        <h5 class="card-title text-dark fw-bold">Renovação</h5>
+                        <p class="card-text text-muted small">Ligação</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
-        <a href="{% url 'vendas_novo_endosso' %}" class="link-card">
-            <div class="card card-menu h-100" style="border-top-color: #343a40;">
-                <div class="card-body text-center p-3">
-                    <i class="fas fa-file-medical fa-2x text-dark mb-3"></i>
-                    <h5 class="card-title text-dark fw-bold">Endosso</h5>
-                    <p class="card-text text-muted small">Ligação</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'vendas_novo_endosso' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #343a40;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-file-medical fa-3x text-dark mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Endosso</h5>
+                        <p class="card-text text-muted small">Ligação</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
-        <a href="{% url 'vendas_emissao' %}" class="link-card vendas-grid-emissao">
-            <div class="card card-menu h-100" style="border-top-color: #6f42c1;">
-                <div class="card-body text-center p-3 h-100 d-flex flex-column justify-content-center">
-                    <i class="fas fa-file-invoice-dollar fa-2x mb-3" style="color: #6f42c1;"></i>
-                    <h5 class="card-title text-dark fw-bold">Emissão</h5>
-                    <p class="card-text text-muted small">Vendas fechadas para emissão</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'vendas_emissao' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-file-invoice-dollar fa-3x mb-3" style="color: #6f42c1;"></i>
+                        <h5 class="card-title text-dark fw-bold">Emissão</h5>
+                        <p class="card-text text-muted small">Vendas fechadas para emissão</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
-        <a href="{% url 'lista_base_novo' %}" class="link-card">
-            <div class="card card-menu h-100" style="border-top-color: #17a2b8;">
-                <div class="card-body text-center p-3">
-                    <i class="fas fa-file-signature fa-2x text-info mb-3"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Novo</h5>
-                    <p class="card-text text-muted small">Gerenciar base de novos negócios</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'lista_base_novo' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #17a2b8;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-file-signature fa-3x text-info mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Base Novo</h5>
+                        <p class="card-text text-muted small">Gerenciar base de novos negócios</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
-        <a href="{% url 'vendas_renovacao' %}" class="link-card">
-            <div class="card card-menu h-100" style="border-top-color: #ffc107;">
-                <div class="card-body text-center p-3">
-                    <i class="fas fa-sync-alt fa-2x text-warning mb-3"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Renovação</h5>
-                    <p class="card-text text-muted small">Gerenciar base de renovação</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'vendas_renovacao' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #ffc107;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-sync-alt fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Base Renovação</h5>
+                        <p class="card-text text-muted small">Gerenciar base de renovação</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
-        <a href="{% url 'vendas_endosso' %}" class="link-card">
-            <div class="card card-menu h-100" style="border-top-color: #6c757d;">
-                <div class="card-body text-center p-3">
-                    <i class="fas fa-edit fa-2x text-secondary mb-3"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Endosso</h5>
-                    <p class="card-text text-muted small">Gerenciar base de endossos</p>
+        <div class="col-lg-3 col-6">
+            <a href="{% url 'vendas_endosso' %}" class="link-card">
+                <div class="card card-menu mb-4" style="border-top-color: #6c757d;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-edit fa-3x text-secondary mb-3"></i>
+                        <h5 class="card-title text-dark fw-bold">Base Endosso</h5>
+                        <p class="card-text text-muted small">Gerenciar base de endossos</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
 
     </div>
 </div>
-
-<style>
-    .vendas-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        grid-auto-rows: 1fr;
-        gap: 1rem;
-    }
-    .vendas-grid-emissao {
-        grid-row: span 2;
-    }
-    @media (max-width: 991.98px) {
-        .vendas-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-        .vendas-grid-emissao {
-            grid-row: auto;
-        }
-    }
-</style>
 {% endblock %}
