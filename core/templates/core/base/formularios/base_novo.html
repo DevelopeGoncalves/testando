@@ -80,9 +80,14 @@
         z-index: 9999 !important;
     }
 
-    /* alex: a Seguradora é a última linha do modal de ligação. Damos um espaço extra
-       no fim do modal para o dropdown ("Pesquisar...") caber sem ser cortado. */
-    #modalLigacao .modal-body { padding-bottom: 210px; }
+    /* alex: a Seguradora é a última linha do modal de ligação. Para o dropdown
+       ("Pesquisar...") não ser cortado, ele ABRE PARA CIMA (em vez de para baixo),
+       assim não precisa de espaço vazio no fim do modal e os botões ficam no lugar. */
+    #modalLigacao .campo-seguradora-dropdown {
+        top: auto;
+        bottom: 100%;
+        margin-bottom: 4px;
+    }
 
     .item-lista {
         padding: 8px 12px;
