@@ -264,7 +264,7 @@
                             </td>
 
                             <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
-                            <td class="text-center">{{ i.responsavel_demanda.matricula_nome|default:'-' }}</td>
+                            <td class="text-center resp-demanda-cell">{{ i.responsavel_demanda.matricula_nome|default:'-' }}</td>
                             <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
                             <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
                             <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
@@ -832,7 +832,7 @@
                 <div class="card mb-3 bg-light border-0 shadow-sm">
                     <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span></span>
-                        ${USUARIO_GESTOR ? '<button type="button" class="btn btn-sm btn-light py-0 px-2" title="Editar esta ligação" onclick="editarLigacaoHistorico(' + numero + ')"><i class="fas fa-pencil-alt"></i></button>' : ''}
+                        ${USUARIO_GESTOR ? '<span><button type="button" class="btn btn-sm btn-light py-0 px-2 me-1" title="Editar esta ligação" onclick="editarLigacaoHistorico(' + numero + ')"><i class="fas fa-pencil-alt"></i></button><button type="button" class="btn btn-sm btn-light text-danger py-0 px-2" title="Apagar esta ligação" onclick="removerLigacaoHistorico(' + numero + ')"><i class="fas fa-trash-alt"></i></button></span>' : ''}
                     </div>
                     <div class="card-body py-2" style="font-size: 0.9rem;">
                         <div class="row g-2">
@@ -977,6 +977,16 @@
                 if (tr) {
                     tr.setAttribute('data-responsavel-demanda', resp.id || '');
                     tr.setAttribute('data-responsavel-demanda-nome', resp.nome || '');
+                    // alex: atualiza também a COLUNA "Responsável" na lista (não só a ficha).
+                    var celResp = tr.querySelector('.resp-demanda-cell');
+                    if (celResp) {
+                        var nomeCel = resp.nome || '-';
+                        try {
+                            $('#tabela-base-novo').DataTable().cell(celResp).data(nomeCel).draw(false);
+                        } catch (e) {
+                            celResp.textContent = nomeCel;
+                        }
+                    }
                 }
                 if (modalResponsavel) modalResponsavel.hide();
             } else {
@@ -1768,11 +1778,9 @@
         novoBloco.style.display = '';
 
         let titulo = novoBloco.querySelector('.titulo-ligacao');
+        // alex: sem botão "Remover" ao registrar a ligação (não tinha função útil ali).
         titulo.innerHTML = `
             <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
-            <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerLigacao(this)">
-                <i class="fas fa-trash"></i> Remover
-            </button>
         `;
 
         let campos = novoBloco.querySelectorAll('input, select, textarea');
@@ -1960,6 +1968,22 @@
         modalLigacao.show();
     }
 
+    // alex: apaga uma ligação do histórico (só Gestor). Remove o bloco e grava a
+    // exclusão no banco (submete o form; o backend recria só as ligações que sobraram).
+    function removerLigacaoHistorico(numero) {
+        if (!USUARIO_GESTOR) return;
+        confirmarElegante('Tem certeza que deseja apagar esta ligação? Esta ação não pode ser desfeita.', function() {
+            let blocos = Array.from(document.querySelectorAll('#container-ligacoes .bloco-ligacao'));
+            let bloco = blocos[numero - 1];
+            if (!bloco) return;
+            bloco.remove();
+            reorganizarLigacoes();
+            desativarBloqueioSaida();
+            var form = document.querySelector('#form-base-novo form');
+            if (form) { form.requestSubmit ? form.requestSubmit() : form.submit(); }
+        }, { titulo: 'Apagar ligação', textoConfirmar: 'Sim, apagar', corBotao: 'danger' });
+    }
+
     function removerLigacao(botao) {
         confirmarElegante('Tem a certeza que deseja remover esta ligação da ficha?', function() {
             botao.closest('.bloco-ligacao').remove();
@@ -1985,9 +2009,6 @@
                     <span>
                         <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
                     </span>
-                    <button type="button" class="btn btn-sm btn-light text-danger py-0" onclick="removerLigacao(this)">
-                        <i class="fas fa-trash"></i> Remover
-                    </button>
                 `;
             }
 
