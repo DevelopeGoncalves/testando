@@ -409,7 +409,13 @@
                                 <div id="base_novo_dropdown_tipo_documento" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">ID</label>{{ form_indicacao.numero_contrato }}</div>
+                        <div class="col-md-2">
+                            <label class="fw-bold small mb-1">ID</label>
+                            <!-- alex: ID do registro (vem do banco). Somente leitura para TODOS (nem Gestor edita).
+                                 O numero_contrato original fica oculto, para não ser apagado ao salvar. -->
+                            <input type="text" id="base_novo_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
+                            {{ form_indicacao.numero_contrato.as_hidden }}
+                        </div>
                         <!--<div class="col-md-2"><label class="fw-bold small mb-1 ">Endosso</label>{{ form_indicacao.numero_endosso }}</div> -->
                         <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
@@ -1603,6 +1609,7 @@
                 prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
                 $('#disp-indicador').val('');
                 $('#disp-agencia').val('');
+                $('#base_novo_id_display').val('');  // alex: cadastro novo ainda não tem ID
                 var _histFicha = document.getElementById('historico-ligacoes-ficha');
                 if (_histFicha) { _histFicha.innerHTML = ''; _histFicha.style.display = 'none'; }
                 mostrarResponsavelDemanda('');  // alex: cadastro novo começa "Em aberto"
@@ -1640,6 +1647,7 @@
         }
 
         $('#base_novo_id_hidden').val(id);
+        $('#base_novo_id_display').val(id);  // alex: mostra o ID do registro (somente leitura)
         atualizarBotaoEditarDados(true);  // alex: registro EXISTENTE -> no card Novo não pode editar dados
         // ao abrir um registro a linha fica vermelha e bloqueada para o proxumo usuario abrir
         if (PODE_REGISTRAR_LIGACAO) { marcarAtendimento(id); iniciarHeartbeatAtendimento(id); }
