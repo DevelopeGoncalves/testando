@@ -153,8 +153,8 @@
                 <!-- alex: lixeira logo depois do Exportar. Excluir só no Base Novo/Emissão e SÓ para Gestor. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
-                {% if usuario_pode_editar %}
-                <!-- alex: Exportar só para quem pode editar (Editor/Gestor). Leitor é só leitura, não exporta. -->
+                {% if usuario_pode_excluir %}
+                <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
                 {% endif %}
 
