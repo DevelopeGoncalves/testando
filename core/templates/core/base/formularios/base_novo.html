@@ -203,7 +203,7 @@
                             <th class="text-center">{% if apenas_pendentes %}Próxima ligação{% else %}Ligações{% endif %}</th> <!-- 22 -->
                             <th class="text-start">Observações</th> <!-- 23 -->
                             <th class="text-center">Status</th> <!-- 24 -->
-                            <th class="text-center">Atendente</th> <!-- 25 -->
+                            <th class="text-center">Último atendente</th> <!-- 25 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -475,7 +475,7 @@
 
                         <!-- Lado Direito: Div separada de Observações com alinhamento flexível -->
                         <div class="col-md-4 d-flex flex-column">
-                            <label class="fw-bold small mb-1">Observações</label>
+                            <label class="fw-bold small mb-1">Dados complementares</label>
                             <div class="flex-grow-1 d-flex flex-column">
                                 {% if form_indicacao.observacoes %}
                                     {{ form_indicacao.observacoes }}
@@ -609,10 +609,10 @@
                                                 <div class="row g-2 mt-2">
                                                     <div class="col-md-5">
                                                         <label class="fw-small mb-1">Seguradora</label>
-                                                        <div class="input-container">
+                                                        <div class="input-container" style="z-index: 9999;">
                                                             <input type="hidden" name="ligacao_seguradora" id="edit_ligacao_seguradora">
-                                                            <input type="text" class="form-control campo-seguradora-ligacao" name="ligacao_seguradora_texto" id="edit_ligacao_seguradora_texto"
-                                                                   autocomplete="off" placeholder="Pesquisar..." disabled>
+                                                            <input type="text" class="form-control form-control-sm campo-seguradora-ligacao" name="ligacao_seguradora_texto" id="edit_ligacao_seguradora_texto"
+                                                                autocomplete="off" placeholder="Pesquisar..." disabled>
                                                             <div class="lista-suspensa d-none campo-seguradora-dropdown"></div>
                                                         </div>
                                                     </div>
@@ -626,7 +626,7 @@
 
                                             <div class="col-md-4 d-flex flex-column">
                                                 <label class="fw-small mb-1">Observações</label>
-                                                <textarea class="form-control form-control-sm flex-grow-1" name="ligacao_obs" id="edit_ligacao_obs" style="min-height: 125px; resize: none;" placeholder="Digite as observações com quebra de linha..."></textarea>
+                                                <textarea class="form-control form-control-sm flex-grow-1" name="ligacao_obs" id="edit_ligacao_obs" style="min-height: 125px; resize: none;" placeholder=""></textarea>
                                             </div>  
 
                                         </div>
@@ -1120,7 +1120,7 @@
         //ocultar tabela 
         {% if apenas_pendentes %}
         // card novo
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 14, 5, 7, 12, 10, 22]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 25, 2, 3, 14, 5, 7, 12, 10, 22]);
         {% else %}
         // Card base novo
         iniciarTabelaExcel('tabela-base-novo', [1, 25, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
