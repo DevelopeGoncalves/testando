@@ -315,8 +315,6 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             CAMPOS_OBRIGATORIOS = [
                 'ramo',           # ramo = (Grupo/Ramo), 'seguradora', 'tipo_documento'
                 'nome_cliente',   # Nome (Dados do Cliente)
-                'telefone_cliente',
-              
                 'cpf_cliente',    # CPF (Dados do Cliente)
             #   'numero_contrato', 'numero_endosso', 'possui_seguro' (Renovação),
             #   'carimbo_data_hora', 'nome_cliente', 'cpf_cliente',
