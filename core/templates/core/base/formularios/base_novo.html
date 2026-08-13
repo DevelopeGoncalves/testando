@@ -1561,6 +1561,13 @@
             }
 
             $dropdown.removeClass('d-none');
+            // alex: a lista pode ficar mais alta que o espaço restante dentro do modal
+            // (ex.: última ligação da tela) e ser cortada pela borda do modal-body. Rola
+            // até a lista inteira ficar visível, em vez de deixá-la "sumir" atrás do fundo.
+            var dropdownEl = $dropdown.get(0);
+            if (dropdownEl && dropdownEl.scrollIntoView) {
+                dropdownEl.scrollIntoView({ block: 'nearest' });
+            }
         }
 
         $input.on('focus.seguradoraPesquisa click.seguradoraPesquisa', mostrarLista);

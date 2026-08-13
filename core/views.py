@@ -1250,7 +1250,16 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
         )
         return form, erro_formulario_msg
 
+    era_novo = instancia is None
     indicacao = form.save()
+
+    # alex: quem CRIA o registro (Novo ou Base Novo) já entra como responsável pela
+    # demanda. O Gestor continua podendo indicar/alterar depois (definir_responsavel_demanda).
+    if era_novo and not indicacao.responsavel_demanda_id:
+        perfil_criador = getattr(request.user, 'perfil', None)
+        if perfil_criador and perfil_criador.colaborador_id:
+            indicacao.responsavel_demanda_id = perfil_criador.colaborador_id
+            indicacao.save(update_fields=['responsavel_demanda'])
 
     # alex: "Data/hora do cadastro" é gerado automatica
     if indicacao.carimbo_data_hora is None:
