@@ -277,11 +277,11 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             'produto',
             'dados_veiculo',
             'possui_seguro',
-            'seguradora',
+            #'seguradora',
             'ramo',
-            'tipo_documento',
-            'numero_contrato',
-            'numero_endosso',
+            #'tipo_documento',
+            #'numero_contrato',
+            #'numero_endosso',
             'observacoes',
         ]
         widgets = {
@@ -296,11 +296,12 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
 
     def __init__(self, *args, ficha_somente_leitura=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['seguradora'].queryset = Seguradora.objects.all().order_by('seguradora')
+        #self.fields['seguradora'].queryset = Seguradora.objects.all().order_by('seguradora')
         self.fields['ramo'].queryset = Ramo.objects.all().order_by('grupo_e_ramo')
         self.fields['ramo'].label_from_instance = lambda obj: obj.grupo_e_ramo or f"{obj.grupo} - {obj.ramo}"
-        self.fields['tipo_documento'].queryset = TipoDocumento.objects.all().order_by('tipo_documento')
-        for campo in ('seguradora', 'ramo', 'tipo_documento'):
+        #self.fields['tipo_documento'].queryset = TipoDocumento.objects.all().order_by('tipo_documento')
+        #for campo in ('seguradora', 'ramo', 'tipo_documento'):,
+        for campo in ['ramo']:
             self.fields[campo].empty_label = '-- Selecione --'
 
         if ficha_somente_leitura:
@@ -332,19 +333,23 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        chave = Indicacao.montar_chave_unica(
-            cleaned_data.get('seguradora').id if cleaned_data.get('seguradora') else None,
-            cleaned_data.get('ramo').id if cleaned_data.get('ramo') else None,
-            cleaned_data.get('tipo_documento').id if cleaned_data.get('tipo_documento') else None,
-            cleaned_data.get('numero_contrato'),
-            cleaned_data.get('numero_endosso'),
-        )
-        # só bloqueia duplicidade quando a chave tem algo além dos separadores
-        if chave.strip('&') and Indicacao.objects.filter(chave_unica=chave).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError(
-                "Já existe uma indicação cadastrada com essa Seguradora, Ramo, Tipo de Documento, "
-                "Número do Contrato e Endosso. Verifique se não é uma ligação duplicada."
-            )
+
+        # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
+
+        #chave = Indicacao.montar_chave_unica(
+        #    cleaned_data.get('seguradora').id if cleaned_data.get('seguradora') else None,
+        #    cleaned_data.get('ramo').id if cleaned_data.get('ramo') else None,
+        #    cleaned_data.get('tipo_documento').id if cleaned_data.get('tipo_documento') else None,
+        #    cleaned_data.get('numero_contrato'),
+        #    cleaned_data.get('numero_endosso'),
+        #)
+        ## só bloqueia duplicidade quando a chave tem algo além dos separadores
+        #if chave.strip('&') and Indicacao.objects.filter(chave_unica=chave).exclude(id=self.instance.id).exists():
+        #    raise forms.ValidationError(
+        #        "Já existe uma indicação cadastrada com essa Seguradora, Ramo, Tipo de Documento, "
+        #        "Número do Contrato e Endosso. Verifique se não é uma ligação duplicada."
+        #    )
+
         return cleaned_data
 
 
