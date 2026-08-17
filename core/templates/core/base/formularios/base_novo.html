@@ -160,7 +160,7 @@
 
                 {% if not modo_emissao and usuario_pode_editar %}
                 <!-- alex: "Novo" na tela Novo e Base Novo, para quem pode editar (Editor/Gestor). -->
-                <button class="btn btn-info text-white" onclick="toggleFormLocal('base-novo', true)"><i class="fas fa-plus"></i> Novo</button>
+                <button class="btn btn-info text-white" onclick="abrirNovoRegistroDireto()"><i class="fas fa-plus"></i> Novo</button>
                 {% endif %}
             </div>
         </div>
@@ -385,6 +385,7 @@
 
                     <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
                     <div class="row g-3">
+                        <!--
                         <div class="col-md-3">
                             <label class="fw-bold small mb-1">Seguradora</label>
                             <div class="input-container">
@@ -393,7 +394,13 @@
                                 <div id="base_novo_dropdown_seguradora" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        -->
+                        <div class="col-md-2">
+                            <label class="fw-bold small mb-1">ID</label>
+                            <input type="text" id="base_novo_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
+                            {{ form_indicacao.numero_contrato.as_hidden }}
+                        </div>
+                        <div class="col-md-4">
                             <label class="fw-bold small mb-1">Grupo/Ramo *</label>
                             <div class="input-container">
                                 <input type="hidden" name="ramo" id="base_novo_ramo_val">
@@ -401,6 +408,7 @@
                                 <div id="base_novo_dropdown_ramo" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
+                        <!--
                         <div class="col-md-1">
                             <label class="fw-bold small mb-1">Tipo Documento</label>
                             <div class="input-container">
@@ -409,11 +417,7 @@
                                 <div id="base_novo_dropdown_tipo_documento" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <label class="fw-bold small mb-1">ID</label>
-                            <input type="text" id="base_novo_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
-                            {{ form_indicacao.numero_contrato.as_hidden }}
-                        </div>
+                        -->
                         <!--<div class="col-md-2"><label class="fw-bold small mb-1 ">Endosso</label>{{ form_indicacao.numero_endosso }}</div> -->
                         <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
                         <div class="col-md-2"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
@@ -1028,13 +1032,24 @@
 
     // vai cancelar devolve o bloco para a ficha e trava de novo, sem salvar.
     function cancelarEdicaoDados() {
-        // alex: desfaz qualquer alteração não salva.
+        // Desfaz alterações
         if (_snapshotDadosEdicao) {
             _snapshotDadosEdicao.forEach(function(s) { s.el.value = s.value; s.el.checked = s.checked; });
             _snapshotDadosEdicao = null;
         }
         devolverBlocoDadosParaFicha();
         if (modalEditarDados) modalEditarDados.hide();
+
+        // Se a gente estava criando um "Novo", remove o truque invisível e volta ao normal
+        if (document.getElementById('base_novo_id_hidden').value === "") {
+            $('#form-base-novo').hide().css({
+                'position': '',
+                'visibility': '',
+                'height': '',
+                'width': '',
+                'top': ''
+            });
+        }
     }
 
     // vai salvar e  marcaa
@@ -2030,6 +2045,45 @@
                 }
             });
         }
+    }
+
+    /*
+    Henriqueeee
+    */
+    function abrirNovoRegistroDireto() {
+    $('#base_novo_id_hidden').val('');
+    $('#base_novo_id_display').val('');
+    $('form')[1].reset(); 
+    limparRelacionamentosPesquisaveis();
+    resetarContainerLigacoes();
+    $('#disp-indicador').val('');
+    $('#disp-agencia').val('');
+    
+    $.get(URL_AGORA_SERVIDOR, function(resposta) {
+        var campoCarimbo = document.getElementById('id_carimbo_data_hora');
+        if (campoCarimbo && !campoCarimbo.value) { campoCarimbo.value = resposta.datahora; }
+    });
+
+    $('#lista-base-novo').show(); 
+    $('#form-base-novo').show().css({
+        'position': 'absolute',
+        'visibility': 'hidden',
+        'height': '0',
+        'width': '100%',
+        'top': '0'
+    });
+    
+    $('#modalEditarDados').css('visibility', 'visible');
+
+    var bloco = document.getElementById('bloco-dados-editaveis');
+    var corpo = document.getElementById('modal-editar-dados-corpo');
+    if (bloco && corpo) {
+        _snapshotDadosEdicao = []; 
+        corpo.appendChild(bloco);
+        bloco.classList.remove('dados-travados');
+    }
+
+    modalEditarDados.show();
     }
 </script>
 {% endblock %}
