@@ -987,7 +987,8 @@ def vendas_novo_negocio(request):
     ).filter(
         Q(ultima_central__isnull=True)
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
-    ).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda').prefetch_related('ligacoes')
+    #).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda').prefetch_related('ligacoes')
+    ).order_by('-id').select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
 
     indicacoes = list(indicacoes)
     # Mapa CID -> nome da agência (tabela Unidade), para exibir "CID - Nome" concatenado
@@ -1370,7 +1371,8 @@ def lista_base_novo(request):
 
     indicacoes = list(
         Indicacao.objects.all().order_by('-id')
-        .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
+        #.select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
+        .select_related('ramo', 'responsavel_demanda')
         .prefetch_related('ligacoes')
     )
     # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo
@@ -1419,7 +1421,8 @@ def vendas_emissao(request):
         ).filter(
             Q(ultima_central=True) | Q(ultima_agn=True)
         ).order_by('-id')
-        .select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
+        #.select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
+        .select_related('ramo', 'responsavel_demanda')
         .prefetch_related('ligacoes')
     )
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
@@ -1682,10 +1685,11 @@ def producao_base_novo_import(request):
                             atualizados.append(obj_existente)
                         else:
                             novo = Indicacao(carimbo_data_hora=carimbo, email=email, **defaults_data)
-                            novo.chave_unica = Indicacao.montar_chave_unica(
-                                novo.seguradora_id, novo.ramo_id, novo.tipo_documento_id,
-                                novo.numero_contrato, novo.numero_endosso
-                            )
+                            # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
+                            #novo.chave_unica = Indicacao.montar_chave_unica(
+                            #    novo.seguradora_id, novo.ramo_id, novo.tipo_documento_id,
+                            #    novo.numero_contrato, novo.numero_endosso
+                            #)
                             novos.append(novo)
 
                     if novos:
@@ -1847,41 +1851,43 @@ def sair_do_sistema(request):
 
 def _ids_duplicados_no_lote(fase_origem, agrupamento):
 
-    registros = RegistroProducao.objects.filter(
-        agrupamento=agrupamento, fase__iexact=fase_origem
-    ).prefetch_related('endossos_extras')
-
-    fase_seguinte = 'PENDENTES' if fase_origem.upper() == 'IMPORTADOS' else 'EMITIDOS'
-    chaves_ja_existentes = set(
-        RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_seguinte)
-        .exclude(chave_unica__isnull=True).exclude(chave_unica='')
-        .values_list('chave_unica', flat=True)
-    )
-
-    contagem = {}
-    dono_da_chave = {}
-
-    for reg in registros:
-        chaves_deste_registro = [reg.chave_unica]
-
-        # Ao emitir, cada endosso adicional vira um registo próprio
-        if fase_origem.upper() == 'PENDENTES':
-            for extra in reg.endossos_extras.all():
-                chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
-                    reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, extra.endosso
-                ))
-
-        for chave in chaves_deste_registro:
-            contagem[chave] = contagem.get(chave, 0) + 1
-            dono_da_chave.setdefault(chave, set()).add(reg.id)
-
-    ids_duplicados = set()
-    for chave, qtd in contagem.items():
-        if qtd > 1 or chave in chaves_ja_existentes:
-            ids_duplicados.update(dono_da_chave[chave])
-
-    return ids_duplicados
-
+    # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
+    #
+    #registros = RegistroProducao.objects.filter(
+    #    agrupamento=agrupamento, fase__iexact=fase_origem
+    #).prefetch_related('endossos_extras')
+    #
+    #fase_seguinte = 'PENDENTES' if fase_origem.upper() == 'IMPORTADOS' else 'EMITIDOS'
+    #chaves_ja_existentes = set(
+    #    RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_seguinte)
+    #    .exclude(chave_unica__isnull=True).exclude(chave_unica='')
+    #    .values_list('chave_unica', flat=True)
+    #)
+    #
+    #contagem = {}
+    #dono_da_chave = {}
+    #
+    #for reg in registros:
+    #    chaves_deste_registro = [reg.chave_unica]
+    #
+    #    # Ao emitir, cada endosso adicional vira um registo próprio
+    #    if fase_origem.upper() == 'PENDENTES':
+    #        for extra in reg.endossos_extras.all():
+    #            chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
+    #                reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, extra.endosso
+    #            ))
+    #
+    #    for chave in chaves_deste_registro:
+    #        contagem[chave] = contagem.get(chave, 0) + 1
+    #        dono_da_chave.setdefault(chave, set()).add(reg.id)
+    #
+    #ids_duplicados = set()
+    #for chave, qtd in contagem.items():
+    #    if qtd > 1 or chave in chaves_ja_existentes:
+    #        ids_duplicados.update(dono_da_chave[chave])
+    #
+    #return ids_duplicados
+    return set()
 
 @login_required
 def producao_lista_fase(request, agrupamento_id, fase):
@@ -1940,24 +1946,25 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 
                 reg.endosso = endosso_principal_input.strip()
 
-                if reg.fase.upper() == 'PENDENTES':
-                    nova_chave = RegistroProducao.montar_chave_unica(
-                        reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
-                    )
-                    ja_existe = RegistroProducao.objects.filter(
-                        agrupamento=agrupamento, fase__iexact='PENDENTES', chave_unica=nova_chave
-                    ).exclude(id=reg.id).exists()
-                    if ja_existe:
-                        erro = ('Já existe um registo em Pendentes com a mesma Seguradora, Grupo/Ramo, '
-                                'Tipo de Documento, Documento e Endosso. Altere um desses campos antes de guardar.')
-                        if is_ajax:
-                            return JsonResponse({
-                                'sucesso': False,
-                                'erro': erro,
-                                'campos_duplicados': ['seguradora', 'grupo_ramo', 'tipo_documento', 'documento', 'endosso'],
-                            }, status=409)
-                        messages.error(request, erro)
-                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
+                #if reg.fase.upper() == 'PENDENTES':
+                #    nova_chave = RegistroProducao.montar_chave_unica(
+                #        reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
+                #    )
+                #    ja_existe = RegistroProducao.objects.filter(
+                #        agrupamento=agrupamento, fase__iexact='PENDENTES', chave_unica=nova_chave
+                #    ).exclude(id=reg.id).exists()
+                #    if ja_existe:
+                #        erro = ('Já existe um registo em Pendentes com a mesma Seguradora, Grupo/Ramo, '
+                #                'Tipo de Documento, Documento e Endosso. Altere um desses campos antes de guardar.')
+                #        if is_ajax:
+                #            return JsonResponse({
+                #                'sucesso': False,
+                #                'erro': erro,
+                #                'campos_duplicados': ['seguradora', 'grupo_ramo', 'tipo_documento', 'documento', 'endosso'],
+                #            }, status=409)
+                #        messages.error(request, erro)
+                #        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
                 reg.mes_producao = request.POST.get('mes_producao')
                 reg.nome_social = request.POST.get('nome_social')
@@ -2854,3 +2861,7 @@ def exportar_txt_habitacional(request):
     response = HttpResponse(conteudo, content_type='text/plain')
     response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
     return response
+
+
+
+
