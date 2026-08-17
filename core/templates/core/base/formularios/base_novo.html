@@ -701,8 +701,10 @@
         {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
     ];
 
+    // alex: lista de Seguradoras vem do contexto (a Indicação não tem mais o campo
+    // seguradora; o relacionamento agora é só na LIGAÇÃO). Alimenta o dropdown da ligação.
     const listaBaseNovoSeguradoras = [
-        {% for s in form_indicacao.seguradora.field.queryset %}
+        {% for s in seguradoras %}
         { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];

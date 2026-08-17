@@ -1011,6 +1011,8 @@ def vendas_novo_negocio(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
+        # alex: seguradoras para o dropdown da LIGAÇÃO (relacionamento só na ligação)
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         'apenas_pendentes': True,
         # Permissões deste card usam o campo do "Novo" (prod_vendas_novo).
         'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_novo'),
@@ -1390,6 +1392,8 @@ def lista_base_novo(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
+        # alex: seguradoras para o dropdown da LIGAÇÃO (relacionamento só na ligação)
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         # Permissões deste card usam o campo do "Base Novo" (prod_vendas_basenovo).
         'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_basenovo'),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_basenovo'),
@@ -1439,6 +1443,8 @@ def vendas_emissao(request):
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
+        # alex: seguradoras para o dropdown da LIGAÇÃO (relacionamento só na ligação)
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         'modo_emissao': True,
         # Permissões deste card usam o campo da "Emissão" (prod_vendas_emissao).
         'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_emissao'),
