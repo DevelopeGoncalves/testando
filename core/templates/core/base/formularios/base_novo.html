@@ -411,8 +411,6 @@
                         </div>
                         <div class="col-md-2">
                             <label class="fw-bold small mb-1">ID</label>
-                            <!-- alex: ID do registro (vem do banco). Somente leitura para TODOS (nem Gestor edita).
-                                 O numero_contrato original fica oculto, para não ser apagado ao salvar. -->
                             <input type="text" id="base_novo_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
                             {{ form_indicacao.numero_contrato.as_hidden }}
                         </div>
@@ -835,7 +833,7 @@
                 <div class="card mb-3 bg-light border-0 shadow-sm">
                     <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span></span>
-                        ${USUARIO_GESTOR ? '<span><button type="button" class="btn btn-sm btn-light text-danger py-0 px-2" title="Apagar esta ligação" onclick="removerLigacaoHistorico(' + numero + ')"><i class="fas fa-trash-alt"></i></button><button type="button" class="btn btn-sm btn-light py-0 px-2 me-1 mr-5" title="Editar esta ligação" onclick="editarLigacaoHistorico(' + numero + ')"><i class="fas fa-pencil-alt"></i></button></span>':''}
+                        ${USUARIO_GESTOR ? '<span><button type="button" class="btn btn-sm btn-light text-danger py-0 px-2 me-2 mr-2" title="Apagar esta ligação" onclick="removerLigacaoHistorico(' + numero + ')"><i class="fas fa-trash-alt"></i></button><button type="button" class="btn btn-sm btn-light py-0 px-2 me-1 mr-5" title="Editar esta ligação" onclick="editarLigacaoHistorico(' + numero + ')"><i class="fas fa-pencil-alt"></i></button></span>':''}
                     </div>
                     <div class="card-body py-2" style="font-size: 0.9rem;">
                         <div class="row g-2">
