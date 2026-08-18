@@ -957,11 +957,6 @@ def producao_vendas(request):
     return render(request, 'core/producao/vendas/index.html')
 
 @login_required
-def vendas_banseg(request):
-
-    return render(request, 'core/producao/vendas/banseg.html')
-
-@login_required
 def vendas_endosso(request):
 
     return render(request, 'core/producao/vendas/base_endosso.html')
@@ -1006,7 +1001,7 @@ def vendas_novo_negocio(request):
         ind.status_fechamento = _status_fechamento_indicacao(ind)
         ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
 
-    return render(request, 'core/base/formularios/base_novo.html', {
+    return render(request, 'core/producao/vendas/novo.html', {
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
@@ -1026,18 +1021,12 @@ def vendas_novo_negocio(request):
 @login_required
 def vendas_nova_renovacao(request):
 
-    return render(request, 'core/producao/vendas/em_construcao.html', {
-        'titulo_pagina': 'Renovação',
-        'icone_pagina': 'fa-redo',
-    })
+    return render(request, 'core/producao/vendas/renovacao.html')
 
 @login_required
 def vendas_novo_endosso(request):
 
-    return render(request, 'core/producao/vendas/em_construcao.html', {
-        'titulo_pagina': 'Endosso',
-        'icone_pagina': 'fa-file-medical',
-    })
+    return render(request, 'core/producao/vendas/endosso.html')
 
 @login_required
 def gerar_protocolo_ligacao(request):
@@ -1387,7 +1376,7 @@ def lista_base_novo(request):
         ind.status_fechamento = _status_fechamento_indicacao(ind)
         ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
 
-    return render(request, 'core/base/formularios/base_novo.html', {
+    return render(request, 'core/producao/vendas/base_novo.html', {
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
@@ -1438,7 +1427,7 @@ def vendas_emissao(request):
         ind.status_fechamento = _status_fechamento_indicacao(ind)
         ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
 
-    return render(request, 'core/base/formularios/base_novo.html', {
+    return render(request, 'core/producao/vendas/emissao.html', {
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
@@ -1474,10 +1463,6 @@ def vendas_renovacao(request):
         'apolices': items, 
         'form_apolice': form
     })
-
-@login_required
-def vendas_outras_cias(request):
-    return render(request, 'core/producao/vendas/outras_cias.html')
 
 @login_required
 def importar_unidades(request):

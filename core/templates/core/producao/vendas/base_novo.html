@@ -4,108 +4,2059 @@
 
 {% block breadcrumb %}
     <span style="font-size: 1rem; font-weight: normal;">
-        <span class="text-primary">Produção</span> / 
-        <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> / 
-        <span>Base Novo</span>
+        <span class="text-primary">Produção</span> /
+        <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> /
+        <span class="text-primary">Base Novo</span>
     </span>
 {% endblock %}
 
 {% block content %}
-<div id="tela-novo">
-    <div id="lista-novo">
+<div id="tela-base-novo">
+    <div id="lista-base-novo">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> Base Novo</h4>
             <div>
-                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')">
-                    <i class="fas fa-file-csv"></i> Exportar
-                </button> 
-                <button class="btn btn-danger me-1">
-                    <i class="fas fa-trash-alt"></i>
+                <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
+                    <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
-                <button class="btn btn-info text-white">
-                    <i class="fas fa-plus"></i> Novo
-                </button>
+                {% if usuario_pode_excluir %}
+                <!-- alex: lixeira logo depois do Exportar. Excluir só no Base Novo/Emissão e SÓ para Gestor. -->
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
+                <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
+                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                {% endif %}
+
+                {% if usuario_pode_editar %}
+                <!-- alex: "Novo" na tela Novo e Base Novo, para quem pode editar (Editor/Gestor). -->
+                <button class="btn btn-info text-white" onclick="abrirNovoRegistroDireto()"><i class="fas fa-plus"></i> Novo</button>
+                {% endif %}
             </div>
         </div>
-        
-        <div class="tabela-container table-responsive">
-            <table class="table table-striped table-hover mb-0" id="tabela-novo" style="width:100%; font-size: 0.85rem; white-space: nowrap;">
-                
-                {% if agrup_selecionado and 'habitacional' in agrup_selecionado.agrupamento|lower %}
-                <thead class="table-light">
-                    <tr>
-                        <th width="2%" class="text-center"><input type="checkbox"></th>
-                        <th>DATA_FINANCIAM</th>
-                        <th>CONTRATO</th>
-                        <th>NR_PN</th>
-                        <th>SEGURADORA</th>
-                        <th>Ramo</th>
-                        <th>PRODUTO</th>
-                        <th>CPF_CNPJ</th>
-                        <th>MUTUARIO</th>
-                        <th>CID</th>
-                        <th>MTR_ANGARIADOR</th>
-                        <th>VLR_SEGURO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for a in apolices %}
-                    <tr class="tr-clickable">
-                        <td class="text-center"><input type="checkbox" name="ids_excluir" value="{{ a.id }}" class="chk-row"></td>
-                        <td>{{ a.dt_venc|date:'d/m/Y'|default:'-' }}</td> <td>{{ a.contrato|default:'-' }}</td>            <td>{{ a.item|default:'-' }}</td>                <td>{{ a.usuario|default:'-' }}</td>             <td>{{ a.ramo.ramo|default:'-' }}</td>           <td>{{ a.agrupamento.agrupamento|default:'-' }}</td> <td>{{ a.cpf_cnpj|default:'-' }}</td>            <td>{{ a.nome|default:'-' }}</td>                <td>{{ a.cid|default:'-' }}</td>                 <td>{{ a.ordem|default:'-' }}</td>               <td>{% if a.premio_liquido %}{{ a.premio_liquido }}{% else %}-{% endif %}</td> </tr>
-                    {% empty %}
-                    <tr><td colspan="12" class="text-center text-muted py-4">Nenhuma apólice encontrada.</td></tr>
-                    {% endfor %}
-                </tbody>
 
-                {% else %}
-                <thead class="table-light">
-                    <tr>
-                        <th width="2%" class="text-center"><input type="checkbox"></th>
-                        <th>Fim Vigência</th>
-                        <th>Contrato</th>
-                        <th>Item</th>
-                        <th>Seguradora</th>
-                        <th>Ramo</th>
-                        <th>Produto</th>
-                        <th>CPF/CNPJ</th>
-                        <th>Nome/Razão Social</th>
-                        <th>CID</th>
-                        <th>Ordem</th>
-                        <th>Prêmio Líquido</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for a in apolices %}
-                    <tr class="tr-clickable">
-                        <td class="text-center"><input type="checkbox" name="ids_excluir" value="{{ a.id }}" class="chk-row"></td>
-                        <td>{{ a.dt_venc|date:'d/m/Y'|default:'-' }}</td>
-                        <td>{{ a.contrato|default:'-' }}</td>
-                        <td>{{ a.item|default:'-' }}</td>
-                        <td>{{ a.usuario|default:'-' }}</td>
-                        <td>{{ a.ramo.ramo|default:'-' }}</td>
-                        <td>{{ a.agrupamento.agrupamento|default:'-' }}</td>
-                        <td>{{ a.cpf_cnpj|default:'-' }}</td>
-                        <td>{{ a.nome|default:'-' }}</td>
-                        <td>{{ a.cid|default:'-' }}</td>
-                        <td>{{ a.ordem|default:'-' }}</td>
-                        <td>{% if a.premio_liquido %}R$ {{ a.premio_liquido }}{% else %}-{% endif %}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="12" class="text-center text-muted py-4">Nenhuma apólice encontrada.</td></tr>
-                    {% endfor %}
-                </tbody>
-                {% endif %}
-            </table>
+        <div class="tabela-container">
+            <div class="tabela-loading text-center text-muted py-5">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="mt-2">Carregando registos...</div>
+            </div>
+            <form id="form-delete-base-novo" method="post" action="{% url 'excluir_em_massa' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_massa" value="indicacao">
+
+                <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            {% if usuario_pode_excluir %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
+                            <th style="display:none;"></th>
+                            <th class="text-center">Cadastrado em</th> <!-- 1 -->
+                            <th class="text-center">Responsável</th> <!-- 2 -->
+                            <th class="text-center">Em uso por</th> <!-- 3 -->
+                            <th class="text-center">E-mail do indicador (outro)</th> <!-- 4 -->
+                            <th class="text-center">Indicador</th> <!-- 5 -->
+                            <th class="text-center">Indicador</th> <!-- 6 -->
+                            <th class="text-center">Agência</th> <!-- 7 -->
+                            <th class="text-center">Telefone do indicador</th> <!-- 8 -->
+                            <th class="text-center">Enviar orçamento para</th> <!-- 9 -->
+                            <th class="text-center">Nome do cliente</th> <!-- 10 -->
+                            <th class="text-center">Telefone do cliente</th> <!-- 11 -->
+                            <th class="text-center">CPF do cliente</th> <!-- 12 -->
+                            <th class="text-center">E-mail do cliente</th> <!-- 13 -->
+                            <th class="text-center">Produto</th> <!-- 14 -->
+                            <th class="text-start">Dados do veículo</th> <!-- 15 -->
+                            <th class="text-center">Renovação</th> <!-- 16 -->
+                            <th class="text-center">Seguradora</th> <!-- 17 -->
+                            <th class="text-center">Grupo/Ramo</th> <!-- 18 -->
+                            <th class="text-center">Tipo Documento</th> <!-- 19 -->
+                            <th class="text-center">Nº Contrato</th> <!-- 20 -->
+                            <th class="text-center">Nº Endosso</th> <!-- 21 -->
+                            <th class="text-center">Ligações</th> <!-- 22 -->
+                            <th class="text-start">Observações</th> <!-- 23 -->
+                            <th class="text-center">Status</th> <!-- 24 -->
+                            <th class="text-center">Último atendente</th> <!-- 25 -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in indicacoes %}
+                        <tr class="tr-clickable{% if i.atendimento_ativo %} em-atendimento{% endif %}" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
+                            data-id="{{ i.id }}"
+                            data-atendimento="{{ i.atendimento_por|default:'' }}"
+                            data-responsavel-demanda="{{ i.responsavel_demanda_id|default:'' }}"
+                            data-responsavel-demanda-nome="{{ i.responsavel_demanda.matricula_nome|default:'' }}"
+                            data-carimbo="{{ i.carimbo_data_hora|date:'Y-m-d\TH:i'|default:'' }}"
+                            data-email="{{ i.email|default:'' }}"
+                            data-email-indicador-outro="{{ i.email_indicador_outro|default:'' }}"
+                            data-matricula="{{ i.matricula_indicador|default:'' }}"
+                            data-nome-indicador="{{ i.nome_indicador|default:'' }}"
+                            data-cid="{{ i.cid_agencia|default:'' }}"
+                            data-nome-agencia="{{ i.nome_agencia|default:'' }}"
+                            data-telefone-indicador="{{ i.telefone_indicador|default:'' }}"
+                            data-orcamento="{{ i.enviar_orcamento_para|default:'' }}"
+                            data-origem-informacao="{{ i.origem_informacao|default:'' }}"
+                            data-nome-cliente="{{ i.nome_cliente|default:'' }}"
+                            data-telefone-cliente="{{ i.telefone_cliente|default:'' }}"
+                            data-cpf-cliente="{{ i.cpf_cliente|default:'' }}"
+                            data-email-cliente="{{ i.email_cliente|default:'' }}"
+                            data-produto="{{ i.produto|default:'' }}"
+                            data-veiculo="{{ i.dados_veiculo|default:'' }}"
+                            data-possui-seguro="{{ i.possui_seguro|default:'' }}"
+                            data-seguradora="{{ i.seguradora_id|default:'' }}"
+                            data-ramo="{{ i.ramo_id|default:'' }}"
+                            data-tipo-documento="{{ i.tipo_documento_id|default:'' }}"
+                            data-contrato="{{ i.numero_contrato|default:'' }}"
+                            data-endosso="{{ i.numero_endosso|default:'' }}"
+                            data-obs="{{ i.observacoes|default:'' }}">
+
+                            {% if usuario_pode_excluir %}
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
+                            </td>
+                            {% endif %}
+
+                            <td style="display:none;" class="dados-ligacoes-extras">
+                                {% for l in i.ligacoes.all %}
+                                <span class="extra-item-ligacao"
+                                      data-protocolo="{{ l.protocolo|default:'' }}"
+                                      data-data="{{ l.data_ligacao|date:'Y-m-d\TH:i:s'|default:'' }}"
+                                      data-status="{{ l.status|default:'' }}"
+                                      data-proximo="{{ l.proximo_contato|date:'Y-m-d\TH:i:s'|default:'' }}"
+                                      data-obs="{{ l.observacoes|default:'' }}"
+                                      data-ramal="{{ l.ramal|default:'' }}"
+                                      data-venda-central="{{ l.venda_central|yesno:'1,0' }}"
+                                      data-premio-total="{{ l.premio_total|floatformat:'2u' }}"
+                                      data-agn="{{ l.agn|yesno:'1,0' }}"
+                                      data-motivo="{{ l.motivo_nao_venda|default:'' }}"
+                                      data-seguradora="{{ l.seguradora_id|default:'' }}"
+                                      data-seguradora-nome="{{ l.seguradora.seguradora|default:'' }}"
+                                      data-comissao="{{ l.comissao|floatformat:'2u'|default:'' }}"
+                                      data-cadastrado-por="{{ l.cadastrado_por|default:'' }}"></span>
+                                {% endfor %}
+                            </td>
+
+                            <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
+                            <td class="text-center resp-demanda-cell">{{ i.responsavel_demanda.matricula_nome|default:'-' }}</td>
+                            <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
+                            <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
+                            <td class="text-center">{% if i.matricula_indicador or i.nome_indicador %}{{ i.matricula_indicador|default:'' }}{% if i.matricula_indicador and i.nome_indicador %} - {% endif %}{{ i.nome_indicador|default:'' }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if i.cid_agencia or i.nome_agencia %}{{ i.cid_agencia|default:'' }}{% if i.cid_agencia and i.nome_agencia %} - {% endif %}{{ i.nome_agencia|default:'' }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{{ i.telefone_indicador|default:'-' }}</td>
+                            <td class="text-center">{{ i.enviar_orcamento_para|default:'-' }}</td>
+                            <td class="text-center">{{ i.nome_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.telefone_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.cpf_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.email_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.produto|default:'-' }}</td>
+                            <td class="text-start">{{ i.dados_veiculo|default:'-' }}</td>
+                            <td class="text-center">{{ i.possui_seguro|default:'-' }}</td>
+                            <td class="text-center">{{ i.seguradora.seguradora|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.grupo_e_ramo|default:'-' }}</td>
+                            <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
+                            <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
+                            <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
+                            <td class="text-center" data-order="">
+                                {% if i.ligacoes.all %}
+                                <span class="badge bg-primary" style="cursor:pointer;" title="Ver histórico de ligações"
+                                      onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
+                                      data-cliente="{{ i.nome_cliente|default:''|escape }}">
+                                    {{ i.ligacoes.all|length }} <i class="fas fa-list-ul ms-1"></i>
+                                </span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-start">{{ i.observacoes|default:'-' }}</td>
+                            <td class="text-center">
+                                {% if 'Não venda' in i.status_fechamento %}<span class="badge bg-danger">{{ i.status_fechamento }}</span>
+                                {% elif 'Venda' in i.status_fechamento %}<span class="badge bg-success">{{ i.status_fechamento }}</span>
+                                {% else %}<span class="badge bg-secondary">{{ i.status_fechamento|default:'Em aberto' }}</span>{% endif %}
+                            </td>
+                            <td class="text-center">{{ i.responsavel_ultima_ligacao|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
         </div>
     </div>
+
+    <style>
+        /* Evita o "flash" da tabela crua */
+        #tabela-base-novo { visibility: hidden; }
+        #tabela-base-novo.dt-pronta { visibility: visible; }
+
+        /* Registro "em atendimento ligacao" */
+        #tabela-base-novo tbody tr.em-atendimento,
+        #tabela-base-novo tbody tr.em-atendimento:hover { background-color: #f5c2c7 !important; }
+        #tabela-base-novo tbody tr.em-atendimento td { color: #ff0217; }
+
+        /* No Novo, os dados ficam travados (só leitura) até abrir o pop-up do lápis.
+           pointer-events:none impede a edição, mas os campos continuam sendo enviados no POST. */
+        #bloco-dados-editaveis.dados-travados { pointer-events: none; opacity: 0.92; }
+        #bloco-dados-editaveis.dados-travados input,
+        #bloco-dados-editaveis.dados-travados select,
+        #bloco-dados-editaveis.dados-travados textarea { background-color: #f3f4f6; }
+
+        .excel-header-btn {
+            display: flex !important;
+            align-items: center !important;
+            width: 100% !important;
+            border: none !important;
+            background: transparent !important;
+            font-weight: bold !important;
+            color: #495057 !important;
+            padding: 8px !important;
+        }
+
+        th.text-center .excel-header-btn {
+            justify-content: center !important;
+            text-align: center !important;
+        }
+
+        th.text-start .excel-header-btn {
+            justify-content: flex-start !important;
+            text-align: left !important;
+        }
+
+        .excel-header-btn::after {
+            margin-left: 5px;
+        }
+
+        #tabela-base-novo td {
+            vertical-align: middle !important;
+        }
+
+        .dropdown-menu {
+            text-align: left !important;
+        }
+
+        /* Dropdowns pesquisáveis para campos de relacionamento */
+        .input-container {
+            position: relative;
+        }
+
+        .lista-suspensa {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 210px;
+            overflow-y: auto;
+            background-color: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 12px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            z-index: 9999 !important;
+        }
+
+        /* mudar o tamanho do card ligacao*/
+
+        #modalLigacao .modal-body { padding-bottom: 80px; }
+
+        /* mudar a cor dos botoes cancelar e salvar ligação */
+
+        #modalLigacao .btn-acao-ligacao {
+            --cor-botao-ligacao: #065534;       
+            color: var(--cor-botao-ligacao);
+            background-color: #ffffff;
+            border: 1px solid var(--cor-botao-ligacao);
+        }
+        #modalLigacao .btn-acao-ligacao:hover {
+            color: #ffffff;
+            background-color: var(--cor-botao-ligacao);
+            border-color: var(--cor-botao-ligacao);
+        }
+
+        .item-lista {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .item-lista:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .item-lista:last-child {
+            border-bottom: none;
+        }
+
+        .lista-suspensa::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .lista-suspensa::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .lista-suspensa::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 10px;
+        }
+
+        .lista-suspensa::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
+        }
+
+        /* Garante o alinhamento perfeito e preenchimento vertical do campo de observações */
+        #id_observacoes {
+            height: 100% !important;
+            min-height: 100px;
+            resize: none;
+        }
+
+    </style>
+
+        <div id="form-base-novo" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 mt-2">
+                <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+                <!-- somento o responsavel pode indicar a demanda -->
+                <div class="d-flex align-items-center">
+                    <span class="me-2 fw-bold text-dark">Responsável:</span>
+                    <span id="resp-demanda-nome" class="text-muted">Em aberto</span>
+                    {% if usuario_gestor %}
+                    <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="abrirModalResponsavel()">
+                        <i class="fas fa-user-check"></i> Indicar responsável
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if usuario_gestor %}
+            <!-- alex: pop-up para o Gestor indicar o responsável (Colaborador). Só renderiza para Gestor. -->
+            <div class="modal fade" id="modalResponsavel" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title"><i class="fas fa-user-check"></i> Indicar Responsável pela Demanda</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <label class="form-label small fw-bold mb-1">Colaborador responsável</label>
+                            <div class="input-container">
+                                <input type="text" class="form-control" id="resp-demanda-input"
+                                       placeholder="Pesquisar colaborador..." autocomplete="off">
+                                <input type="hidden" id="resp-demanda-id-sel">
+                                <div id="resp-demanda-dropdown" class="lista-suspensa d-none"></div>
+                            </div>
+                            <div class="form-text">Deixe em branco e salve para deixar a demanda "Em aberto".</div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-success" onclick="salvarResponsavel()"><i class="fas fa-check"></i> Salvar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm border-0">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+                    <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
+                    <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
+
+                    <div class="card-body p-4 position-relative" style="font-size: 0.95rem;">
+
+                        {% if usuario_pode_editar %}
+                        <!-- no card novo e base novo o pop up aparece pra editar -->
+                        <button type="button" id="btn-editar-dados" class="btn btn-sm btn-outline-primary position-absolute" style="top: 1.5rem; right: 1.5rem; z-index: 3;" title="Editar dados do registro" onclick="abrirEdicaoDados()">
+                            <i class="fas fa-pencil-alt"></i> Editar dados
+                        </button>
+                        {% endif %}
+
+                        <div id="bloco-dados-editaveis" class="dados-travados">
+
+                        <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
+                        <div class="row g-3">
+                            <!--
+                            <div class="col-md-3">
+                                <label class="fw-bold small mb-1">Seguradora</label>
+                                <div class="input-container">
+                                    <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
+                                    <input type="text" id="base_novo_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                    <div id="base_novo_dropdown_seguradora" class="lista-suspensa d-none"></div>
+                                </div>
+                            </div>
+                            -->
+                            <div class="col-md-2">
+                                <label class="fw-bold small mb-1">ID</label>
+                                <input type="text" id="base_novo_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
+                                {{ form_indicacao.numero_contrato.as_hidden }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-bold small mb-1">Grupo/Ramo *</label>
+                                <div class="input-container">
+                                    <input type="hidden" name="ramo" id="base_novo_ramo_val">
+                                    <input type="text" id="base_novo_ramo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                    <div id="base_novo_dropdown_ramo" class="lista-suspensa d-none"></div>
+                                </div>
+                            </div>
+                            <!--
+                            <div class="col-md-1">
+                                <label class="fw-bold small mb-1">Tipo Documento</label>
+                                <div class="input-container">
+                                    <input type="hidden" name="tipo_documento" id="base_novo_tipo_documento_val">
+                                    <input type="text" id="base_novo_tipo_documento_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                    <div id="base_novo_dropdown_tipo_documento" class="lista-suspensa d-none"></div>
+                                </div>
+                            </div>
+                            -->
+                            <!--<div class="col-md-2"><label class="fw-bold small mb-1 ">Endosso</label>{{ form_indicacao.numero_endosso }}</div> -->
+                            <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
+                        </div>
+
+                        <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">CPF *</label>{{ form_indicacao.cpf_cliente }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
+                            <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                        </div>
+
+                        <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
+                        <div class="row g-3">
+                        
+                            <div class="col-md-8">
+                                <div class="row g-3">
+                                    <div class="col-md-4" id="disp-ind-col">
+                                        <label class="fw-bold small mb-1">Indicador</label>
+                                        <!-- alex: dropdown pesquisável do Colaborador (matrícula - nome), igual ao da Seguradora. -->
+                                        <div class="input-container">
+                                            <input type="hidden" id="disp-indicador-id">
+                                            <input type="text" id="disp-indicador" name="indicador_combo" class="form-control" placeholder="matrícula - nome" autocomplete="off">
+                                            <div id="disp-indicador-dropdown" class="lista-suspensa d-none"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4" id="disp-ag-col">
+                                        <label class="fw-bold small mb-1">Agência</label>
+                                        <!-- alex: dropdown pesquisável da Unidade (CID - nome da agência), igual ao da Seguradora. -->
+                                        <div class="input-container">
+                                            <input type="hidden" id="disp-agencia-id">
+                                            <input type="text" id="disp-agencia" name="agencia_combo" class="form-control" placeholder="CID - nome da agência" autocomplete="off">
+                                            <div id="disp-agencia-dropdown" class="lista-suspensa d-none"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="fw-bold small mb-1">Telefone</label>
+                                        {{ form_indicacao.telefone_indicador }}
+                                    </div>
+                                
+                                    <div class="col-md-5">
+                                        <label class="fw-bold small mb-1">E-mail</label>
+                                        {{ form_indicacao.email }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="fw-bold small mb-1">Enviar orçamento para</label>
+                                        {{ form_indicacao.enviar_orcamento_para }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="fw-bold small mb-1">Origem da informação</label>
+                                        {{ form_indicacao.origem_informacao }}
+                                    </div>
+                                
+                                    <!-- Campos Ocultos (Mantidos) -->
+                                    <div class="col-md-2 d-none" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
+                                    <div class="col-md-2 d-none" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
+                                    <div class="col-md-2 d-none" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Lado Direito: Div separada de Observações com alinhamento flexível -->
+                            <div class="col-md-4 d-flex flex-column">
+                                <label class="fw-bold small mb-1">Dados complementares</label>
+                                <div class="flex-grow-1 d-flex flex-column">
+                                    {% if form_indicacao.observacoes %}
+                                        {{ form_indicacao.observacoes }}
+                                    {% else %}
+                                        <textarea class="form-control flex-grow-1" name="observacoes" id="id_observacoes" placeholder="Digite as observações com quebra de linha..."></textarea>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        </div><!-- /#bloco-dados-editaveis -->
+
+                        <!-- pop up de edicao para cada ligacao-->
+                        <div class="modal fade" id="modalEditarDados" tabindex="-1" aria-labelledby="modalEditarDadosLabel"
+                             data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-primary text-white">
+                                        <h5 class="modal-title" id="modalEditarDadosLabel"><i class="fas fa-edit"></i> Editar Dados do Registro</h5>
+                                    </div>
+                                    <div class="modal-body" id="modal-editar-dados-corpo">
+                                        <!-- #bloco-dados-editaveis entra aqui ao abrir -->
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" onclick="cancelarEdicaoDados()"><i class="fas fa-times"></i> Cancelar</button>
+                                        <button type="button" class="btn btn-success fw-bold px-4" onclick="salvarEdicaoDados()"><i class="fas fa-check"></i> Salvar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- onde o histórico vai aparecer fora do modal -->
+                        <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
+
+                        {% if usuario_pode_editar %}
+                        <!-- Área na ficha: botões que ABREM o pop-up (segunda tela) da ligação.
+                             alex: agora também no Base Novo; só para quem pode editar (Editor/Gestor). -->
+
+                        <div class="mt-4 text-end border-bottom pb-4">
+                            <span id="resumo-ligacoes" class="text-success fw-bold me-3"></span>
+                            <button type="button" id="btn-iniciar-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalLigacao(true)">
+                                <i class="fas fa-phone-alt"></i> Iniciar Ligação
+                            </button>
+                            <button type="button" id="btn-registrar-outra-ligacao" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalLigacao(false)" style="display:none;">
+                                <i class="fas fa-plus"></i> Registrar outra Ligação
+                            </button>
+                        </div>
+
+                        <!-- POP-UP para registrar a ligação. -->
+                        <div class="modal fade" id="modalLigacao" tabindex="-1" aria-labelledby="modalLigacaoLabel"
+                            data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+                        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <h5 class="modal-title m-0" id="modalLigacaoLabel"><i class="fas fa-phone-alt"></i> Registrar Ligação</h5>
+                                    <!-- alex: botões Cancelar/Salvar movidos para o cabeçalho azul. -->
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-acao-ligacao fw-bold me-2" onclick="cancelarLigacaoModal()"><i class="fas fa-times"></i> Cancelar</button>
+                                        <button type="button" class="btn btn-sm btn-acao-ligacao fw-bold px-4" onclick="salvarLigacaoModal()"><i class="fa-regular fa-floppy-disk"></i> Salvar</button>                                </div>
+                                    </div>
+                                <div class="modal-body">
+                                    <div id="container-ligacoes">
+                                        <div class="bloco-ligacao" id="ligacao-1">
+                                            <h5 class="text-primary border-bottom pb-2 mb-3 titulo-ligacao"><i class="fas fa-phone-alt"></i> 1ª Ligação</h5>
+                                            <div class="row g-3">
+                                            
+                                                <div class="col-md-8">
+                                                
+                                                    <div class="row g-2">
+                                                        <div class="col-md-3">
+                                                            <label class="fw-small mb-1">Data/Hora da Ligação</label>
+                                                            <!-- alex: inativo; a data/hora é gerada automaticamente ao informar o ramal (ou outro campo).
+                                                                 readonly (não disabled) para não ser reativado ao abrir o bloco e ainda ser enviado no submit. -->
+                                                            <input type="datetime-local" step="1" class="form-control form-control-sm bg-light" name="ligacao_data" id="edit_ligacao_data" readonly tabindex="-1" style="pointer-events:none;">
+                                                        </div>
+
+                                                        <div class="col-md-2">
+                                                            <label class="fw-small mb-1">Protocolo</label>
+                                                            <input type="text" class="form-control form-control-sm bg-light" name="ligacao_protocolo" id="edit_ligacao_protocolo" readonly tabindex="-1" placeholder="(automático)">
+                                                        </div>
+
+                                                        <div class="col-md-2">
+                                                            <label class="fw-small mb-1">Ramal</label>
+                                                            <input type="text" class="form-control form-control-sm" name="ligacao_ramal" id="edit_ligacao_ramal">
+                                                        </div>
+
+                                                        <div class="col-md-2">
+                                                            <label class="fw-small mb-1">Vendas</label>
+                                                            <select class="form-select form-select-sm" id="edit_ligacao_vendas" data-vendas-select onchange="aplicarSelecaoVendas(this)">
+                                                                <option value="">-- Selecione --</option>
+                                                                <option value="central">Central</option>
+                                                                <option value="agencia">Agência</option>
+                                                            </select>
+                                                            <input type="checkbox" class="d-none campo-venda-canal" name="ligacao_venda_central" id="edit_ligacao_venda_central" tabindex="-1" aria-hidden="true">
+                                                            <input type="checkbox" class="d-none campo-venda-canal" name="ligacao_agn" id="edit_ligacao_agn" tabindex="-1" aria-hidden="true">
+                                                        </div>
+
+                                                        <div class="col-md-3">
+                                                            <label class="fw-small mb-1">Prêmio Total</label>
+                                                            <input type="text" inputmode="numeric" class="form-control form-control-sm campo-premio-total" name="ligacao_premio_total" id="edit_ligacao_premio_total" placeholder="0,00" disabled>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="row g-2 mt-2">
+                                                        <div class="col-md-3">
+                                                            <label class="fw-small mb-1">Próximo contato</label>
+                                                            <input type="datetime-local" step="1" class="form-control form-control-sm campo-proximo-contato" name="ligacao_proximo" id="edit_ligacao_proximo" disabled>
+                                                        </div>
+                                                    
+                                                        <div class="col-md-5">
+                                                            <label class="fw-small mb-1">Motivo Não Venda</label>
+                                                            <select class="form-select form-select-sm" name="ligacao_motivo_nao_venda" id="edit_ligacao_motivo_nao_venda">
+                                                                <option value="">-- Selecione --</option>
+                                                                {% for valor, rotulo in motivos_nao_venda %}
+                                                                <option value="{{ valor }}">{{ rotulo }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="col-md-4">
+                                                            <label class="fw-small mb-1">Cadastrado por</label>
+                                                            <input type="text" class="form-control form-control-sm bg-light" name="ligacao_cadastrado_por" id="edit_ligacao_cadastrado_por" readonly tabindex="-1">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="row g-2 mt-2">
+                                                        <div class="col-md-5">
+                                                            <label class="fw-small mb-1">Seguradora</label>
+                                                            <div class="input-container" style="z-index: 9999;">
+                                                                <input type="hidden" name="ligacao_seguradora" id="edit_ligacao_seguradora">
+                                                                <input type="text" class="form-control form-control-sm campo-seguradora-ligacao" name="ligacao_seguradora_texto" id="edit_ligacao_seguradora_texto"
+                                                                    autocomplete="off" placeholder="Pesquisar..." disabled>
+                                                                <div class="lista-suspensa d-none campo-seguradora-dropdown"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="fw-small mb-1">Comissão (%)</label>
+                                                            <input type="text" inputmode="decimal" class="form-control form-control-sm campo-comissao" name="ligacao_comissao" id="edit_ligacao_comissao" placeholder="0,00" oninput="aplicarMascaraComissao(this)" disabled>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+
+                                                <div class="col-md-4 d-flex flex-column">
+                                                    <label class="fw-small mb-1">Observações</label>
+                                                    <textarea class="form-control form-control-sm flex-grow-1" name="ligacao_obs" id="edit_ligacao_obs" style="min-height: 125px; resize: none;" placeholder=""></textarea>
+                                                </div>  
+
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-footer bg-light text-end p-3">
+                        <!-- alex: no Novo/Base Novo o salvamento acontece ao confirmar "Editar dados" ou
+                             "Salvar Ligação" nos pop-ups. Aqui fica só o "Voltar" (retorna à lista e libera a trava). -->
+                        <button type="button" class="btn btn-secondary" onclick="toggleFormLocal('base-novo', false)"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Pop-up (só leitura) com o histórico de ligações/vendas de um registro. -->
+        <div class="modal fade" id="modalHistoricoLigacoes" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-phone-alt"></i> Histórico de Ligações <span id="hist-cliente" class="fw-normal"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+              </div>
+              <div class="modal-body" id="hist-corpo"></div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    $(document).ready(function() { 
-        iniciarTabelaExcel('tabela-novo'); 
+    let contadorLigacoes = 1;
+    const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
+    // alex: Novo e Base Novo (não Emissão) E só para quem pode editar (Editor/Gestor).
+    // Leitor não registra/edita ligação nem trava o registro (apenas leitura).
+    const PODE_REGISTRAR_LIGACAO = {% if usuario_pode_editar %}true{% else %}false{% endif %};
+    // alex: card "Novo" (Ligação Novo). Nele NÃO se edita um registro existente (só criar novo/ligações).
+    const APENAS_PENDENTES = false;
+    // alex: só perfil Gestor (nível 3) ou superusuário pode editar uma ligação já salva.
+    const USUARIO_GESTOR = {% if usuario_gestor %}true{% else %}false{% endif %};
+    const URL_GERAR_PROTOCOLO = "{% url 'gerar_protocolo_ligacao' %}";
+    const URL_AGORA_SERVIDOR = "{% url 'agora_servidor_ligacao' %}";
+    const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
+    const URL_MARCAR_ATEND = "{% url 'marcar_atendimento' 0 %}";
+    const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
+    // alex: responsável pela demanda (indicado por Gestor)
+    const URL_RESP_DEMANDA = "{% url 'definir_responsavel_demanda' 0 %}";
+    const LISTA_COLABORADORES_DEMANDA = [
+        {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    // alex: lista de Seguradoras vem do contexto (a Indicação não tem mais o campo
+    // seguradora; o relacionamento agora é só na LIGAÇÃO). Alimenta o dropdown da ligação.
+    const listaBaseNovoSeguradoras = [
+        {% for s in seguradoras %}
+        { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const listaBaseNovoRamos = [
+        {% for r in form_indicacao.ramo.field.queryset %}
+        { id: "{{ r.id }}", texto: "{{ r.grupo_e_ramo|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const listaBaseNovoTiposDocumento = [
+        {% for t in form_indicacao.tipo_documento.field.queryset %}
+        { id: "{{ t.id }}", texto: "{{ t.tipo_documento|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+
+
+    // alex: Indicador (Colaborador) e Agência (Unidade) concatenados, para o dropdown pesquisável.
+    const listaIndicadores = [
+        {% for c in colaboradores_demanda %}{ id: "{{ c.matricula_nome|escapejs }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    const listaAgencias = [
+        {% for u in unidades_agencia %}{ id: "{{ u.cid_unidade|escapejs }} - {{ u.unidade|escapejs }}", texto: "{{ u.cid_unidade|escapejs }} - {{ u.unidade|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    function inicializarDropdownRelacionamento(inputId, hiddenId, dropdownId, listaDeDados) {
+        const $input = $('#' + inputId);
+        const $hidden = $('#' + hiddenId);
+        const $dropdown = $('#' + dropdownId);
+
+        if (!$input.length || !$hidden.length || !$dropdown.length) return;
+
+        $input.off('.relacionamentoPesquisa');
+
+        function mostrarLista() {
+            const valorDigitado = ($input.val() || '').toLowerCase().trim();
+            $dropdown.empty();
+
+            const filtrados = listaDeDados.filter(function(item) {
+                return (item.texto || '').toLowerCase().includes(valorDigitado);
+            });
+
+            if (filtrados.length > 0) {
+                filtrados.forEach(function(item) {
+                    const $item = $('<div>')
+                        .addClass('item-lista')
+                        .text(item.texto);
+
+                    $item.on('mousedown', function(evt) {
+                        evt.preventDefault();
+                        $input.val(item.texto);
+                        $hidden.val(item.id);
+                        $dropdown.addClass('d-none');
+                    });
+
+                    $dropdown.append($item);
+                });
+            } else {
+                $dropdown.append(
+                    $('<div>').addClass('item-lista text-muted').text('Nada encontrado')
+                );
+            }
+
+            $dropdown.removeClass('d-none');
+        }
+
+        $input.on('focus.relacionamentoPesquisa click.relacionamentoPesquisa', mostrarLista);
+
+        $input.on('input.relacionamentoPesquisa', function() {
+            $hidden.val('');
+            mostrarLista();
+        });
+    }
+
+    function ultimoBlocoConcluido() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        if (blocos.length === 0) return true;
+        
+        let ultimoBloco = blocos[blocos.length - 1];
+        let central = ultimoBloco.querySelector('input[name^="ligacao_venda_central"]').checked;
+        let agencia = ultimoBloco.querySelector('input[name^="ligacao_agn"]').checked;
+        let premio = ultimoBloco.querySelector('input[name^="ligacao_premio_total"]').value.trim() !== '';
+        
+        let vendaFechada = (central || agencia) && premio;
+        return vendaFechada;
+    }
+
+    function atualizarEstadoLigacoes() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        let divHistorico = document.getElementById('historico-ligacoes-ficha');
+        let htmlHistorico = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
+        let temHistorico = false;
+        let cardsHistorico = [];
+
+        blocos.forEach((bloco, index) => {
+            let isSalvo = bloco.classList.contains('ligacao-salva');
+            let campos = bloco.querySelectorAll('input, select, textarea');
+            let btnRemover = bloco.querySelector('.btn-outline-danger');
+            let titulo = bloco.querySelector('.titulo-ligacao');
+
+            if (isSalvo) {
+                bloco.style.display = 'none'; 
+                campos.forEach(c => c.disabled = true);
+                temHistorico = true;
+
+                let dataVal = bloco.querySelector('input[name^="ligacao_data"]').value;
+                let protVal = bloco.querySelector('input[name^="ligacao_protocolo"]').value;
+                let ramalVal = bloco.querySelector('input[name^="ligacao_ramal"]').value;
+                let premioVal = bloco.querySelector('input[name^="ligacao_premio_total"]').value;
+                let obsVal = bloco.querySelector('textarea[name^="ligacao_obs"]').value;
+                let cadastradoVal = bloco.querySelector('input[name^="ligacao_cadastrado_por"]').value;
+                let proxVal = bloco.querySelector('input[name^="ligacao_proximo"]').value;
+
+                let central = bloco.querySelector('input[name^="ligacao_venda_central"]').checked;
+                let agn = bloco.querySelector('input[name^="ligacao_agn"]').checked;
+                let motSelect = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
+                let motText = motSelect.options[motSelect.selectedIndex]?.text;
+                if(motText === "-- Selecione --" || !motText) motText = "";
+
+                let segInput = bloco.querySelector('input[name^="ligacao_seguradora_texto"]');
+                let segText = segInput ? (segInput.value || '') : '';
+
+                let comInput = bloco.querySelector('input[name^="ligacao_comissao"]');
+                let comVal = comInput ? (comInput.value || '') : '';
+
+                let venda = central ? 'Central' : (agn ? 'Agência' : '-');
+                let numero = index + 1;
+
+                cardsHistorico.push(`
+                <div class="card mb-3 bg-light border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-phone-alt"></i> ${numero}ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ${formatarDataHora(dataVal) || '-'}</span></span>
+                        ${USUARIO_GESTOR ? '<span><button type="button" class="btn btn-sm btn-light text-danger py-0 px-2 me-2 mr-2" title="Apagar esta ligação" onclick="removerLigacaoHistorico(' + numero + ')"><i class="fas fa-trash-alt"></i></button><button type="button" class="btn btn-sm btn-light py-0 px-2 me-1 mr-5" title="Editar esta ligação" onclick="editarLigacaoHistorico(' + numero + ')"><i class="fas fa-pencil-alt"></i></button></span>':''}
+                    </div>
+                    <div class="card-body py-2" style="font-size: 0.9rem;">
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <div class="row g-2">
+                                    <div class="col-md-4"><strong>Protocolo:</strong> ${protVal || '-'}</div>
+                                    <div class="col-md-4"><strong>Ramal:</strong> ${ramalVal || '-'}</div>
+                                    <div class="col-md-4"><strong>Venda:</strong> ${venda}</div>
+                                    <div class="col-md-4"><strong>Prêmio Total:</strong> ${premioVal ? 'R$ ' + premioVal : '-'}</div>
+                                    <div class="col-md-4"><strong>Motivo:</strong> ${motText || '-'}</div>
+                                    <div class="col-md-4"><strong>Próximo contato:</strong> ${formatarDataHora(proxVal) || '-'}</div>
+                                    <div class="col-md-4"><strong>Seguradora:</strong> ${segText || '-'}</div>
+                                    <div class="col-md-4"><strong>Comissão:</strong> ${comVal ? comVal + '%' : '-'}</div>
+                                    <div class="col-md-12"><strong>Cadastrado por:</strong> ${cadastradoVal || '-'}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 border-start">
+                                <strong>Observações:</strong>
+                                <div style="white-space: pre-line;">${obsVal || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`);
+            } else {
+                bloco.style.display = 'block';
+                bloco.style.opacity = '1';
+                bloco.classList.add('p-3', 'border', 'border-2', 'border-primary', 'rounded', 'bg-white', 'shadow-sm');
+                bloco.classList.remove('border-bottom', 'pb-3', 'mb-3');
+                campos.forEach(c => c.disabled = false);
+                if (titulo) {
+                    titulo.classList.add('text-primary');
+                    titulo.classList.remove('text-muted');
+                }
+                if (btnRemover) btnRemover.style.display = 'inline-block';
+                sincronizarExclusividadeVenda(bloco);
+            }
+        });
+
+        htmlHistorico += cardsHistorico.reverse().join('');
+
+        if (divHistorico) {
+            if (temHistorico) {
+                divHistorico.innerHTML = htmlHistorico;
+                divHistorico.style.display = 'block';
+            } else {
+                divHistorico.innerHTML = '';
+                divHistorico.style.display = 'none';
+            }
+        }
+    }
+
+    function definirRelacionamentoPesquisavel(hiddenId, inputId, valor, listaDeDados) {
+        const $hidden = $('#' + hiddenId);
+        const $input = $('#' + inputId);
+
+        $hidden.val(valor || '');
+
+        if (!valor) {
+            $input.val('');
+            return;
+        }
+
+        const item = listaDeDados.find(function(i) {
+            return String(i.id) === String(valor) ||
+                   String(i.texto).trim() === String(valor).trim();
+        });
+
+        $input.val(item ? item.texto : '');
+    }
+
+    function limparRelacionamentosPesquisaveis() {
+        definirRelacionamentoPesquisavel(
+            'base_novo_seguradora_val',
+            'base_novo_seguradora_texto',
+            '',
+            listaBaseNovoSeguradoras
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_ramo_val',
+            'base_novo_ramo_texto',
+            '',
+            listaBaseNovoRamos
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_tipo_documento_val',
+            'base_novo_tipo_documento_texto',
+            '',
+            listaBaseNovoTiposDocumento
+        );
+        $('.lista-suspensa').addClass('d-none');
+    }
+
+    let modalLigacao = null;          
+    let algumaLigacaoSalva = false;   
+    let blocosSnapshot = 1;           
+
+    let modalHistorico = null;
+    let modalEditarDados = null;      // pop-up de edição dos dados do registro
+    let modalResponsavel = null;      // alex: pop-up de indicar responsável pela demanda (Gestor)
+
+    // alex: mostra na ficha o responsável atual da demanda (ou "Em aberto").
+    function mostrarResponsavelDemanda(nome) {
+        var el = document.getElementById('resp-demanda-nome');
+        if (el) el.textContent = (nome && nome.trim()) ? nome : 'Em aberto';
+    }
+    function abrirModalResponsavel() {
+        if (!modalResponsavel) return;
+        var atual = document.getElementById('resp-demanda-nome');
+        var nomeAtual = (atual && atual.textContent.trim() !== 'Em aberto') ? atual.textContent.trim() : '';
+        document.getElementById('resp-demanda-input').value = nomeAtual;
+        document.getElementById('resp-demanda-id-sel').value = '';
+        if (nomeAtual) resolverColaboradorDemanda(document.getElementById('resp-demanda-input'));
+        modalResponsavel.show();
+    }
+    // Descobre o id do colaborador pelo texto digitado (mesmo esquema da seguradora).
+    function resolverColaboradorDemanda(input) {
+        var hidden = document.getElementById('resp-demanda-id-sel');
+        var texto = (input.value || '').trim().toLowerCase();
+        var item = LISTA_COLABORADORES_DEMANDA.find(function(c) {
+            return String(c.texto).trim().toLowerCase() === texto;
+        });
+        hidden.value = item ? item.id : '';
+    }
+    function salvarResponsavel() {
+        var idReg = $('#base_novo_id_hidden').val();
+        if (!idReg) return;
+        var txt = (document.getElementById('resp-demanda-input').value || '').trim();
+        var colId = document.getElementById('resp-demanda-id-sel').value || '';
+        if (txt && !colId) {
+            avisoElegante('Selecione um colaborador válido da lista, ou apague o campo para deixar "Em aberto".', 'Colaborador não encontrado');
+            return;
+        }
+        $.ajax({
+            url: URL_RESP_DEMANDA.replace('/0/', '/' + idReg + '/'),
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfAtendimento() },
+            data: { colaborador: colId }
+        }).done(function(resp) {
+            if (resp && resp.ok) {
+                mostrarResponsavelDemanda(resp.nome);
+                var tr = document.querySelector('#tabela-base-novo tbody tr[data-id="' + idReg + '"]');
+                if (tr) {
+                    tr.setAttribute('data-responsavel-demanda', resp.id || '');
+                    tr.setAttribute('data-responsavel-demanda-nome', resp.nome || '');
+                    // alex: atualiza também a COLUNA "Responsável" na lista (não só a ficha).
+                    var celResp = tr.querySelector('.resp-demanda-cell');
+                    if (celResp) {
+                        var nomeCel = resp.nome || '-';
+                        try {
+                            $('#tabela-base-novo').DataTable().cell(celResp).data(nomeCel).draw(false);
+                        } catch (e) {
+                            celResp.textContent = nomeCel;
+                        }
+                    }
+                }
+                if (modalResponsavel) modalResponsavel.hide();
+            } else {
+                avisoElegante((resp && resp.erro) || 'Não foi possível salvar o responsável.', 'Ação não permitida');
+            }
+        }).fail(function(xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível salvar o responsável.';
+            avisoElegante(msg, 'Ação não permitida');
+        });
+    }
+
+    // alex: mostra/esconde o botão "Editar dados". No card "Novo" não se edita um
+    // registro EXISTENTE (só criar novo cadastro ou registrar ligações).
+    function atualizarBotaoEditarDados(ehExistente) {
+        var btn = document.getElementById('btn-editar-dados');
+        if (!btn) return;
+        btn.style.display = (APENAS_PENDENTES && ehExistente) ? 'none' : '';
+    }
+
+    // alex: guarda os valores para desfazer se o usuário Cancelar (só salva no botão Salvar).
+    var _snapshotDadosEdicao = null;
+
+    // Abre o pop-up de edição do bloco de dados
+    function abrirEdicaoDados() {
+        if (!modalEditarDados) return;
+        var bloco = document.getElementById('bloco-dados-editaveis');
+        var corpo = document.getElementById('modal-editar-dados-corpo');
+        if (bloco && corpo) {
+            _snapshotDadosEdicao = [];
+            bloco.querySelectorAll('input, select, textarea').forEach(function(el) {
+                _snapshotDadosEdicao.push({ el: el, value: el.value, checked: el.checked });
+            });
+            corpo.appendChild(bloco);
+            bloco.classList.remove('dados-travados'); // destrava para edição
+        }
+        modalEditarDados.show();
+    }
+
+    // vai cancelar devolve o bloco para a ficha e trava de novo, sem salvar.
+    function cancelarEdicaoDados() {
+        // Desfaz alterações
+        if (_snapshotDadosEdicao) {
+            _snapshotDadosEdicao.forEach(function(s) { s.el.value = s.value; s.el.checked = s.checked; });
+            _snapshotDadosEdicao = null;
+        }
+        devolverBlocoDadosParaFicha();
+        if (modalEditarDados) modalEditarDados.hide();
+
+        // Se a gente estava criando um "Novo", remove o truque invisível e volta ao normal
+        if (document.getElementById('base_novo_id_hidden').value === "") {
+            $('#form-base-novo').hide().css({
+                'position': '',
+                'visibility': '',
+                'height': '',
+                'width': '',
+                'top': ''
+            });
+        }
+    }
+
+    // vai salvar e  marcaa
+    function salvarEdicaoDados() {
+        // alex: campos obrigatórios (mesma regra do backend em IndicacaoForm.CAMPOS_OBRIGATORIOS).
+        var ramo = document.getElementById('base_novo_ramo_val');
+        if (!ramo || !ramo.value) {
+            avisoElegante('O campo "Grupo/Ramo" é obrigatório. Selecione um Grupo/Ramo antes de salvar.', 'Campo obrigatório');
+            return;
+        }
+        var nome = document.getElementById('id_nome_cliente');
+        if (!nome || !nome.value.trim()) {
+            avisoElegante('O campo "Nome" é obrigatório.', 'Campo obrigatório');
+            return;
+        }
+        var cpf = document.getElementById('id_cpf_cliente');
+        if (!cpf || !cpf.value.trim()) {
+            avisoElegante('O campo "CPF" é obrigatório.', 'Campo obrigatório');
+            return;
+        }
+        var flag = document.getElementById('editar_dados_flag');
+        if (flag) flag.value = '1';
+        var form = document.querySelector('#form-base-novo form');
+        if (form) form.requestSubmit ? form.requestSubmit() : form.submit();
+    }
+
+    // Recoloca o bloco de dados na ficha antes do historico e fica travado.
+    function devolverBlocoDadosParaFicha() {
+        var bloco = document.getElementById('bloco-dados-editaveis');
+        var refHistorico = document.getElementById('historico-ligacoes-ficha');
+        if (bloco && refHistorico && refHistorico.parentNode) {
+            bloco.classList.add('dados-travados');
+            refHistorico.parentNode.insertBefore(bloco, refHistorico);
+        }
+    }
+    const MOTIVOS_NAO_VENDA = {
+        {% for valor, rotulo in motivos_nao_venda %}"{{ valor|escapejs }}": "{{ rotulo|escapejs }}",{% endfor %}
+    };
+
+    // Mapa id -> nome da seguradora, para mostrar o nome no histórico.
+    function nomeSeguradora(id) {
+        if (!id) return '';
+        var s = listaBaseNovoSeguradoras.find(function(x) { return String(x.id) === String(id); });
+        return s ? s.texto : '';
+    }
+
+    $(document).ready(function() {
+
+        inicializarDropdownRelacionamento(
+            'base_novo_seguradora_texto',
+            'base_novo_seguradora_val',
+            'base_novo_dropdown_seguradora',
+            listaBaseNovoSeguradoras
+        );
+        inicializarDropdownRelacionamento(
+            'base_novo_ramo_texto',
+            'base_novo_ramo_val',
+            'base_novo_dropdown_ramo',
+            listaBaseNovoRamos
+        );
+        inicializarDropdownRelacionamento(
+            'base_novo_tipo_documento_texto',
+            'base_novo_tipo_documento_val',
+            'base_novo_dropdown_tipo_documento',
+            listaBaseNovoTiposDocumento
+        );
+        inicializarDropdownRelacionamento(
+            'resp-demanda-input',
+            'resp-demanda-id-sel',
+            'resp-demanda-dropdown',
+            LISTA_COLABORADORES_DEMANDA
+        );
+        // alex: Indicador e Agência com o mesmo dropdown pesquisável da Seguradora.
+        inicializarDropdownRelacionamento(
+            'disp-indicador',
+            'disp-indicador-id',
+            'disp-indicador-dropdown',
+            listaIndicadores
+        );
+        inicializarDropdownRelacionamento(
+            'disp-agencia',
+            'disp-agencia-id',
+            'disp-agencia-dropdown',
+            listaAgencias
+        );
+        inicializarSeguradoraLigacao(document.getElementById('ligacao-1'));
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.input-container').length) {
+                $('.lista-suspensa').addClass('d-none');
+            }
+        });
+
+        iniciarTabelaExcel('tabela-base-novo', [1, 25, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
+
+
+        atualizarAtendimentos();
+        setInterval(atualizarAtendimentos, 5000);
+        if (tableInstance) tableInstance.on('draw', aplicarAtendimentos);
+
+        if (PODE_REGISTRAR_LIGACAO) {
+            modalLigacao = new bootstrap.Modal(document.getElementById('modalLigacao'));
+            atualizarResumoLigacoes();
+            var elEditar = document.getElementById('modalEditarDados');
+            if (elEditar) modalEditarDados = new bootstrap.Modal(elEditar);
+        }
+
+        var elResp = document.getElementById('modalResponsavel');
+        if (elResp) modalResponsavel = new bootstrap.Modal(elResp);
+
+        var elHist = document.getElementById('modalHistoricoLigacoes');
+        if (elHist) {
+            modalHistorico = new bootstrap.Modal(elHist);
+        }
+
+        {% if form_indicacao.errors %}
+            $('#lista-base-novo').hide();
+            $('#form-base-novo').show();
+
+            var id_erro = $('#base_novo_id_hidden').val();
+            if(id_erro) {
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo');
+            } else {
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
+            }
+
+            {% for campo in form_indicacao %}
+                {% if campo.errors %}$('#{{ campo.id_for_label }}').addClass('is-invalid');{% endif %}
+            {% endfor %}
+
+            avisoElegante("{{ erro_formulario_msg|escapejs }}", 'Não foi possível salvar');
+        {% endif %}
+
+        $('#container-ligacoes').on('input change', [
+            'input[name^="ligacao_data"]',
+            'input[name^="ligacao_ramal"]',
+            'input[name^="ligacao_venda_central"]',
+            'input[name^="ligacao_agn"]',
+            'input[name^="ligacao_premio_total"]',
+            'select[name^="ligacao_motivo_nao_venda"]',
+            'input[name^="ligacao_proximo"]',
+            'textarea[name^="ligacao_obs"]'
+        ].join(', '), function() {
+            var informou = (this.type === 'checkbox') ? this.checked : (this.value || '').trim() !== '';
+            if (!informou) return;
+            gerarProtocoloEDataSeNecessario($(this).closest('.bloco-ligacao'));
+        });
+
+        $('#container-ligacoes').on('change', 'input[name^="ligacao_venda_central"], input[name^="ligacao_agn"], select[name^="ligacao_motivo_nao_venda"]', function() {
+            sincronizarExclusividadeVenda(this.closest('.bloco-ligacao'));
+        });
+
+        $('#container-ligacoes').on('input', 'input[name^="ligacao_premio_total"]', function() {
+            aplicarMascaraMilhar(this);
+        });
+
+        $('#form-base-novo form').on('submit', function(e) {
+            let faltando = false;
+            document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(function(bloco) {
+                let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+                let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
+                let premio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+                let marcouVenda = (central && central.checked) || (agencia && agencia.checked);
+                if (marcouVenda && premio && !premio.value.trim()) {
+                    faltando = true;
+                }
+            });
+            
+            if (faltando) {
+                e.preventDefault();
+                avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
+                return;
+            }
+
+            $('#container-ligacoes .bloco-ligacao').find('input, select, textarea').prop('disabled', false);
+        });
     });
+
+    function prepararNovaLigacao(idProtocolo, idCadastradoPor) {
+        let campoCadastradoPor = document.getElementById(idCadastradoPor);
+        if (campoCadastradoPor) {
+            campoCadastradoPor.value = USUARIO_ATUAL_NOME;
+        }
+
+        let campoProtocolo = document.getElementById(idProtocolo);
+        if (campoProtocolo) {
+            campoProtocolo.value = '';
+        }
+    }
+
+    function gerarProtocoloEDataSeNecessario(bloco) {
+        if (!bloco || !bloco.length) return;
+
+        let campoProtocolo = bloco.find('input[name^="ligacao_protocolo"]');
+        if (campoProtocolo.length && !campoProtocolo.val() && !campoProtocolo.data('gerando')) {
+            campoProtocolo.data('gerando', true);
+            $.get(URL_GERAR_PROTOCOLO, function(resposta) {
+                if (!campoProtocolo.val()) {
+                    campoProtocolo.val(resposta.protocolo);
+                }
+                campoProtocolo.data('gerando', false);
+            });
+        }
+
+        let campoData = bloco.find('input[name^="ligacao_data"]');
+        if (campoData.length && !campoData.val()) {
+            $.get(URL_AGORA_SERVIDOR, function(resposta) {
+                if (!campoData.val()) {
+                    campoData.val(resposta.datahora);
+                }
+            });
+        }
+    }
+
+    function iniciarPrimeiraLigacao() {
+        algumaLigacaoSalva = true;
+        $('#btn-iniciar-ligacao').hide();
+        $('#btn-registrar-outra-ligacao').show();
+        atualizarResumoLigacoes();
+    }
+
+    function avisarSaida(e) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+    function ativarBloqueioSaida() {
+        window.addEventListener('beforeunload', avisarSaida);
+    }
+    function desativarBloqueioSaida() {
+        window.removeEventListener('beforeunload', avisarSaida);
+    }
+
+    function atualizarResumoLigacoes() {
+        let resumo = document.getElementById('resumo-ligacoes');
+        if (!resumo) return;
+        let n = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
+        resumo.innerHTML = (algumaLigacaoSalva && n > 0)
+            ? '<i class="fas fa-check-circle"></i> ' + n + ' ligação(ões) registrada(s)'
+            : '';
+    }
+
+    function escHtml(s) {
+        return (s == null ? '' : String(s)).replace(/[&<>"]/g, function(c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+    }
+
+    function formatarDataHora(iso) {
+        if (!iso) return '';
+        var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        return m ? (m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5]) : iso;
+    }
+
+    function abrirHistoricoLigacoes(el) {
+        if (!modalHistorico) return;
+        var tr = el.closest('tr');
+        var cliente = el.getAttribute('data-cliente') || '';
+        document.getElementById('hist-cliente').textContent = cliente ? '— ' + cliente : '';
+
+        var itens = tr ? tr.querySelectorAll('.dados-ligacoes-extras .extra-item-ligacao') : [];
+        var arr = Array.prototype.slice.call(itens);
+        var total = arr.length;
+        var html = '';
+
+        arr.forEach(function(item, idx) {
+            var d = item.dataset;
+            var ehUltima = (idx === 0);
+            var venda = d.vendaCentral === '1' ? 'Central'
+                      : d.agn === '1' ? 'Agência'
+                      : '-';
+            var motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
+            var premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
+            var numero = total - idx;
+
+            html += ''
+              + '<div class="card mb-2 ' + (ehUltima ? 'border-primary' : '') + '">'
+              +   '<div class="card-header d-flex justify-content-between align-items-center py-2 ' + (ehUltima ? 'bg-primary text-white' : 'bg-light') + '">'
+              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação '
+              +       (ehUltima ? '<span class="badge bg-light text-primary ms-1">Mais recente</span>' : '') + '</span>'
+              +     '<small>' + escHtml(formatarDataHora(d.data)) + '</small>'
+              +   '</div>'
+              +   '<div class="card-body py-2" style="font-size:.9rem;">'
+              +     '<div class="row g-2">'
+              +       '<div class="col-md-8">'
+              +         '<div class="row g-2">'
+              +           '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
+              +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +           '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Comissão:</strong> ' + (d.comissao ? escHtml(formatarValorBRL(d.comissao)) + '%' : '-') + '</div>'
+              +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-4 border-start"><strong>Observações:</strong><div style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</div></div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        });
+
+        if (!html) html = '<div class="text-muted text-center py-3">Nenhuma ligação registrada.</div>';
+        document.getElementById('hist-corpo').innerHTML = html;
+        modalHistorico.show();
+    }
+
+    function renderHistoricoFichaBaseNovo(row) {
+        let div = document.getElementById('historico-ligacoes-ficha');
+        if (!div) return;
+        let itens = Array.from(row.querySelectorAll('.extra-item-ligacao'));
+        let total = itens.length;
+        if (total === 0) {
+            div.innerHTML = '';
+            div.style.display = 'none';
+            return;
+        }
+        let html = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
+        itens.forEach(function(item, idx) {
+            let d = item.dataset;
+            let numero = total - idx;
+            let venda = d.vendaCentral === '1' ? 'Central' : (d.agn === '1' ? 'Agência' : '-');
+            let motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
+            let premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
+            html += ''
+              + '<div class="card mb-3 bg-light border-0 shadow-sm">'
+              +   '<div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">'
+              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ' + (escHtml(formatarDataHora(d.data)) || '-') + '</span></span>'
+              +     '<span class="badge bg-success"><i class="fas fa-check"></i> Finalizada</span>'
+              +   '</div>'
+              +   '<div class="card-body py-2" style="font-size:0.9rem;">'
+              +     '<div class="row g-2">'
+              +       '<div class="col-md-8">'
+              +         '<div class="row g-2">'
+              +           '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
+              +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +           '<div class="col-md-4"><strong>Motivo:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Comissão:</strong> ' + (d.comissao ? escHtml(formatarValorBRL(d.comissao)) + '%' : '-') + '</div>'
+              +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-4 border-start"><strong>Observações:</strong><div style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</div></div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        });
+        div.innerHTML = html;
+        div.style.display = 'block';
+    }
+
+    function resetarContainerLigacoes() {
+        contadorLigacoes = 1;
+        let container = document.getElementById('container-ligacoes');
+        if (!container) return;
+        while (container.children.length > 1) {
+            container.removeChild(container.lastChild);
+        }
+        document.getElementById('edit_ligacao_protocolo').value = '';
+        document.getElementById('edit_ligacao_data').value = '';
+        document.getElementById('edit_ligacao_proximo').value = '';
+        document.getElementById('edit_ligacao_obs').value = '';
+        document.getElementById('edit_ligacao_ramal').value = '';
+        document.getElementById('edit_ligacao_venda_central').checked = false;
+        document.getElementById('edit_ligacao_premio_total').value = '';
+        document.getElementById('edit_ligacao_agn').checked = false;
+        document.getElementById('edit_ligacao_motivo_nao_venda').value = '';
+        document.getElementById('edit_ligacao_seguradora').value = '';
+        document.getElementById('edit_ligacao_seguradora_texto').value = '';
+        document.getElementById('edit_ligacao_comissao').value = '';
+        document.getElementById('edit_ligacao_cadastrado_por').value = '';
+
+        algumaLigacaoSalva = false;
+        $('#ligacao-1').hide();
+        $('#btn-iniciar-ligacao').show();
+        $('#btn-registrar-outra-ligacao').hide();
+        sincronizarExclusividadeVenda(document.getElementById('ligacao-1'));
+        atualizarResumoLigacoes();
+        
+        let divHistorico = document.getElementById('historico-ligacoes-ficha');
+        if (divHistorico) {
+            divHistorico.innerHTML = '';
+            divHistorico.style.display = 'none';
+        }
+    }
+
+    function sincronizarExclusividadeVenda(bloco) {
+        if (!bloco) return;
+        let campoCentral = bloco.querySelector('input[name^="ligacao_venda_central"]');
+        let campoAgencia = bloco.querySelector('input[name^="ligacao_agn"]');
+        let campoMotivo = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
+        let campoPremio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+        let campoProximo = bloco.querySelector('input[name^="ligacao_proximo"]');
+        let campoSeguradoraTexto = bloco.querySelector('.campo-seguradora-ligacao');
+        let campoSeguradoraHidden = bloco.querySelector('input[type="hidden"][name^="ligacao_seguradora"]');
+        let campoComissao = bloco.querySelector('input[name^="ligacao_comissao"]');
+        if (!campoCentral || !campoAgencia || !campoMotivo) return;
+
+        let temCentral = campoCentral.checked;
+        let temAgencia = campoAgencia.checked;
+        let temMotivo = campoMotivo.value !== '';
+
+        campoMotivo.disabled = false;
+
+        campoCentral.disabled = temAgencia || temMotivo;
+        if (campoCentral.disabled) campoCentral.checked = false;
+
+        campoAgencia.disabled = temCentral || temMotivo;
+        if (campoAgencia.disabled) campoAgencia.checked = false;
+
+        temCentral = campoCentral.checked;
+        temAgencia = campoAgencia.checked;
+
+        if (campoPremio) {
+            campoPremio.disabled = !(temCentral || temAgencia);
+            if (!(temCentral || temAgencia)) {
+                campoPremio.value = '';
+            }
+        }
+
+        if (campoProximo) {
+            let ligacaoConcluida = temCentral || temAgencia || temMotivo;
+            campoProximo.disabled = ligacaoConcluida;
+            if (ligacaoConcluida) {
+                campoProximo.value = '';
+            }
+        }
+
+        let vendaFechada = temCentral || temAgencia;
+
+        if (campoSeguradoraTexto) {
+            campoSeguradoraTexto.disabled = !vendaFechada;
+            if (!vendaFechada) {
+                campoSeguradoraTexto.value = '';
+                if (campoSeguradoraHidden) campoSeguradoraHidden.value = '';
+            }
+        }
+
+        if (campoComissao) {
+            campoComissao.disabled = !vendaFechada;
+            if (!vendaFechada) {
+                campoComissao.value = '';
+            }
+        }
+
+        sincronizarSelectVendas(bloco);
+    }
+
+    function aplicarSelecaoVendas(selectEl) {
+        let bloco = selectEl.closest('.bloco-ligacao');
+        if (!bloco) return;
+        let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+        let agn = bloco.querySelector('input[name^="ligacao_agn"]');
+        if (central) central.checked = (selectEl.value === 'central');
+        if (agn) agn.checked = (selectEl.value === 'agencia');
+        sincronizarExclusividadeVenda(bloco);
+        if (selectEl.value) gerarProtocoloEDataSeNecessario($(bloco));
+    }
+
+    function sincronizarSelectVendas(bloco) {
+        let sel = bloco.querySelector('[data-vendas-select]');
+        if (!sel) return;
+        let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+        let agn = bloco.querySelector('input[name^="ligacao_agn"]');
+        let motivo = bloco.querySelector('select[name^="ligacao_motivo_nao_venda"]');
+        sel.value = (central && central.checked) ? 'central' : ((agn && agn.checked) ? 'agencia' : '');
+        sel.disabled = !!(motivo && motivo.value !== '');
+    }
+
+    function aplicarMascaraMilhar(input) {
+        let digitos = (input.value || '').replace(/\D/g, '');
+        if (!digitos) { input.value = ''; return; }
+        let numero = parseInt(digitos, 10) / 100;
+        input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // o campo comissao valor em % com formato milhar
+    // nao permitir digitar maior que o numero 65.
+    function aplicarMascaraComissao(input) {
+        let digitos = (input.value || '').replace(/\D/g, '');
+        if (!digitos) { input.value = ''; return; }
+        let numero = parseInt(digitos, 10) / 100;
+        if (numero > 65) numero = 65;
+        input.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // cada bloco novo 2ª, 3ª ligação... é clonado dinamicamente em adicionarLigacao().
+    function inicializarSeguradoraLigacao(bloco) {
+        const $input = $(bloco).find('.campo-seguradora-ligacao');
+        const $hidden = $(bloco).find('input[type="hidden"][name^="ligacao_seguradora"]');
+        const $dropdown = $(bloco).find('.campo-seguradora-dropdown');
+
+        if (!$input.length || !$hidden.length || !$dropdown.length) return;
+
+        $input.off('.seguradoraPesquisa');
+
+        function mostrarLista() {
+            const valorDigitado = ($input.val() || '').toLowerCase().trim();
+            $dropdown.empty();
+
+            const filtrados = listaBaseNovoSeguradoras.filter(function(item) {
+                return (item.texto || '').toLowerCase().includes(valorDigitado);
+            });
+
+            if (filtrados.length > 0) {
+                filtrados.forEach(function(item) {
+                    const $item = $('<div>')
+                        .addClass('item-lista')
+                        .text(item.texto);
+
+                    $item.on('mousedown', function(evt) {
+                        evt.preventDefault();
+                        $input.val(item.texto);
+                        $hidden.val(item.id);
+                        $dropdown.addClass('d-none');
+                    });
+
+                    $dropdown.append($item);
+                });
+            } else {
+                $dropdown.append(
+                    $('<div>').addClass('item-lista text-muted').text('Nada encontrado')
+                );
+            }
+
+            $dropdown.removeClass('d-none');
+            // alex: a lista pode ficar mais alta que o espaço restante dentro do modal
+            // (ex.: última ligação da tela) e ser cortada pela borda do modal-body. Rola
+            // até a lista inteira ficar visível, em vez de deixá-la "sumir" atrás do fundo.
+            var dropdownEl = $dropdown.get(0);
+            if (dropdownEl && dropdownEl.scrollIntoView) {
+                dropdownEl.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        $input.on('focus.seguradoraPesquisa click.seguradoraPesquisa', mostrarLista);
+
+        $input.on('input.seguradoraPesquisa', function() {
+            $hidden.val('');
+            mostrarLista();
+        });
+    }
+
+    function formatarValorBRL(valor) {
+        if (valor === undefined || valor === null || valor === '') return '';
+        let numero = parseFloat(valor);
+        if (isNaN(numero)) return '';
+        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function toggleFormLocal(tipo, mostrar) {
+        if(mostrar) {
+            $('#lista-' + tipo).hide();
+            $('#form-' + tipo).show();
+            if(document.getElementById('base_novo_id_hidden').value === "") {
+                $('form')[1].reset();
+                limparRelacionamentosPesquisaveis();
+                resetarContainerLigacoes();
+                prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
+                $('#disp-indicador').val('');
+                $('#disp-agencia').val('');
+                $('#base_novo_id_display').val('');  // alex: cadastro novo ainda não tem ID
+                var _histFicha = document.getElementById('historico-ligacoes-ficha');
+                if (_histFicha) { _histFicha.innerHTML = ''; _histFicha.style.display = 'none'; }
+                mostrarResponsavelDemanda('');  // alex: cadastro novo começa "Em aberto"
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
+                atualizarBotaoEditarDados(false);  // alex: cadastro NOVO pode editar os dados
+                // alex: gera automaticamente a "Data/hora do cadastro" (data/hora do servidor).
+                // O campo fica inativo; o usuário não precisa preencher.
+                $.get(URL_AGORA_SERVIDOR, function(resposta) {
+                    var campoCarimbo = document.getElementById('id_carimbo_data_hora');
+                    if (campoCarimbo && !campoCarimbo.value) { campoCarimbo.value = resposta.datahora; }
+                });
+            }
+        } else {
+            {% if form_indicacao.errors %}
+                window.location.href = window.location.pathname;
+            {% else %}
+                // Ao voltar para a lista, libera a trava do registro que estava aberto.
+                var _idFechar = document.getElementById('base_novo_id_hidden').value;
+                if (_idFechar) encerrarAtendimento(_idFechar);
+                $('#form-' + tipo).hide();
+                $('#lista-' + tipo).show();
+                $('#base_novo_id_hidden').val('');
+            {% endif %}
+        }
+    }
+
+    function editarIndicacao(row) {
+        var id = row.getAttribute('data-id');
+
+        if (row.classList.contains('em-atendimento')) {
+            // Registro em uso: ninguém mais abre até quem está mexendo Cancelar ou Salvar.
+            var atendentePor = atendimentosAtivos[String(id)] || row.getAttribute('data-atendimento') || 'outro usuário';
+            avisoElegante('Este registro já está em atendimento por ' + atendentePor + '. Aguarde a liberação para poder abri-lo.', 'Registro em atendimento');
+            return;
+        }
+
+        $('#base_novo_id_hidden').val(id);
+        $('#base_novo_id_display').val(id);  // alex: mostra o ID do registro (somente leitura)
+        atualizarBotaoEditarDados(true);  // alex: registro EXISTENTE -> no card Novo não pode editar dados
+        // ao abrir um registro a linha fica vermelha e bloqueada para o proxumo usuario abrir
+        if (PODE_REGISTRAR_LIGACAO) { marcarAtendimento(id); iniciarHeartbeatAtendimento(id); }
+        // alex: mostra o responsável já indicado para essa demanda (ou "Em aberto").
+        mostrarResponsavelDemanda(row.getAttribute('data-responsavel-demanda-nome'));
+
+        $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
+        $('#id_email').val(row.getAttribute('data-email'));
+        $('#id_email_indicador_outro').val(row.getAttribute('data-email-indicador-outro'));
+        var _mat = row.getAttribute('data-matricula') || '';
+        var _nomeInd = row.getAttribute('data-nome-indicador') || '';
+        var _cid = row.getAttribute('data-cid') || '';
+        var _nomeAg = row.getAttribute('data-nome-agencia') || '';
+        $('#id_matricula_indicador').val(_mat);
+        $('#id_nome_indicador').val(_nomeInd);
+        $('#id_cid_agencia').val(_cid);
+        $('#disp-indicador').val(_mat + ((_mat && _nomeInd) ? ' - ' : '') + _nomeInd);
+        $('#disp-agencia').val(_cid + ((_cid && _nomeAg) ? ' - ' : '') + _nomeAg);
+        $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
+        $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
+        $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
+        $('#id_nome_cliente').val(row.getAttribute('data-nome-cliente'));
+        $('#id_telefone_cliente').val(row.getAttribute('data-telefone-cliente'));
+        $('#id_cpf_cliente').val(row.getAttribute('data-cpf-cliente'));
+        $('#id_email_cliente').val(row.getAttribute('data-email-cliente'));
+        $('#id_produto').val(row.getAttribute('data-produto'));
+        $('#id_dados_veiculo').val(row.getAttribute('data-veiculo'));
+        $('#id_possui_seguro').val(row.getAttribute('data-possui-seguro'));
+        definirRelacionamentoPesquisavel(
+            'base_novo_seguradora_val',
+            'base_novo_seguradora_texto',
+            row.getAttribute('data-seguradora'),
+            listaBaseNovoSeguradoras
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_ramo_val',
+            'base_novo_ramo_texto',
+            row.getAttribute('data-ramo'),
+            listaBaseNovoRamos
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_tipo_documento_val',
+            'base_novo_tipo_documento_texto',
+            row.getAttribute('data-tipo-documento'),
+            listaBaseNovoTiposDocumento
+        );
+        $('#id_numero_contrato').val(row.getAttribute('data-contrato'));
+        $('#id_numero_endosso').val(row.getAttribute('data-endosso'));
+        
+        $('#id_observacoes').val(row.getAttribute('data-obs'));
+
+        if (PODE_REGISTRAR_LIGACAO) {
+        resetarContainerLigacoes();
+        
+        let itensLigacoesNode = row.querySelectorAll('.extra-item-ligacao');
+        let itensLigacoes = Array.from(itensLigacoesNode).reverse();
+        
+        itensLigacoes.forEach(function(item, index) {
+            if(index === 0) {
+                let bloco = document.getElementById('ligacao-1');
+                bloco.classList.add('ligacao-salva');
+                
+                document.getElementById('edit_ligacao_protocolo').value = item.dataset.protocolo || '';
+                document.getElementById('edit_ligacao_data').value = item.dataset.data || '';
+                document.getElementById('edit_ligacao_proximo').value = item.dataset.proximo || '';
+                document.getElementById('edit_ligacao_obs').value = item.dataset.obs || '';
+                document.getElementById('edit_ligacao_ramal').value = item.dataset.ramal || '';
+                document.getElementById('edit_ligacao_venda_central').checked = item.dataset.vendaCentral === '1';
+                document.getElementById('edit_ligacao_premio_total').value = formatarValorBRL(item.dataset.premioTotal);
+                document.getElementById('edit_ligacao_agn').checked = item.dataset.agn === '1';
+                document.getElementById('edit_ligacao_motivo_nao_venda').value = item.dataset.motivo || '';
+                document.getElementById('edit_ligacao_seguradora').value = item.dataset.seguradora || '';
+                document.getElementById('edit_ligacao_seguradora_texto').value = item.dataset.seguradoraNome || '';
+                document.getElementById('edit_ligacao_comissao').value = formatarValorBRL(item.dataset.comissao);
+                document.getElementById('edit_ligacao_cadastrado_por').value = item.dataset.cadastradoPor || '';
+            } else {
+                adicionarLigacao(true);
+                let c = contadorLigacoes;
+                let bloco = document.getElementById('ligacao-' + c);
+                bloco.classList.add('ligacao-salva');
+                
+                document.getElementById('edit_ligacao_protocolo_' + c).value = item.dataset.protocolo || '';
+                document.getElementById('edit_ligacao_data_' + c).value = item.dataset.data || '';
+                document.getElementById('edit_ligacao_proximo_' + c).value = item.dataset.proximo || '';
+                document.getElementById('edit_ligacao_obs_' + c).value = item.dataset.obs || '';
+                document.getElementById('edit_ligacao_ramal_' + c).value = item.dataset.ramal || '';
+                document.getElementById('edit_ligacao_venda_central_' + c).checked = item.dataset.vendaCentral === '1';
+                document.getElementById('edit_ligacao_premio_total_' + c).value = formatarValorBRL(item.dataset.premioTotal);
+                document.getElementById('edit_ligacao_agn_' + c).checked = item.dataset.agn === '1';
+                document.getElementById('edit_ligacao_motivo_nao_venda_' + c).value = item.dataset.motivo || '';
+                document.getElementById('edit_ligacao_seguradora_' + c).value = item.dataset.seguradora || '';
+                document.getElementById('edit_ligacao_seguradora_texto_' + c).value = item.dataset.seguradoraNome || '';
+                document.getElementById('edit_ligacao_comissao_' + c).value = formatarValorBRL(item.dataset.comissao);
+                document.getElementById('edit_ligacao_cadastrado_por_' + c).value = item.dataset.cadastradoPor || '';
+            }
+        });
+
+        document.querySelectorAll('#container-ligacoes .bloco-ligacao').forEach(sincronizarExclusividadeVenda);
+
+        if(itensLigacoes.length === 0) {
+            prepararNovaLigacao('edit_ligacao_protocolo', 'edit_ligacao_cadastrado_por');
+        } else {
+            iniciarPrimeiraLigacao();
+        }
+        
+        atualizarEstadoLigacoes();
+
+        } else {
+            renderHistoricoFichaBaseNovo(row);
+        }
+
+        $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo');
+        toggleFormLocal('base-novo', true);
+    }
+
+    function adicionarLigacao(forcar = false) {
+        if (!forcar && !ultimoBlocoConcluido()) {
+            avisoElegante('Só é possível registrar uma nova ligação após finalizar a venda da ligação atual (marque "Vendas Central" ou "Vendas Agência" e informe o Prêmio Total).', 'Ação não permitida');
+            return;
+        }
+
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        if (blocos.length > 0) {
+            blocos[blocos.length - 1].classList.add('ligacao-salva');
+        }
+
+        contadorLigacoes++;
+        let blocoOriginal = document.getElementById('ligacao-1');
+        let novoBloco = blocoOriginal.cloneNode(true);
+        novoBloco.id = 'ligacao-' + contadorLigacoes;
+        
+        novoBloco.classList.remove('ligacao-salva');
+        novoBloco.style.display = '';
+
+        let titulo = novoBloco.querySelector('.titulo-ligacao');
+        // alex: sem botão "Remover" ao registrar a ligação (não tinha função útil ali).
+        titulo.innerHTML = `
+            <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
+        `;
+
+        let campos = novoBloco.querySelectorAll('input, select, textarea');
+        campos.forEach(function(campo) {
+            if(campo.type === 'checkbox') {
+                campo.checked = false;
+            } else {
+                campo.value = '';
+            }
+            let nomeOriginal = campo.getAttribute('name');
+            if(nomeOriginal) {
+                nomeOriginal = nomeOriginal.replace(/_\d+$/, '');
+                campo.setAttribute('name', nomeOriginal + '_' + contadorLigacoes);
+            }
+            let idOriginal = campo.getAttribute('id');
+            if(idOriginal) {
+                idOriginal = idOriginal.replace(/_\d+$/, '');
+                campo.setAttribute('id', idOriginal + '_' + contadorLigacoes);
+            }
+        });
+        
+        document.getElementById('container-ligacoes').appendChild(novoBloco);
+        inicializarSeguradoraLigacao(novoBloco);
+        prepararNovaLigacao('edit_ligacao_protocolo_' + contadorLigacoes, 'edit_ligacao_cadastrado_por_' + contadorLigacoes);
+
+        atualizarEstadoLigacoes();
+    }
+
+    var atendimentosAtivos = {};
+    function csrfAtendimento() {
+        var el = document.querySelector('input[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+    var heartbeatAtendimento = null;   // "sinal de vida" enquanto a ficha está aberta
+    function marcarAtendimento(id) {
+        if (!id) return;
+        $.ajax({ url: URL_MARCAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
+                 headers: { 'X-CSRFToken': csrfAtendimento() } });
+    }
+
+    // enquanto o campo fica aberto uma pessoa acessando a cada 15s atualiza, se usuario sair do navegador, ele fecha sozinho entre 45s
+    function iniciarHeartbeatAtendimento(id) {
+        pararHeartbeatAtendimento();
+        if (!id) return;
+        heartbeatAtendimento = setInterval(function() { marcarAtendimento(id); }, 15000);
+    }
+    function pararHeartbeatAtendimento() {
+        if (heartbeatAtendimento) { clearInterval(heartbeatAtendimento); heartbeatAtendimento = null; }
+    }
+    function encerrarAtendimento(id) {
+        pararHeartbeatAtendimento();
+        if (!id) return;
+        $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
+                 headers: { 'X-CSRFToken': csrfAtendimento() } });
+        // Libera na hora sem o tempo de segundos
+        delete atendimentosAtivos[String(id)];
+        aplicarAtendimentos();
+    }
+    // quando fechar a aba sem salvar ou cancelar libera na hora 
+    function liberarAoFechar() {
+        var id = document.getElementById('base_novo_id_hidden');
+        id = id ? id.value : '';
+        if (!id || !navigator.sendBeacon) return;
+        var fd = new FormData();
+        fd.append('csrfmiddlewaretoken', csrfAtendimento());
+        navigator.sendBeacon(URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), fd);
+    }
+    window.addEventListener('pagehide', liberarAoFechar);
+    window.addEventListener('beforeunload', liberarAoFechar);
+    function aplicarAtendimentos() {
+        $('#tabela-base-novo tbody tr').each(function() {
+            var id = String($(this).data('id') || '');
+            var nome = atendimentosAtivos[id];
+            var cell = $(this).find('.uso-por-cell');
+            if (nome) {
+                $(this).addClass('em-atendimento').attr('title', 'Em atendimento por ' + nome);
+                cell.text(nome);
+            } else {
+                $(this).removeClass('em-atendimento').removeAttr('title');
+                cell.text('-');
+            }
+        });
+    }
+    function atualizarAtendimentos() {
+        $.get(URL_ATENDIMENTOS_ATIVOS, function(resp) {
+            atendimentosAtivos = (resp && resp.atendimentos) ? resp.atendimentos : {};
+            aplicarAtendimentos();
+        });
+    }
+
+    function salvarLigacaoModal() {
+        let faltando = false;
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        blocos.forEach(function(bloco) {
+            if(bloco.classList.contains('ligacao-salva')) return;
+            
+            let central = bloco.querySelector('input[name^="ligacao_venda_central"]');
+            let agencia = bloco.querySelector('input[name^="ligacao_agn"]');
+            let premio = bloco.querySelector('input[name^="ligacao_premio_total"]');
+            let marcouVenda = (central && central.checked) || (agencia && agencia.checked);
+            if (marcouVenda && premio && !premio.value.trim()) {
+                faltando = true;
+            }
+        });
+
+        if (faltando) {
+            avisoElegante('Informe o "Prêmio Total" nas ligações marcadas como "Vendas Central" ou "Vendas Agência".', 'Não foi possível salvar');
+            return;
+        }
+
+        blocos.forEach(function(b) { b.classList.add('ligacao-salva'); });
+        ligacaoEmEdicao = null;
+
+        algumaLigacaoSalva = true;
+        desativarBloqueioSaida();
+        modalLigacao.hide();
+        $('#btn-iniciar-ligacao').hide();
+        $('#btn-registrar-outra-ligacao').show();
+        atualizarResumoLigacoes();
+
+        atualizarEstadoLigacoes();
+
+        // alex: ao confirmar a ligação (registrar OU editar) já grava de verdade no banco,
+        // sem depender do antigo botão "Salvar" do rodapé.
+        var formBase = document.querySelector('#form-base-novo form');
+        if (formBase) { formBase.requestSubmit ? formBase.requestSubmit() : formBase.submit(); }
+    }
+
+    function cancelarLigacaoModal() {
+        if (ligacaoEmEdicao) {
+            ligacaoEmEdicao.classList.add('ligacao-salva');
+            ligacaoEmEdicao = null;
+            desativarBloqueioSaida();
+            modalLigacao.hide();
+            atualizarResumoLigacoes();
+            atualizarEstadoLigacoes();
+            return;
+        }
+
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        for (let i = blocos.length - 1; i >= blocosSnapshot; i--) {
+            blocos[i].remove();
+        }
+        reorganizarLigacoes();
+        if (!algumaLigacaoSalva) {
+            resetarContainerLigacoes();
+        }
+        desativarBloqueioSaida();
+        modalLigacao.hide();
+        atualizarResumoLigacoes();
+        atualizarEstadoLigacoes();
+    }
+
+    function abrirModalLigacao(primeira) {
+        if (!modalLigacao) return;
+
+        $('#ligacao-1').show();
+        blocosSnapshot = document.querySelectorAll('#container-ligacoes .bloco-ligacao').length;
+       
+        if (!primeira) {
+            adicionarLigacao(true);
+        } else {
+            let bloco1 = document.getElementById('ligacao-1');
+            if (bloco1) bloco1.classList.remove('ligacao-salva');
+        }
+        
+        atualizarEstadoLigacoes();
+        ativarBloqueioSaida();
+        modalLigacao.show();
+    }
+
+    var ligacaoEmEdicao = null;
+
+    function editarLigacaoHistorico(numero) {
+        if (!PODE_REGISTRAR_LIGACAO || !modalLigacao) return;
+        let blocos = Array.from(document.querySelectorAll('#container-ligacoes .bloco-ligacao'));
+        let bloco = blocos[numero - 1];
+        if (!bloco) return;
+        ligacaoEmEdicao = bloco;
+        $('#ligacao-1').show();
+        blocosSnapshot = blocos.length;
+        bloco.classList.remove('ligacao-salva');
+        atualizarEstadoLigacoes();
+        ativarBloqueioSaida();
+        modalLigacao.show();
+    }
+
+    // alex: apaga uma ligação do histórico (só Gestor). Remove o bloco e grava a
+    // exclusão no banco (submete o form; o backend recria só as ligações que sobraram).
+    function removerLigacaoHistorico(numero) {
+        if (!USUARIO_GESTOR) return;
+        confirmarElegante('Tem certeza que deseja apagar esta ligação? Esta ação não pode ser desfeita.', function() {
+            let blocos = Array.from(document.querySelectorAll('#container-ligacoes .bloco-ligacao'));
+            let bloco = blocos[numero - 1];
+            if (!bloco) return;
+            bloco.remove();
+            reorganizarLigacoes();
+            desativarBloqueioSaida();
+            var form = document.querySelector('#form-base-novo form');
+            if (form) { form.requestSubmit ? form.requestSubmit() : form.submit(); }
+        }, { titulo: 'Apagar ligação', textoConfirmar: 'Sim, apagar', corBotao: 'danger' });
+    }
+
+    function removerLigacao(botao) {
+        confirmarElegante('Tem a certeza que deseja remover esta ligação da ficha?', function() {
+            botao.closest('.bloco-ligacao').remove();
+            reorganizarLigacoes();
+        }, { titulo: 'Remover ligação', textoConfirmar: 'Sim, remover', corBotao: 'danger' });
+    }
+
+    function reorganizarLigacoes() {
+        let blocos = document.querySelectorAll('#container-ligacoes .bloco-ligacao');
+        contadorLigacoes = 1;
+
+        for(let i = 1; i < blocos.length; i++) {
+            contadorLigacoes++;
+            let bloco = blocos[i];
+
+            bloco.id = 'ligacao-' + contadorLigacoes;
+
+            let titulo = bloco.querySelector('.titulo-ligacao');
+            if(titulo) {
+                titulo.className = 'titulo-ligacao bg-primary text-white p-2 rounded mb-3 d-flex justify-content-between align-items-center';
+
+                titulo.innerHTML = `
+                    <span>
+                        <i class="fas fa-phone-alt"></i> ${contadorLigacoes}ª Ligação
+                    </span>
+                `;
+            }
+
+            let campos = bloco.querySelectorAll('input, select, textarea');
+            campos.forEach(function(campo) {
+                let nomeOriginal = campo.getAttribute('name');
+                if(nomeOriginal) {
+                    nomeOriginal = nomeOriginal.replace(/_\d+$/, '');
+                    campo.setAttribute('name', nomeOriginal + '_' + contadorLigacoes);
+                }
+
+                let idOriginal = campo.getAttribute('id');
+                if(idOriginal) {
+                    idOriginal = idOriginal.replace(/_\d+$/, '');
+                    campo.setAttribute('id', idOriginal + '_' + contadorLigacoes);
+                }
+            });
+        }
+    }
+
+    /*
+    Henriqueeee
+    */
+    function abrirNovoRegistroDireto() {
+    $('#base_novo_id_hidden').val('');
+    $('#base_novo_id_display').val('');
+    $('form')[1].reset(); 
+    limparRelacionamentosPesquisaveis();
+    resetarContainerLigacoes();
+    $('#disp-indicador').val('');
+    $('#disp-agencia').val('');
+    
+    $.get(URL_AGORA_SERVIDOR, function(resposta) {
+        var campoCarimbo = document.getElementById('id_carimbo_data_hora');
+        if (campoCarimbo && !campoCarimbo.value) { campoCarimbo.value = resposta.datahora; }
+    });
+
+    $('#lista-base-novo').show(); 
+    $('#form-base-novo').show().css({
+        'position': 'absolute',
+        'visibility': 'hidden',
+        'height': '0',
+        'width': '100%',
+        'top': '0'
+    });
+    
+    $('#modalEditarDados').css('visibility', 'visible');
+
+    var bloco = document.getElementById('bloco-dados-editaveis');
+    var corpo = document.getElementById('modal-editar-dados-corpo');
+    if (bloco && corpo) {
+        _snapshotDadosEdicao = []; 
+        corpo.appendChild(bloco);
+        bloco.classList.remove('dados-travados');
+    }
+
+    modalEditarDados.show();
+    }
 </script>
 {% endblock %}

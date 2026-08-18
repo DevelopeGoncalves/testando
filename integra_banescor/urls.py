@@ -89,10 +89,8 @@ urlpatterns = [
 
 
     # 10. Rotas para cada Card específico de vendas
-    path('producao/vendas/banseg/', views.vendas_banseg, name='vendas_banseg'),
     path('producao/vendas/endosso/', views.vendas_endosso, name='vendas_endosso'),
     path('producao/vendas/renovacao/', views.vendas_renovacao, name='vendas_renovacao'),
-    path('producao/vendas/outras-cias/', views.vendas_outras_cias, name='vendas_outras_cias'),
 
     # 10.2 Cards "Novo"/"Renovação"/"Endosso" (ainda em desenvolvimento, ligados aos poucos à respectiva "Base X")
     path('producao/vendas/novo-negocio/', views.vendas_novo_negocio, name='vendas_novo_negocio'),

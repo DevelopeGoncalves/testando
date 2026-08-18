@@ -1,0 +1,1008 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Vendas - Emissão{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <span class="text-primary">Produção</span> /
+        <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> /
+        <span class="text-primary">Emissão</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Evita o "flash" da tabela crua */
+    #tabela-base-novo { visibility: hidden; }
+    #tabela-base-novo.dt-pronta { visibility: visible; }
+
+    /* Registro "em atendimento ligacao" */
+    #tabela-base-novo tbody tr.em-atendimento,
+    #tabela-base-novo tbody tr.em-atendimento:hover { background-color: #f5c2c7 !important; }
+    #tabela-base-novo tbody tr.em-atendimento td { color: #ff0217; }
+
+    /* No Novo, os dados ficam travados (só leitura) até abrir o pop-up do lápis.
+       pointer-events:none impede a edição, mas os campos continuam sendo enviados no POST. */
+    #bloco-dados-editaveis.dados-travados { pointer-events: none; opacity: 0.92; }
+    #bloco-dados-editaveis.dados-travados input,
+    #bloco-dados-editaveis.dados-travados select,
+    #bloco-dados-editaveis.dados-travados textarea { background-color: #f3f4f6; }
+
+    .excel-header-btn {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+        font-weight: bold !important;
+        color: #495057 !important;
+        padding: 8px !important;
+    }
+
+    th.text-center .excel-header-btn {
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    th.text-start .excel-header-btn {
+        justify-content: flex-start !important;
+        text-align: left !important;
+    }
+
+    .excel-header-btn::after {
+        margin-left: 5px;
+    }
+
+    #tabela-base-novo td {
+        vertical-align: middle !important;
+    }
+
+    .dropdown-menu {
+        text-align: left !important;
+    }
+
+    /* Dropdowns pesquisáveis para campos de relacionamento */
+    .input-container {
+        position: relative;
+    }
+
+    .lista-suspensa {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        max-height: 210px;
+        overflow-y: auto;
+        background-color: #ffffff;
+        border: 1px solid #ced4da;
+        border-radius: 12px;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        z-index: 9999 !important;
+    }
+
+    .item-lista {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    .item-lista:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .item-lista:last-child {
+        border-bottom: none;
+    }
+
+    .lista-suspensa::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-thumb {
+        background: #adb5bd;
+        border-radius: 10px;
+    }
+
+    .lista-suspensa::-webkit-scrollbar-thumb:hover {
+        background: #6c757d;
+    }
+
+    /* Garante o alinhamento perfeito e preenchimento vertical do campo de observações */
+    #id_observacoes {
+        height: 100% !important;
+        min-height: 100px;
+        resize: none;
+    }
+
+</style>
+
+<div id="tela-base-novo">
+    <div id="lista-base-novo">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> Emissão</h4>
+            <div>
+                <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
+                    <i class="fas fa-filter"></i> Limpar Filtros
+                </button>
+                {% if usuario_pode_excluir %}
+                <!-- alex: lixeira logo depois do Exportar. Excluir SÓ para Gestor. -->
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
+                <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
+                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tabela-container">
+            <div class="tabela-loading text-center text-muted py-5">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="mt-2">Carregando registos...</div>
+            </div>
+            <form id="form-delete-base-novo" method="post" action="{% url 'excluir_em_massa' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_massa" value="indicacao">
+
+                <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            {% if usuario_pode_excluir %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
+                            <th style="display:none;"></th>
+                            <th class="text-center">Cadastrado em</th> <!-- 1 -->
+                            <th class="text-center">Responsável</th> <!-- 2 -->
+                            <th class="text-center">Em uso por</th> <!-- 3 -->
+                            <th class="text-center">E-mail do indicador (outro)</th> <!-- 4 -->
+                            <th class="text-center">Indicador</th> <!-- 5 -->
+                            <th class="text-center">Indicador</th> <!-- 6 -->
+                            <th class="text-center">Agência</th> <!-- 7 -->
+                            <th class="text-center">Telefone do indicador</th> <!-- 8 -->
+                            <th class="text-center">Enviar orçamento para</th> <!-- 9 -->
+                            <th class="text-center">Nome do cliente</th> <!-- 10 -->
+                            <th class="text-center">Telefone do cliente</th> <!-- 11 -->
+                            <th class="text-center">CPF do cliente</th> <!-- 12 -->
+                            <th class="text-center">E-mail do cliente</th> <!-- 13 -->
+                            <th class="text-center">Produto</th> <!-- 14 -->
+                            <th class="text-start">Dados do veículo</th> <!-- 15 -->
+                            <th class="text-center">Renovação</th> <!-- 16 -->
+                            <th class="text-center">Seguradora</th> <!-- 17 -->
+                            <th class="text-center">Grupo/Ramo</th> <!-- 18 -->
+                            <th class="text-center">Tipo Documento</th> <!-- 19 -->
+                            <th class="text-center">Nº Contrato</th> <!-- 20 -->
+                            <th class="text-center">Nº Endosso</th> <!-- 21 -->
+                            <th class="text-center">Ligações</th> <!-- 22 -->
+                            <th class="text-start">Observações</th> <!-- 23 -->
+                            <th class="text-center">Status</th> <!-- 24 -->
+                            <th class="text-center">Último atendente</th> <!-- 25 -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in indicacoes %}
+                        <tr class="tr-clickable{% if i.atendimento_ativo %} em-atendimento{% endif %}" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
+                            data-id="{{ i.id }}"
+                            data-atendimento="{{ i.atendimento_por|default:'' }}"
+                            data-responsavel-demanda="{{ i.responsavel_demanda_id|default:'' }}"
+                            data-responsavel-demanda-nome="{{ i.responsavel_demanda.matricula_nome|default:'' }}"
+                            data-carimbo="{{ i.carimbo_data_hora|date:'Y-m-d\TH:i'|default:'' }}"
+                            data-email="{{ i.email|default:'' }}"
+                            data-email-indicador-outro="{{ i.email_indicador_outro|default:'' }}"
+                            data-matricula="{{ i.matricula_indicador|default:'' }}"
+                            data-nome-indicador="{{ i.nome_indicador|default:'' }}"
+                            data-cid="{{ i.cid_agencia|default:'' }}"
+                            data-nome-agencia="{{ i.nome_agencia|default:'' }}"
+                            data-telefone-indicador="{{ i.telefone_indicador|default:'' }}"
+                            data-orcamento="{{ i.enviar_orcamento_para|default:'' }}"
+                            data-origem-informacao="{{ i.origem_informacao|default:'' }}"
+                            data-nome-cliente="{{ i.nome_cliente|default:'' }}"
+                            data-telefone-cliente="{{ i.telefone_cliente|default:'' }}"
+                            data-cpf-cliente="{{ i.cpf_cliente|default:'' }}"
+                            data-email-cliente="{{ i.email_cliente|default:'' }}"
+                            data-produto="{{ i.produto|default:'' }}"
+                            data-veiculo="{{ i.dados_veiculo|default:'' }}"
+                            data-possui-seguro="{{ i.possui_seguro|default:'' }}"
+                            data-seguradora="{{ i.seguradora_id|default:'' }}"
+                            data-ramo="{{ i.ramo_id|default:'' }}"
+                            data-tipo-documento="{{ i.tipo_documento_id|default:'' }}"
+                            data-contrato="{{ i.numero_contrato|default:'' }}"
+                            data-endosso="{{ i.numero_endosso|default:'' }}"
+                            data-obs="{{ i.observacoes|default:'' }}">
+
+                            {% if usuario_pode_excluir %}
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
+                            </td>
+                            {% endif %}
+
+                            <td style="display:none;" class="dados-ligacoes-extras">
+                                {% for l in i.ligacoes.all %}
+                                <span class="extra-item-ligacao"
+                                      data-protocolo="{{ l.protocolo|default:'' }}"
+                                      data-data="{{ l.data_ligacao|date:'Y-m-d\TH:i:s'|default:'' }}"
+                                      data-status="{{ l.status|default:'' }}"
+                                      data-proximo="{{ l.proximo_contato|date:'Y-m-d\TH:i:s'|default:'' }}"
+                                      data-obs="{{ l.observacoes|default:'' }}"
+                                      data-ramal="{{ l.ramal|default:'' }}"
+                                      data-venda-central="{{ l.venda_central|yesno:'1,0' }}"
+                                      data-premio-total="{{ l.premio_total|floatformat:'2u' }}"
+                                      data-agn="{{ l.agn|yesno:'1,0' }}"
+                                      data-motivo="{{ l.motivo_nao_venda|default:'' }}"
+                                      data-seguradora="{{ l.seguradora_id|default:'' }}"
+                                      data-seguradora-nome="{{ l.seguradora.seguradora|default:'' }}"
+                                      data-comissao="{{ l.comissao|floatformat:'2u'|default:'' }}"
+                                      data-cadastrado-por="{{ l.cadastrado_por|default:'' }}"></span>
+                                {% endfor %}
+                            </td>
+
+                            <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
+                            <td class="text-center resp-demanda-cell">{{ i.responsavel_demanda.matricula_nome|default:'-' }}</td>
+                            <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{{ i.email_indicador_outro|default:'-' }}</td>
+                            <td class="text-center">{{ i.matricula_indicador|default:'-' }}</td>
+                            <td class="text-center">{% if i.matricula_indicador or i.nome_indicador %}{{ i.matricula_indicador|default:'' }}{% if i.matricula_indicador and i.nome_indicador %} - {% endif %}{{ i.nome_indicador|default:'' }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if i.cid_agencia or i.nome_agencia %}{{ i.cid_agencia|default:'' }}{% if i.cid_agencia and i.nome_agencia %} - {% endif %}{{ i.nome_agencia|default:'' }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{{ i.telefone_indicador|default:'-' }}</td>
+                            <td class="text-center">{{ i.enviar_orcamento_para|default:'-' }}</td>
+                            <td class="text-center">{{ i.nome_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.telefone_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.cpf_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.email_cliente|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.produto|default:'-' }}</td>
+                            <td class="text-start">{{ i.dados_veiculo|default:'-' }}</td>
+                            <td class="text-center">{{ i.possui_seguro|default:'-' }}</td>
+                            <td class="text-center">{{ i.seguradora.seguradora|default:'-' }}</td>
+                            <td class="text-center">{{ i.ramo.grupo_e_ramo|default:'-' }}</td>
+                            <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
+                            <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
+                            <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
+                            <td class="text-center" data-order="">
+                                {% if i.ligacoes.all %}
+                                <span class="badge bg-primary" style="cursor:pointer;" title="Ver histórico de ligações"
+                                      onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
+                                      data-cliente="{{ i.nome_cliente|default:''|escape }}">
+                                    {{ i.ligacoes.all|length }} <i class="fas fa-list-ul ms-1"></i>
+                                </span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-start">{{ i.observacoes|default:'-' }}</td>
+                            <td class="text-center">
+                                {% if 'Não venda' in i.status_fechamento %}<span class="badge bg-danger">{{ i.status_fechamento }}</span>
+                                {% elif 'Venda' in i.status_fechamento %}<span class="badge bg-success">{{ i.status_fechamento }}</span>
+                                {% else %}<span class="badge bg-secondary">{{ i.status_fechamento|default:'Em aberto' }}</span>{% endif %}
+                            </td>
+                            <td class="text-center">{{ i.responsavel_ultima_ligacao|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="form-base-novo" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 mt-2">
+            <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+            <!-- somento o responsavel pode indicar a demanda -->
+            <div class="d-flex align-items-center">
+                <span class="me-2 fw-bold text-dark">Responsável:</span>
+                <span id="resp-demanda-nome" class="text-muted">Em aberto</span>
+                {% if usuario_gestor %}
+                <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="abrirModalResponsavel()">
+                    <i class="fas fa-user-check"></i> Indicar responsável
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if usuario_gestor %}
+        <!-- alex: pop-up para o Gestor indicar o responsável (Colaborador). Só renderiza para Gestor. -->
+        <div class="modal fade" id="modalResponsavel" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-user-check"></i> Indicar Responsável pela Demanda</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label small fw-bold mb-1">Colaborador responsável</label>
+                        <div class="input-container">
+                            <input type="text" class="form-control" id="resp-demanda-input"
+                                   placeholder="Pesquisar colaborador..." autocomplete="off">
+                            <input type="hidden" id="resp-demanda-id-sel">
+                            <div id="resp-demanda-dropdown" class="lista-suspensa d-none"></div>
+                        </div>
+                        <div class="form-text">Deixe em branco e salve para deixar a demanda "Em aberto".</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" onclick="salvarResponsavel()"><i class="fas fa-check"></i> Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm border-0">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+                <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
+                <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
+
+                <div class="card-body p-4 position-relative" style="font-size: 0.95rem;">
+
+                    <div id="bloco-dados-editaveis">
+
+                    <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
+                    <div class="row g-3">
+                        <!--
+                        <div class="col-md-3">
+                            <label class="fw-bold small mb-1">Seguradora</label>
+                            <div class="input-container">
+                                <input type="hidden" name="seguradora" id="base_novo_seguradora_val">
+                                <input type="text" id="base_novo_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_seguradora" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        -->
+                        <div class="col-md-2">
+                            <label class="fw-bold small mb-1">ID</label>
+                            <input type="text" id="base_novo_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
+                            {{ form_indicacao.numero_contrato.as_hidden }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="fw-bold small mb-1">Grupo/Ramo *</label>
+                            <div class="input-container">
+                                <input type="hidden" name="ramo" id="base_novo_ramo_val">
+                                <input type="text" id="base_novo_ramo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_ramo" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        <!--
+                        <div class="col-md-1">
+                            <label class="fw-bold small mb-1">Tipo Documento</label>
+                            <div class="input-container">
+                                <input type="hidden" name="tipo_documento" id="base_novo_tipo_documento_val">
+                                <input type="text" id="base_novo_tipo_documento_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <div id="base_novo_dropdown_tipo_documento" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
+                        -->
+                        <!--<div class="col-md-2"><label class="fw-bold small mb-1 ">Endosso</label>{{ form_indicacao.numero_endosso }}</div> -->
+                        <div class="col-md-1"><label class="fw-bold small mb-1">Renovação</label>{{ form_indicacao.possui_seguro }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF *</label>{{ form_indicacao.cpf_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
+                        <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
+                    <div class="row g-3">
+                        
+                        <div class="col-md-8">
+                            <div class="row g-3">
+                                <div class="col-md-4" id="disp-ind-col">
+                                    <label class="fw-bold small mb-1">Indicador</label>
+                                    <!-- alex: dropdown pesquisável do Colaborador (matrícula - nome), igual ao da Seguradora. -->
+                                    <div class="input-container">
+                                        <input type="hidden" id="disp-indicador-id">
+                                        <input type="text" id="disp-indicador" name="indicador_combo" class="form-control" placeholder="matrícula - nome" autocomplete="off">
+                                        <div id="disp-indicador-dropdown" class="lista-suspensa d-none"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4" id="disp-ag-col">
+                                    <label class="fw-bold small mb-1">Agência</label>
+                                    <!-- alex: dropdown pesquisável da Unidade (CID - nome da agência), igual ao da Seguradora. -->
+                                    <div class="input-container">
+                                        <input type="hidden" id="disp-agencia-id">
+                                        <input type="text" id="disp-agencia" name="agencia_combo" class="form-control" placeholder="CID - nome da agência" autocomplete="off">
+                                        <div id="disp-agencia-dropdown" class="lista-suspensa d-none"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold small mb-1">Telefone</label>
+                                    {{ form_indicacao.telefone_indicador }}
+                                </div>
+                                
+                                <div class="col-md-5">
+                                    <label class="fw-bold small mb-1">E-mail</label>
+                                    {{ form_indicacao.email }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold small mb-1">Enviar orçamento para</label>
+                                    {{ form_indicacao.enviar_orcamento_para }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="fw-bold small mb-1">Origem da informação</label>
+                                    {{ form_indicacao.origem_informacao }}
+                                </div>
+                                
+                                <!-- Campos Ocultos (Mantidos) -->
+                                <div class="col-md-2 d-none" id="col-ind-matricula"><label class="fw-bold small mb-1">Matrícula</label>{{ form_indicacao.matricula_indicador }}</div>
+                                <div class="col-md-2 d-none" id="col-ind-nome"><label class="fw-bold small mb-1">Nome</label>{{ form_indicacao.nome_indicador }}</div>
+                                <div class="col-md-2 d-none" id="col-ind-cid"><label class="fw-bold small mb-1">CID da agência</label>{{ form_indicacao.cid_agencia }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Lado Direito: Div separada de Observações com alinhamento flexível -->
+                        <div class="col-md-4 d-flex flex-column">
+                            <label class="fw-bold small mb-1">Dados complementares</label>
+                            <div class="flex-grow-1 d-flex flex-column">
+                                {% if form_indicacao.observacoes %}
+                                    {{ form_indicacao.observacoes }}
+                                {% else %}
+                                    <textarea class="form-control flex-grow-1" name="observacoes" id="id_observacoes" placeholder="Digite as observações com quebra de linha..."></textarea>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    </div><!-- /#bloco-dados-editaveis -->
+
+                    <!-- onde o histórico vai aparecer fora do modal -->
+                    <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
+                </div>
+
+                <div class="card-footer bg-light text-end p-3">
+                    <!-- Na Emissão os dados são editados direto na ficha, então mantém o Salvar. -->
+                    <button type="button" class="btn btn-secondary me-2" onclick="toggleFormLocal('base-novo', false)">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pop-up (só leitura) com o histórico de ligações/vendas de um registro. -->
+    <div class="modal fade" id="modalHistoricoLigacoes" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title"><i class="fas fa-phone-alt"></i> Histórico de Ligações <span id="hist-cliente" class="fw-normal"></span></h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body" id="hist-corpo"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
+    const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
+    // alex: responsável pela demanda (indicado por Gestor)
+    const URL_RESP_DEMANDA = "{% url 'definir_responsavel_demanda' 0 %}";
+    const LISTA_COLABORADORES_DEMANDA = [
+        {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    // alex: lista de Seguradoras vem do contexto (a Indicação não tem mais o campo
+    // seguradora; o relacionamento agora é só na LIGAÇÃO). Alimenta o dropdown da ligação.
+    const listaBaseNovoSeguradoras = [
+        {% for s in seguradoras %}
+        { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const listaBaseNovoRamos = [
+        {% for r in form_indicacao.ramo.field.queryset %}
+        { id: "{{ r.id }}", texto: "{{ r.grupo_e_ramo|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const listaBaseNovoTiposDocumento = [
+        {% for t in form_indicacao.tipo_documento.field.queryset %}
+        { id: "{{ t.id }}", texto: "{{ t.tipo_documento|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+
+
+    // alex: Indicador (Colaborador) e Agência (Unidade) concatenados, para o dropdown pesquisável.
+    const listaIndicadores = [
+        {% for c in colaboradores_demanda %}{ id: "{{ c.matricula_nome|escapejs }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    const listaAgencias = [
+        {% for u in unidades_agencia %}{ id: "{{ u.cid_unidade|escapejs }} - {{ u.unidade|escapejs }}", texto: "{{ u.cid_unidade|escapejs }} - {{ u.unidade|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    function inicializarDropdownRelacionamento(inputId, hiddenId, dropdownId, listaDeDados) {
+        const $input = $('#' + inputId);
+        const $hidden = $('#' + hiddenId);
+        const $dropdown = $('#' + dropdownId);
+
+        if (!$input.length || !$hidden.length || !$dropdown.length) return;
+
+        $input.off('.relacionamentoPesquisa');
+
+        function mostrarLista() {
+            const valorDigitado = ($input.val() || '').toLowerCase().trim();
+            $dropdown.empty();
+
+            const filtrados = listaDeDados.filter(function(item) {
+                return (item.texto || '').toLowerCase().includes(valorDigitado);
+            });
+
+            if (filtrados.length > 0) {
+                filtrados.forEach(function(item) {
+                    const $item = $('<div>')
+                        .addClass('item-lista')
+                        .text(item.texto);
+
+                    $item.on('mousedown', function(evt) {
+                        evt.preventDefault();
+                        $input.val(item.texto);
+                        $hidden.val(item.id);
+                        $dropdown.addClass('d-none');
+                    });
+
+                    $dropdown.append($item);
+                });
+            } else {
+                $dropdown.append(
+                    $('<div>').addClass('item-lista text-muted').text('Nada encontrado')
+                );
+            }
+
+            $dropdown.removeClass('d-none');
+        }
+
+        $input.on('focus.relacionamentoPesquisa click.relacionamentoPesquisa', mostrarLista);
+
+        $input.on('input.relacionamentoPesquisa', function() {
+            $hidden.val('');
+            mostrarLista();
+        });
+    }
+
+    function definirRelacionamentoPesquisavel(hiddenId, inputId, valor, listaDeDados) {
+        const $hidden = $('#' + hiddenId);
+        const $input = $('#' + inputId);
+
+        $hidden.val(valor || '');
+
+        if (!valor) {
+            $input.val('');
+            return;
+        }
+
+        const item = listaDeDados.find(function(i) {
+            return String(i.id) === String(valor) ||
+                   String(i.texto).trim() === String(valor).trim();
+        });
+
+        $input.val(item ? item.texto : '');
+    }
+
+    let modalHistorico = null;
+    let modalResponsavel = null;      // alex: pop-up de indicar responsável pela demanda (Gestor)
+
+    // alex: mostra na ficha o responsável atual da demanda (ou "Em aberto").
+    function mostrarResponsavelDemanda(nome) {
+        var el = document.getElementById('resp-demanda-nome');
+        if (el) el.textContent = (nome && nome.trim()) ? nome : 'Em aberto';
+    }
+    function abrirModalResponsavel() {
+        if (!modalResponsavel) return;
+        var atual = document.getElementById('resp-demanda-nome');
+        var nomeAtual = (atual && atual.textContent.trim() !== 'Em aberto') ? atual.textContent.trim() : '';
+        document.getElementById('resp-demanda-input').value = nomeAtual;
+        document.getElementById('resp-demanda-id-sel').value = '';
+        if (nomeAtual) resolverColaboradorDemanda(document.getElementById('resp-demanda-input'));
+        modalResponsavel.show();
+    }
+    // Descobre o id do colaborador pelo texto digitado (mesmo esquema da seguradora).
+    function resolverColaboradorDemanda(input) {
+        var hidden = document.getElementById('resp-demanda-id-sel');
+        var texto = (input.value || '').trim().toLowerCase();
+        var item = LISTA_COLABORADORES_DEMANDA.find(function(c) {
+            return String(c.texto).trim().toLowerCase() === texto;
+        });
+        hidden.value = item ? item.id : '';
+    }
+    function salvarResponsavel() {
+        var idReg = $('#base_novo_id_hidden').val();
+        if (!idReg) return;
+        var txt = (document.getElementById('resp-demanda-input').value || '').trim();
+        var colId = document.getElementById('resp-demanda-id-sel').value || '';
+        if (txt && !colId) {
+            avisoElegante('Selecione um colaborador válido da lista, ou apague o campo para deixar "Em aberto".', 'Colaborador não encontrado');
+            return;
+        }
+        $.ajax({
+            url: URL_RESP_DEMANDA.replace('/0/', '/' + idReg + '/'),
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfAtendimento() },
+            data: { colaborador: colId }
+        }).done(function(resp) {
+            if (resp && resp.ok) {
+                mostrarResponsavelDemanda(resp.nome);
+                var tr = document.querySelector('#tabela-base-novo tbody tr[data-id="' + idReg + '"]');
+                if (tr) {
+                    tr.setAttribute('data-responsavel-demanda', resp.id || '');
+                    tr.setAttribute('data-responsavel-demanda-nome', resp.nome || '');
+                    // alex: atualiza também a COLUNA "Responsável" na lista (não só a ficha).
+                    var celResp = tr.querySelector('.resp-demanda-cell');
+                    if (celResp) {
+                        var nomeCel = resp.nome || '-';
+                        try {
+                            $('#tabela-base-novo').DataTable().cell(celResp).data(nomeCel).draw(false);
+                        } catch (e) {
+                            celResp.textContent = nomeCel;
+                        }
+                    }
+                }
+                if (modalResponsavel) modalResponsavel.hide();
+            } else {
+                avisoElegante((resp && resp.erro) || 'Não foi possível salvar o responsável.', 'Ação não permitida');
+            }
+        }).fail(function(xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível salvar o responsável.';
+            avisoElegante(msg, 'Ação não permitida');
+        });
+    }
+
+    const MOTIVOS_NAO_VENDA = {
+        {% for valor, rotulo in motivos_nao_venda %}"{{ valor|escapejs }}": "{{ rotulo|escapejs }}",{% endfor %}
+    };
+
+    // Mapa id -> nome da seguradora, para mostrar o nome no histórico.
+    function nomeSeguradora(id) {
+        if (!id) return '';
+        var s = listaBaseNovoSeguradoras.find(function(x) { return String(x.id) === String(id); });
+        return s ? s.texto : '';
+    }
+
+    $(document).ready(function() {
+
+        inicializarDropdownRelacionamento(
+            'base_novo_seguradora_texto',
+            'base_novo_seguradora_val',
+            'base_novo_dropdown_seguradora',
+            listaBaseNovoSeguradoras
+        );
+        inicializarDropdownRelacionamento(
+            'base_novo_ramo_texto',
+            'base_novo_ramo_val',
+            'base_novo_dropdown_ramo',
+            listaBaseNovoRamos
+        );
+        inicializarDropdownRelacionamento(
+            'base_novo_tipo_documento_texto',
+            'base_novo_tipo_documento_val',
+            'base_novo_dropdown_tipo_documento',
+            listaBaseNovoTiposDocumento
+        );
+        inicializarDropdownRelacionamento(
+            'resp-demanda-input',
+            'resp-demanda-id-sel',
+            'resp-demanda-dropdown',
+            LISTA_COLABORADORES_DEMANDA
+        );
+        // alex: Indicador e Agência com o mesmo dropdown pesquisável da Seguradora.
+        inicializarDropdownRelacionamento(
+            'disp-indicador',
+            'disp-indicador-id',
+            'disp-indicador-dropdown',
+            listaIndicadores
+        );
+        inicializarDropdownRelacionamento(
+            'disp-agencia',
+            'disp-agencia-id',
+            'disp-agencia-dropdown',
+            listaAgencias
+        );
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.input-container').length) {
+                $('.lista-suspensa').addClass('d-none');
+            }
+        });
+
+        iniciarTabelaExcel('tabela-base-novo', [1, 25, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
+
+        atualizarAtendimentos();
+        setInterval(atualizarAtendimentos, 5000);
+        if (tableInstance) tableInstance.on('draw', aplicarAtendimentos);
+
+        var elResp = document.getElementById('modalResponsavel');
+        if (elResp) modalResponsavel = new bootstrap.Modal(elResp);
+
+        var elHist = document.getElementById('modalHistoricoLigacoes');
+        if (elHist) {
+            modalHistorico = new bootstrap.Modal(elHist);
+        }
+
+        {% if form_indicacao.errors %}
+            $('#lista-base-novo').hide();
+            $('#form-base-novo').show();
+
+            var id_erro = $('#base_novo_id_hidden').val();
+            if(id_erro) {
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo');
+            } else {
+                $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Novo Cadastro de Indicação');
+            }
+
+            {% for campo in form_indicacao %}
+                {% if campo.errors %}$('#{{ campo.id_for_label }}').addClass('is-invalid');{% endif %}
+            {% endfor %}
+
+            avisoElegante("{{ erro_formulario_msg|escapejs }}", 'Não foi possível salvar');
+        {% endif %}
+
+    });
+
+    function escHtml(s) {
+        return (s == null ? '' : String(s)).replace(/[&<>"]/g, function(c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+    }
+
+    function formatarDataHora(iso) {
+        if (!iso) return '';
+        var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        return m ? (m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5]) : iso;
+    }
+
+    function abrirHistoricoLigacoes(el) {
+        if (!modalHistorico) return;
+        var tr = el.closest('tr');
+        var cliente = el.getAttribute('data-cliente') || '';
+        document.getElementById('hist-cliente').textContent = cliente ? '— ' + cliente : '';
+
+        var itens = tr ? tr.querySelectorAll('.dados-ligacoes-extras .extra-item-ligacao') : [];
+        var arr = Array.prototype.slice.call(itens);
+        var total = arr.length;
+        var html = '';
+
+        arr.forEach(function(item, idx) {
+            var d = item.dataset;
+            var ehUltima = (idx === 0);
+            var venda = d.vendaCentral === '1' ? 'Central'
+                      : d.agn === '1' ? 'Agência'
+                      : '-';
+            var motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
+            var premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
+            var numero = total - idx;
+
+            html += ''
+              + '<div class="card mb-2 ' + (ehUltima ? 'border-primary' : '') + '">'
+              +   '<div class="card-header d-flex justify-content-between align-items-center py-2 ' + (ehUltima ? 'bg-primary text-white' : 'bg-light') + '">'
+              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação '
+              +       (ehUltima ? '<span class="badge bg-light text-primary ms-1">Mais recente</span>' : '') + '</span>'
+              +     '<small>' + escHtml(formatarDataHora(d.data)) + '</small>'
+              +   '</div>'
+              +   '<div class="card-body py-2" style="font-size:.9rem;">'
+              +     '<div class="row g-2">'
+              +       '<div class="col-md-8">'
+              +         '<div class="row g-2">'
+              +           '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
+              +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +           '<div class="col-md-4"><strong>Motivo Não Venda:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Comissão:</strong> ' + (d.comissao ? escHtml(formatarValorBRL(d.comissao)) + '%' : '-') + '</div>'
+              +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-4 border-start"><strong>Observações:</strong><div style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</div></div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        });
+
+        if (!html) html = '<div class="text-muted text-center py-3">Nenhuma ligação registrada.</div>';
+        document.getElementById('hist-corpo').innerHTML = html;
+        modalHistorico.show();
+    }
+
+    function renderHistoricoFichaBaseNovo(row) {
+        let div = document.getElementById('historico-ligacoes-ficha');
+        if (!div) return;
+        let itens = Array.from(row.querySelectorAll('.extra-item-ligacao'));
+        let total = itens.length;
+        if (total === 0) {
+            div.innerHTML = '';
+            div.style.display = 'none';
+            return;
+        }
+        let html = '<h5 class="text-secondary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-history"></i> Histórico de Ligações</h5>';
+        itens.forEach(function(item, idx) {
+            let d = item.dataset;
+            let numero = total - idx;
+            let venda = d.vendaCentral === '1' ? 'Central' : (d.agn === '1' ? 'Agência' : '-');
+            let motivoTxt = (d.motivo && MOTIVOS_NAO_VENDA[d.motivo]) ? MOTIVOS_NAO_VENDA[d.motivo] : '';
+            let premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
+            html += ''
+              + '<div class="card mb-3 bg-light border-0 shadow-sm">'
+              +   '<div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">'
+              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ' + (escHtml(formatarDataHora(d.data)) || '-') + '</span></span>'
+              +     '<span class="badge bg-success"><i class="fas fa-check"></i> Finalizada</span>'
+              +   '</div>'
+              +   '<div class="card-body py-2" style="font-size:0.9rem;">'
+              +     '<div class="row g-2">'
+              +       '<div class="col-md-8">'
+              +         '<div class="row g-2">'
+              +           '<div class="col-md-4"><strong>Protocolo:</strong> ' + (escHtml(d.protocolo) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Ramal:</strong> ' + (escHtml(d.ramal) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Venda:</strong> ' + escHtml(venda) + '</div>'
+              +           '<div class="col-md-4"><strong>Prêmio Total:</strong> ' + escHtml(premio) + '</div>'
+              +           '<div class="col-md-4"><strong>Motivo:</strong> ' + (escHtml(motivoTxt) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Próximo contato:</strong> ' + (escHtml(formatarDataHora(d.proximo)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Seguradora:</strong> ' + (escHtml(nomeSeguradora(d.seguradora)) || '-') + '</div>'
+              +           '<div class="col-md-4"><strong>Comissão:</strong> ' + (d.comissao ? escHtml(formatarValorBRL(d.comissao)) + '%' : '-') + '</div>'
+              +           '<div class="col-md-12"><strong>Cadastrado por:</strong> ' + (escHtml(d.cadastradoPor) || '-') + '</div>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-4 border-start"><strong>Observações:</strong><div style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</div></div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        });
+        div.innerHTML = html;
+        div.style.display = 'block';
+    }
+
+    function formatarValorBRL(valor) {
+        if (valor === undefined || valor === null || valor === '') return '';
+        let numero = parseFloat(valor);
+        if (isNaN(numero)) return '';
+        return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function toggleFormLocal(tipo, mostrar) {
+        if(mostrar) {
+            $('#lista-' + tipo).hide();
+            $('#form-' + tipo).show();
+        } else {
+            {% if form_indicacao.errors %}
+                window.location.href = window.location.pathname;
+            {% else %}
+                // Ao voltar para a lista, libera a trava do registro que estava aberto.
+                var _idFechar = document.getElementById('base_novo_id_hidden').value;
+                if (_idFechar) encerrarAtendimento(_idFechar);
+                $('#form-' + tipo).hide();
+                $('#lista-' + tipo).show();
+                $('#base_novo_id_hidden').val('');
+            {% endif %}
+        }
+    }
+
+    function editarIndicacao(row) {
+        var id = row.getAttribute('data-id');
+
+        if (row.classList.contains('em-atendimento')) {
+            // Registro em uso: ninguém mais abre até quem está mexendo Cancelar ou Salvar.
+            var atendentePor = atendimentosAtivos[String(id)] || row.getAttribute('data-atendimento') || 'outro usuário';
+            avisoElegante('Este registro já está em atendimento por ' + atendentePor + '. Aguarde a liberação para poder abri-lo.', 'Registro em atendimento');
+            return;
+        }
+
+        $('#base_novo_id_hidden').val(id);
+        $('#base_novo_id_display').val(id);  // alex: mostra o ID do registro (somente leitura)
+        // alex: mostra o responsável já indicado para essa demanda (ou "Em aberto").
+        mostrarResponsavelDemanda(row.getAttribute('data-responsavel-demanda-nome'));
+
+        $('#id_carimbo_data_hora').val(row.getAttribute('data-carimbo'));
+        $('#id_email').val(row.getAttribute('data-email'));
+        $('#id_email_indicador_outro').val(row.getAttribute('data-email-indicador-outro'));
+        var _mat = row.getAttribute('data-matricula') || '';
+        var _nomeInd = row.getAttribute('data-nome-indicador') || '';
+        var _cid = row.getAttribute('data-cid') || '';
+        var _nomeAg = row.getAttribute('data-nome-agencia') || '';
+        $('#id_matricula_indicador').val(_mat);
+        $('#id_nome_indicador').val(_nomeInd);
+        $('#id_cid_agencia').val(_cid);
+        $('#disp-indicador').val(_mat + ((_mat && _nomeInd) ? ' - ' : '') + _nomeInd);
+        $('#disp-agencia').val(_cid + ((_cid && _nomeAg) ? ' - ' : '') + _nomeAg);
+        $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
+        $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
+        $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
+        $('#id_nome_cliente').val(row.getAttribute('data-nome-cliente'));
+        $('#id_telefone_cliente').val(row.getAttribute('data-telefone-cliente'));
+        $('#id_cpf_cliente').val(row.getAttribute('data-cpf-cliente'));
+        $('#id_email_cliente').val(row.getAttribute('data-email-cliente'));
+        $('#id_produto').val(row.getAttribute('data-produto'));
+        $('#id_dados_veiculo').val(row.getAttribute('data-veiculo'));
+        $('#id_possui_seguro').val(row.getAttribute('data-possui-seguro'));
+        definirRelacionamentoPesquisavel(
+            'base_novo_seguradora_val',
+            'base_novo_seguradora_texto',
+            row.getAttribute('data-seguradora'),
+            listaBaseNovoSeguradoras
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_ramo_val',
+            'base_novo_ramo_texto',
+            row.getAttribute('data-ramo'),
+            listaBaseNovoRamos
+        );
+        definirRelacionamentoPesquisavel(
+            'base_novo_tipo_documento_val',
+            'base_novo_tipo_documento_texto',
+            row.getAttribute('data-tipo-documento'),
+            listaBaseNovoTiposDocumento
+        );
+        $('#id_numero_contrato').val(row.getAttribute('data-contrato'));
+        $('#id_numero_endosso').val(row.getAttribute('data-endosso'));
+        
+        $('#id_observacoes').val(row.getAttribute('data-obs'));
+
+        renderHistoricoFichaBaseNovo(row);
+
+        $('#titulo-form-base-novo').html('<i class="fas fa-edit"></i> Editar Ficha do Registo');
+        toggleFormLocal('base-novo', true);
+    }
+
+    var atendimentosAtivos = {};
+    function csrfAtendimento() {
+        var el = document.querySelector('input[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+    var heartbeatAtendimento = null;   // "sinal de vida" enquanto a ficha está aberta
+    function pararHeartbeatAtendimento() {
+        if (heartbeatAtendimento) { clearInterval(heartbeatAtendimento); heartbeatAtendimento = null; }
+    }
+    function encerrarAtendimento(id) {
+        pararHeartbeatAtendimento();
+        if (!id) return;
+        $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
+                 headers: { 'X-CSRFToken': csrfAtendimento() } });
+        // Libera na hora sem o tempo de segundos
+        delete atendimentosAtivos[String(id)];
+        aplicarAtendimentos();
+    }
+    // quando fechar a aba sem salvar ou cancelar libera na hora 
+    function liberarAoFechar() {
+        var id = document.getElementById('base_novo_id_hidden');
+        id = id ? id.value : '';
+        if (!id || !navigator.sendBeacon) return;
+        var fd = new FormData();
+        fd.append('csrfmiddlewaretoken', csrfAtendimento());
+        navigator.sendBeacon(URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), fd);
+    }
+    window.addEventListener('pagehide', liberarAoFechar);
+    window.addEventListener('beforeunload', liberarAoFechar);
+    function aplicarAtendimentos() {
+        $('#tabela-base-novo tbody tr').each(function() {
+            var id = String($(this).data('id') || '');
+            var nome = atendimentosAtivos[id];
+            var cell = $(this).find('.uso-por-cell');
+            if (nome) {
+                $(this).addClass('em-atendimento').attr('title', 'Em atendimento por ' + nome);
+                cell.text(nome);
+            } else {
+                $(this).removeClass('em-atendimento').removeAttr('title');
+                cell.text('-');
+            }
+        });
+    }
+    function atualizarAtendimentos() {
+        $.get(URL_ATENDIMENTOS_ATIVOS, function(resp) {
+            atendimentosAtivos = (resp && resp.atendimentos) ? resp.atendimentos : {};
+            aplicarAtendimentos();
+        });
+    }
+
+</script>
+{% endblock %}
