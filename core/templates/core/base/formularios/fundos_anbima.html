@@ -1,0 +1,147 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Valores por Fundos{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Base</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'base_formularios' %}" class="text-primary text-decoration-none">Formulários</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">Valores por Fundos</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div id="tela-fundos-anbima">
+    <div id="lista-fundos-anbima">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0"><i class="fas fa-coins" style="color: #6610f2;"></i> Valores por Fundos</h4>
+            <div>
+                <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
+                    <i class="fas fa-filter"></i> Limpar Filtros
+                </button>
+                {% if request.user.is_superuser or request.user.perfil.base_form_fundos_anbima > 2 %}
+                <button class="btn btn-success me-1" onclick="exportarCSV('fundos_anbima.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                {% endif %}
+
+                {% if request.user.is_superuser or request.user.perfil.base_form_fundos_anbima > 2 %}
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-fundos-anbima')"><i class="fas fa-trash-alt"></i></button>
+                {% endif %}
+
+                {% if request.user.is_superuser or request.user.perfil.base_form_fundos_anbima > 1 %}
+                <button class="btn btn-success" onclick="toggleFormLocal('fundos-anbima', true)"><i class="fas fa-plus"></i> Novo</button>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <div class="tabela-container">
+            <form id="form-delete-fundos-anbima" method="post" action="{% url 'excluir_em_massa' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_massa" value="fundo_anbima">
+                <table class="table table-striped table-hover mb-0" id="tabela-fundos-anbima" style="width:100%; font-size: 0.9rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
+                            <th class="text-center">CNPJ Fundo</th>
+                            <th class="text-start">Nome do Fundo</th>
+                            <th class="text-center">CÓDIGO ANBIMA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fundos_anbima %}
+                        <tr
+                            {% if request.user.is_superuser or request.user.perfil.base_form_fundos_anbima > 2 %}
+                            class="tr-clickable" ondblclick="editarFundoAnbima(this)"
+                            {% endif %}
+                            data-id="{{ f.id }}"
+                            data-cnpj="{{ f.cnpj_fundo|default:'' }}"
+                            data-nome="{{ f.nome_fundo|default:'' }}"
+                            data-codigo="{{ f.codigo_anbima|default:'' }}"
+                            data-ordem="{{ f.ordem_apresentacao|default:0 }}">
+
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" name="ids_excluir" value="{{ f.id }}" class="chk-delete chk-row">
+                            </td>
+                            <td class="text-center">{{ f.cnpj_fundo|default:'-' }}</td>
+                            <td class="text-start">{{ f.nome_fundo }}</td>
+                            <td class="text-center">{{ f.codigo_anbima|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="form-fundos-anbima" style="display:none;">
+        <div class="card shadow-sm mt-3" style="max-width:700px; margin:0 auto; border-top: 4px solid #6610f2;">
+            <div class="card-header bg-white"><h5 id="titulo-form-fundo-anbima">Cadastro de Fundo</h5></div>
+            <div class="card-body">
+
+                {% if form_fundo_anbima.errors %}
+                <div class="alert alert-danger shadow-sm">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Ops, não foi possível salvar!</strong><br>
+                    Já existe um <b>Fundo</b> com este nome cadastrado no sistema.
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_id" id="fundo_anbima_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+
+                    <div class="row">
+                        {{ form_fundo_anbima.as_p }}
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-light border" onclick="toggleFormLocal('fundos-anbima', false)">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        iniciarTabelaExcel('tabela-fundos-anbima');
+
+        {% if form_fundo_anbima.errors %}
+            toggleFormLocal('fundos-anbima', true);
+        {% endif %}
+    });
+
+    function toggleFormLocal(tipo, mostrar) {
+        if(mostrar) {
+            $('#lista-' + tipo).hide();
+            $('#form-' + tipo).show();
+            if(!$('#fundo_anbima_id_hidden').val() && {{ form_fundo_anbima.errors|yesno:"false,true" }}) {
+                $('form')[1].reset();
+                $('#titulo-form-fundo-anbima').text("Novo Fundo");
+            }
+        } else {
+            $('#form-' + tipo).hide();
+            $('#lista-' + tipo).show();
+            $('#fundo_anbima_id_hidden').val('');
+            $('.alert-danger').hide();
+        }
+    }
+
+    function editarFundoAnbima(row) {
+        var id = row.getAttribute('data-id');
+        $('#fundo_anbima_id_hidden').val(id);
+
+        $('#id_cnpj_fundo').val(row.getAttribute('data-cnpj'));
+        $('#id_nome_fundo').val(row.getAttribute('data-nome'));
+        $('#id_codigo_anbima').val(row.getAttribute('data-codigo'));
+        $('#id_ordem_apresentacao').val(row.getAttribute('data-ordem'));
+
+        $('#titulo-form-fundo-anbima').text("Editar Fundo #" + id);
+        toggleFormLocal('fundos-anbima', true);
+    }
+</script>
+{% endblock %}

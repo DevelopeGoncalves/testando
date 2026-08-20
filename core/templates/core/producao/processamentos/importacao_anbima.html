@@ -1,0 +1,75 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Processamento ANBIMA{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Produção</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'producao_processamentos' %}" class="text-primary text-decoration-none">Processamentos</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">ANBIMA</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid pt-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+            {% if fundos_desconhecidos %}
+            <div class="alert alert-danger shadow-sm">
+                <strong><i class="fas fa-exclamation-triangle"></i> Fundos não cadastrados encontrados na planilha!</strong>
+                <p class="mb-2 mt-2">Os fundos abaixo aparecem no arquivo enviado, mas não estão cadastrados em <b>Base &gt; Formulários &gt; Valores por Fundos</b>. Cadastre-os e tente novamente.</p>
+                <ul class="mb-0">
+                    {% for fundo in fundos_desconhecidos %}
+                    <li>{{ fundo }}</li>
+                    {% endfor %}
+                </ul>
+                <a href="{% url 'lista_fundos_anbima' %}" class="btn btn-sm btn-outline-danger mt-3">
+                    <i class="fas fa-coins"></i> Ir para Valores por Fundos
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm" style="border-top: 4px solid #6f42c1 !important;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-1" style="color: #6f42c1;">
+                        <i class="fas fa-file-invoice-dollar me-2"></i> Processamento ANBIMA
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Envie a planilha do Relatório de Clientes (previdência). O sistema cruza os dados com os
+                        cadastros de <b>Por Estado</b> e <b>Valores por Fundos</b> e devolve o arquivo pronto,
+                        com as abas "Por Estado" e "Valores por Fundos".
+                    </p>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Planilha do Relatório de Clientes</label>
+                            <input class="form-control" type="file" name="arquivo_relatorio" accept=".xls,.xlsx" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data de corte (opcional)</label>
+                            <input class="form-control" type="date" name="data_corte">
+                            <div class="form-text">
+                                Registros com contratação a partir dessa data não entram no processamento.
+                                Deixe em branco para usar o padrão (remove apenas o mês atual).
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn fw-bold text-white" style="background-color: #6f42c1;">
+                                <i class="fas fa-cogs"></i> Processar e Exportar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

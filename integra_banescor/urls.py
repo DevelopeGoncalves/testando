@@ -49,8 +49,12 @@ urlpatterns = [
     path('seguradoras/', views.lista_seguradoras, name='lista_seguradoras'),
     
     path('tipos-documentos/', views.lista_tiposdoc, name='lista_tiposdoc'),
-    
+
+    path('base/formularios/estados-anbima/', views.lista_estados_anbima, name='lista_estados_anbima'),
+    path('base/formularios/fundos-anbima/', views.lista_fundos_anbima, name='lista_fundos_anbima'),
+
     path('producao/processamentos/habitacional/', views.producao_habitacional_import, name='producao_habitacional_import'),
+    path('producao/processamentos/anbima/', views.producao_anbima_import, name='producao_anbima_import'),
     path('producao/processamentos/base-novo/', views.producao_base_novo_import, name='producao_base_novo_import'),
 
     
@@ -62,7 +66,7 @@ urlpatterns = [
     path('clientes/', views.lista_clientes, name='lista_clientes'),
     
     # 7.1 TELA LOGIN 
-    path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
+    path('login/', views.login_view, name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
        
     # 9. ROTA DO PAINEL DE PRODUÇÃO

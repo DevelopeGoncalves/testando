@@ -132,6 +132,39 @@ class Produto(models.Model):
     def __str__(self):
         return self.produto
 
+class EstadoAnbima(models.Model):
+    uf = models.CharField("UF", max_length=2, unique=True)
+    estado = models.CharField("Estado", max_length=50)
+    uf_estado = models.CharField("UF - Estado", max_length=60, blank=True)
+    ordem_apresentacao = models.IntegerField("Ordem de Apresentação", default=0)
+
+    def save(self, *args, **kwargs):
+        self.uf = (self.uf or '').strip().upper()
+        self.uf_estado = f"{self.uf} - {self.estado}".strip(' -')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.uf_estado
+
+    class Meta:
+        verbose_name = "Estado (ANBIMA)"
+        verbose_name_plural = "Estados (ANBIMA)"
+        ordering = ['ordem_apresentacao', 'uf']
+
+class FundoAnbima(models.Model):
+    cnpj_fundo = models.CharField("CNPJ Fundo", max_length=20, blank=True, null=True)
+    nome_fundo = models.CharField("Nome do Fundo", max_length=150, unique=True)
+    codigo_anbima = models.CharField("Código ANBIMA", max_length=20, blank=True, null=True)
+    ordem_apresentacao = models.IntegerField("Ordem de Apresentação", default=0)
+
+    def __str__(self):
+        return self.nome_fundo
+
+    class Meta:
+        verbose_name = "Fundo (ANBIMA)"
+        verbose_name_plural = "Valores por Fundos (ANBIMA)"
+        ordering = ['ordem_apresentacao', 'nome_fundo']
+
 class Unidade(models.Model):
     superintendencia = models.CharField("Superintendência", max_length=150, null=True, blank=True)
     cid_unidade = models.CharField("CID Unidade", max_length=4, unique=True)
@@ -432,6 +465,8 @@ class PerfilUsuario(models.Model):
     base_form_metas = models.IntegerField('Base_Form_Metas', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_form_tipopessoa = models.IntegerField('Base_Form_TipoPessoa', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_form_clientes = models.IntegerField('Base_Form_Clientes', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_estados_anbima = models.IntegerField('Base_Form_EstadosAnbima', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_fundos_anbima = models.IntegerField('Base_Form_FundosAnbima', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
     base_proc_unidade = models.IntegerField('Base_Proc_Unidade', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_proc_colaboradores = models.IntegerField('Base_Proc_Colaboradores', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
@@ -470,6 +505,7 @@ class PerfilUsuario(models.Model):
     prod_proc_saude = models.IntegerField('Prod_Proc_Saude', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_proc_habitacional = models.IntegerField('Prod_Proc_Habitacional', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_proc_basenovo = models.IntegerField('Prod_Proc_Basenovo', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_proc_anbima = models.IntegerField('Prod_Proc_Anbima', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
     prod_rel = models.IntegerField('Prod_Rel', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 

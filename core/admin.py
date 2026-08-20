@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Agrupamento, Produto, Unidade, Ramo, MetaMensal, MotivoNaoVenda
+from .models import Agrupamento, Produto, Unidade, Ramo, MetaMensal, MotivoNaoVenda, EstadoAnbima, FundoAnbima
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from .models import PerfilUsuario
@@ -29,6 +29,16 @@ class RamoAdmin(admin.ModelAdmin):
     list_display = ('cod_ramo', 'ramo', 'grupo', 'produto', 'inativo') 
     list_filter = ('produto', 'inativo')
     search_fields = ('ramo', 'grupo')
+
+@admin.register(EstadoAnbima)
+class EstadoAnbimaAdmin(admin.ModelAdmin):
+    list_display = ('uf', 'estado', 'uf_estado', 'ordem_apresentacao')
+    search_fields = ('uf', 'estado')
+
+@admin.register(FundoAnbima)
+class FundoAnbimaAdmin(admin.ModelAdmin):
+    list_display = ('nome_fundo', 'cnpj_fundo', 'codigo_anbima', 'ordem_apresentacao')
+    search_fields = ('nome_fundo', 'cnpj_fundo', 'codigo_anbima')
 
 @admin.register(MotivoNaoVenda)
 class MotivoNaoVendaAdmin(admin.ModelAdmin):

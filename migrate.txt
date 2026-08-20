@@ -1,2 +1,4 @@
 python manage.py makemigrations
 python manage.py migrate
+python manage.py collectstatic
+sqlite3 db.sqlite3 < patch_anbima_producao.sql

@@ -6,3 +6,9 @@ env/
 
 # Banco de dados local: cada ambiente usa o seu (nao versionar)
 db.sqlite3
+
+# Saida do collectstatic (STATIC_ROOT) - gerada no deploy, nao versionar
+/static/
+
+# Pasta de analise local: tem planilha com dados reais de clientes (CPF, financeiro) - nao versionar
+/analise/

@@ -1,0 +1,145 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Por Estado{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Base</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'base_formularios' %}" class="text-primary text-decoration-none">Formulários</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">Por Estado</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div id="tela-estados-anbima">
+    <div id="lista-estados-anbima">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0"><i class="fas fa-map-marker-alt" style="color: #20c997;"></i> Por Estado</h4>
+            <div>
+                <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
+                    <i class="fas fa-filter"></i> Limpar Filtros
+                </button>
+                {% if request.user.is_superuser or request.user.perfil.base_form_estados_anbima > 2 %}
+                <button class="btn btn-success me-1" onclick="exportarCSV('estados_anbima.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                {% endif %}
+
+                {% if request.user.is_superuser or request.user.perfil.base_form_estados_anbima > 2 %}
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-estados-anbima')"><i class="fas fa-trash-alt"></i></button>
+                {% endif %}
+
+                {% if request.user.is_superuser or request.user.perfil.base_form_estados_anbima > 1 %}
+                <button class="btn btn-success" onclick="toggleFormLocal('estados-anbima', true)"><i class="fas fa-plus"></i> Novo</button>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <div class="tabela-container">
+            <form id="form-delete-estados-anbima" method="post" action="{% url 'excluir_em_massa' %}">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_massa" value="estado_anbima">
+                <table class="table table-striped table-hover mb-0" id="tabela-estados-anbima" style="width:100%; font-size: 0.9rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
+                            <th class="text-center">UF</th>
+                            <th class="text-start">Estado</th>
+                            <th class="text-start">UF - Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in estados_anbima %}
+                        <tr
+                            {% if request.user.is_superuser or request.user.perfil.base_form_estados_anbima > 2 %}
+                            class="tr-clickable" ondblclick="editarEstadoAnbima(this)"
+                            {% endif %}
+                            data-id="{{ e.id }}"
+                            data-uf="{{ e.uf|default:'' }}"
+                            data-estado="{{ e.estado|default:'' }}"
+                            data-ordem="{{ e.ordem_apresentacao|default:0 }}">
+
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" name="ids_excluir" value="{{ e.id }}" class="chk-delete chk-row">
+                            </td>
+                            <td class="text-center">{{ e.uf }}</td>
+                            <td class="text-start">{{ e.estado }}</td>
+                            <td class="text-start">{{ e.uf_estado }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="form-estados-anbima" style="display:none;">
+        <div class="card shadow-sm mt-3" style="max-width:700px; margin:0 auto; border-top: 4px solid #20c997;">
+            <div class="card-header bg-white"><h5 id="titulo-form-estado-anbima">Cadastro de Estado</h5></div>
+            <div class="card-body">
+
+                {% if form_estado_anbima.errors %}
+                <div class="alert alert-danger shadow-sm">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Ops, não foi possível salvar!</strong><br>
+                    Já existe um <b>Estado</b> com este UF cadastrado no sistema.
+                </div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_id" id="estado_anbima_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+
+                    <div class="row">
+                        {{ form_estado_anbima.as_p }}
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-light border" onclick="toggleFormLocal('estados-anbima', false)">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        iniciarTabelaExcel('tabela-estados-anbima');
+
+        {% if form_estado_anbima.errors %}
+            toggleFormLocal('estados-anbima', true);
+        {% endif %}
+    });
+
+    function toggleFormLocal(tipo, mostrar) {
+        if(mostrar) {
+            $('#lista-' + tipo).hide();
+            $('#form-' + tipo).show();
+            if(!$('#estado_anbima_id_hidden').val() && {{ form_estado_anbima.errors|yesno:"false,true" }}) {
+                $('form')[1].reset();
+                $('#titulo-form-estado-anbima').text("Novo Estado");
+            }
+        } else {
+            $('#form-' + tipo).hide();
+            $('#lista-' + tipo).show();
+            $('#estado_anbima_id_hidden').val('');
+            $('.alert-danger').hide();
+        }
+    }
+
+    function editarEstadoAnbima(row) {
+        var id = row.getAttribute('data-id');
+        $('#estado_anbima_id_hidden').val(id);
+
+        $('#id_uf').val(row.getAttribute('data-uf'));
+        $('#id_estado').val(row.getAttribute('data-estado'));
+        $('#id_ordem_apresentacao').val(row.getAttribute('data-ordem'));
+
+        $('#titulo-form-estado-anbima').text("Editar Estado #" + id);
+        toggleFormLocal('estados-anbima', true);
+    }
+</script>
+{% endblock %}

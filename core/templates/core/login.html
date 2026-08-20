@@ -1,45 +1,662 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Integra Banescor</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta name="theme-color" content="#17100c">
+    <title>Login | Meu Front</title>
+    <link rel="stylesheet" href="{% static 'css/pages/login.css' %}">
+
     <style>
-        body { background-color: #f4f6f9; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .login-header { background-color: #1976d2; color: white; padding: 30px 20px; text-align: center; }
+/* ==========================================================================
+        TEMA MODERNO (LOGIN) - COR EXATA DA MARCA (#0814DD) E BRANCO
+        ========================================================================== */
+
+        :root {
+            color-scheme: dark;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            
+            /* CORES DA MARCA */
+            --brand-blue-bg: #030730;      /* Fundo da página, azul bem escuro */
+            --brand-blue-card: #0814DD;    /* COR EXATA DA MARCA PARA O CARD */ 
+            --brand-blue-accent: #FFFFFF;  /* Branco puro para brilhos e focos */
+
+            /* TEXTOS */
+            --text-primary: #FFFFFF;       /* Branco puro para leitura perfeita */
+            --text-muted: #B3C5FF;         /* Azul bem claro para rótulos secundários */
+            --text-green: #04d11f;
+
+            /* SUPERFÍCIES (Card sólido para garantir a cor exata) */ 
+            --card-surface: var(--brand-blue-card); 
+            --glass-border: rgba(255, 255, 255, 0.25); /* Borda sutil branca */
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            
+            /* CAMPOS DE FORMULÁRIO (INPUTS) - Mantém o efeito Glass aqui */
+            --input-surface: rgba(0, 0, 30, 0.4); 
+            
+            --focus-ring: rgba(255, 255, 255, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-width: 320px;
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            margin: 0;
+            color: var(--text-primary);
+            /* Fundo mantido com a sua imagem */
+            background:
+                linear-gradient(135deg, rgba(3, 7, 48, 0.1), rgba(8, 20, 221, 0.2)),
+                url("{% static 'img/Background_Day.jpg' %}") center / cover no-repeat fixed; 
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .login-page {
+            position: relative;
+            isolation: isolate;
+            display: grid;
+            min-height: 100vh;
+            min-height: 100dvh;
+            place-items: center;
+            overflow: hidden;
+            padding: 32px 20px;
+        }
+
+        .login-page::before {
+            position: absolute;
+            z-index: -2;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(8, 20, 221, 0.15)),
+                radial-gradient(circle at center, transparent 40%, rgba(8, 20, 221, 0.25) 100%);
+            content: "";
+        }
+
+        .glow {
+            position: absolute;
+            z-index: -1;
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            opacity: 0.6; 
+            filter: blur(90px);
+            pointer-events: none;
+        }
+
+        .glow--top {
+            top: -110px;
+            right: 10%;
+            background: var(--brand-blue-accent);
+        }
+
+        .glow--bottom {
+            bottom: -150px;
+            left: 12%;
+            background: var(--brand-blue-card);
+        }
+
+        /* ==========================================================================
+        CARD DE LOGIN (Cor sólida e exata)
+        ========================================================================== */
+        .login-card {
+            position: relative;
+            width: min(100%, 420px);
+            padding: 38px 36px 30px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            background: var(--card-surface); /* Aplica a cor pura #0814DD sem transparência */
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 var(--glass-highlight);
+            animation: card-arrival 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .login-card::after {
+            position: absolute;
+            top: 0;
+            left: 12%;
+            width: 52%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+            content: "";
+        }
+
+        .login-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .login-header h1 {
+            margin: 0; 
+            font-size: clamp(2.2rem, 8.5vw, 2.85rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.08;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-header h1 .brand-light { 
+            color: var(--text-primary); 
+            font-weight: 400; 
+        }
+
+        .login-header h1 .brand-green { 
+            color: var(--text-green); 
+            font-weight: 400; 
+        }
+
+        .login-header h1 .brand-bold { 
+            color: var(--brand-blue-accent); 
+            font-weight: 800; 
+        }
+
+        .login-header p {
+            margin: 10px 0 0;
+            color: var(--text-muted);
+            font-size: 0.93rem;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .login-form {
+            display: grid;
+            gap: 28px;
+        }
+
+        .form-field {
+            position: relative;
+        }
+
+        /* RÓTULO ANIMADO DOS INPUTS */
+        .field-label {
+            position: absolute;
+            top: 50%;
+            left: 49px;
+            color: var(--text-muted);
+            font-size: 0.93rem;
+            font-weight: 400;
+            letter-spacing: 0.025em;
+            line-height: 1;
+            pointer-events: none;
+            transform: translateY(-50%);
+            will-change: top, left, transform;
+            transition:
+                top 280ms cubic-bezier(0.22, 1, 0.36, 1),
+                left 280ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 220ms ease,
+                font-size 280ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* ==========================================================================
+        CAMPOS DE ENTRADA (INPUTS) - Com leve transparência
+        ========================================================================== */
+        .field-control {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-height: 54px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            background: var(--input-surface); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        }
+
+        .field-control:focus-within {
+            border-color: var(--brand-blue-accent);
+            background: rgba(0, 0, 20, 0.5);
+            box-shadow: 0 0 0 4px var(--focus-ring), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .field-control:focus-within .field-label,
+        .field-control input:not(:placeholder-shown) + .field-label,
+        .field-control input:-webkit-autofill + .field-label,
+        .field-control input:autofill + .field-label {
+            top: -19px;
+            left: 3px;
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 0.8rem;
+            transform: translateY(0);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .field-control input:-webkit-autofill + .field-label,
+        .field-control input:autofill + .field-label {
+            animation: autofill-label-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .field-icon,
+        .eye-icon,
+        .button-arrow {
+            flex: 0 0 auto;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .field-icon {
+            width: 20px;
+            margin-left: 17px;
+            color: var(--text-muted);
+            transition: color 180ms ease;
+        }
+        
+        .field-control:focus-within .field-icon {
+            color: var(--brand-blue-accent);
+        }
+
+        .field-control input {
+            width: 100%;
+            min-width: 0;
+            padding: 16px 12px;
+            border: 0;
+            outline: 0;
+            color: var(--text-primary);
+            font-weight: 600;
+            background: transparent;
+            caret-color: var(--brand-blue-accent);
+        }
+
+        .field-control input:-webkit-autofill,
+        .field-control input:-webkit-autofill:hover,
+        .field-control input:-webkit-autofill:focus,
+        .field-control input:autofill {
+            -webkit-text-fill-color: var(--text-primary);
+            background-color: transparent !important;
+            background-image: none !important;
+            -webkit-background-clip: text;
+            background-clip: text;
+            box-shadow: 0 0 0 1000px transparent inset !important;
+            caret-color: var(--text-primary);
+        }
+
+        .password-toggle {
+            display: grid;
+            flex: 0 0 44px;
+            width: 44px;
+            height: 44px;
+            margin-right: 5px;
+            border: 0;
+            border-radius: 12px;
+            place-items: center;
+            color: var(--text-muted);
+            background: transparent;
+            cursor: pointer;
+            transition: color 160ms ease, background-color 160ms ease;
+        }
+
+        .password-toggle:hover,
+        .password-toggle:focus-visible {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.15);
+            outline: 0;
+        }
+
+        .eye-icon {
+            grid-area: 1 / 1;
+            width: 20px;
+            transition: opacity 150ms ease, transform 150ms ease;
+        }
+
+        .eye-icon--closed,
+        .password-toggle.is-visible .eye-icon--open {
+            opacity: 0;
+            transform: scale(0.75);
+        }
+
+        .password-toggle.is-visible .eye-icon--closed {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .login-error {
+            margin: -12px 3px -8px;
+            color: #ff6b6b;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .login-actions {
+            display: grid;
+            gap: 12px;
+        }
+
+        .remember-option {
+            display: inline-flex;
+            align-items: center;
+            width: max-content;
+            gap: 7px;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 300;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-option input {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            accent-color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        /* ==========================================================================
+        BOTÃO DE LOGIN - FUNDO VERDE, TEXTO BRANCO
+        ========================================================================== */
+        .login-button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 54px;
+            margin-top: 0;
+            padding: 0 22px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            
+            /* Fundo Verde exato */
+            background: #00AB16; 
+            
+            
+            /* Sombra ajustada para o tom esverdeado */
+            box-shadow: 0 4px 15px rgba(0, 171, 22, 0.3); 
+            cursor: pointer;
+            transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+        }
+
+        .login-button::before {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.3) 50%, transparent 65%);
+            content: "";
+            transform: translateX(-120%);
+            transition: transform 520ms ease;
+        }
+
+        .login-button:hover {
+            /* Verde um pouquinho mais escuro no hover para dar feedback visual */
+            background: #009613; 
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 6px 20px rgba(0, 171, 22, 0.4); 
+            transform: translateY(-1px);
+        }
+
+        .login-button:hover::before {
+            transform: translateX(120%);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .login-button:focus-visible {
+            outline: 3px solid var(--focus-ring);
+            outline-offset: 3px;
+        }
+
+        .button-label {
+            position: relative;
+            color: #FFFFFF; /* Escrita Branca */
+            font-size: 1.4rem; /* Tamanho MAIOR */
+            font-weight: 600;  /* SEM NEGRITO */
+        }
+
+        .button-arrow {
+            position: absolute;
+            right: 20px;
+            width: 19px;
+            color: #FFFFFF; /* Seta branca acompanhando o texto */
+            transition: transform 180ms ease;
+        }
+
+        .login-button:hover .button-arrow {
+            transform: translateX(3px);
+        }
+
+        .button-loader {
+            display: none;
+            width: 19px;
+            height: 19px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-top-color: #FFFFFF; /* Ícone de carregamento branco */
+            border-radius: 50%;
+            animation: spin 700ms linear infinite;
+        }
+
+        .login-button.is-loading {
+            cursor: wait;
+        }
+
+        .login-button.is-loading .button-label,
+        .login-button.is-loading .button-arrow {
+            display: none;
+        }
+
+        .login-button.is-loading .button-loader {
+            display: block;
+        }
+
+        @keyframes card-arrival {
+            from {
+                opacity: 0;
+                transform: translateY(22px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes autofill-label-rise {
+            from {
+                top: 50%;
+                left: 49px;
+                color: var(--text-muted);
+                font-size: 0.93rem;
+                transform: translateY(-50%);
+            }
+            to {
+                top: -19px;
+                left: 3px;
+                color: var(--text-muted);
+                font-size: 0.8rem;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 520px) {
+            body {
+                background-attachment: scroll;
+            }
+
+            .login-page {
+                padding: 20px 14px;
+            }
+
+            .login-card {
+                padding: 30px 22px 25px;
+                border-radius: 24px;
+            }
+
+            .login-header {
+                margin-bottom: 26px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .field-label {
+                animation-duration: 280ms !important;
+                transition-duration: 280ms !important;
+            }
+
+            .button-loader {
+                animation-duration: 700ms !important;
+                animation-iteration-count: infinite !important;
+            }
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-5 col-lg-4">
-            <div class="card login-card">
-                <div class="login-header">
-                    <i class="fas fa-shield-alt fa-3x mb-3"></i>
-                    <h3 class="fw-bold">Integra Banescor</h3>
+    <main class="login-page">
+
+        <section class="login-card" aria-labelledby="login-title">
+            <header class="login-header">
+                <h1 id="login-title">
+                    <span class="brand-green">Integra</span><span class="brand-light">Banescor</span>
+                </h1>
+                <p>Entre com seus dados para continuar.</p>
+            </header>
+            <form class="login-form" method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+
+                <div class="form-field">
+                    <div class="field-control">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4.5 20c.7-4 3.2-6 7.5-6s6.8 2 7.5 6" />
+                        </svg>
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            placeholder=" "
+                            value="{{ form.username.value|default_if_none:'' }}"
+                            autocomplete="username"
+                            required
+                        >
+                        <label class="field-label" for="username">Usuário</label>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label text-muted">Usuário</label>
-                            <div class="input-group">
-                                <input type="text" name="username" class="form-control" placeholder="Digite seu usuário" required autofocus>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label text-muted">Senha</label>
-                            <input type="password" name="password" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar</button>
-                    </form>
+
+                <div class="form-field">
+                    <div class="field-control">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <rect x="5" y="10" width="14" height="10" rx="2" />
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14.5v2" />
+                        </svg>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            placeholder=" "
+                            autocomplete="current-password"
+                            required
+                        >
+                        <label class="field-label" for="password">Senha</label>
+                        <button
+                            class="password-toggle"
+                            type="button"
+                            aria-label="Mostrar senha"
+                            aria-pressed="false"
+                            title="Mostrar senha"
+                        >
+                            <svg class="eye-icon eye-icon--open" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                                <circle cx="12" cy="12" r="2.5" />
+                            </svg>
+                            <svg class="eye-icon eye-icon--closed" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="m4 4 16 16M10.5 6.2c.5-.1 1-.2 1.5-.2 6 0 9.5 6 9.5 6a18 18 0 0 1-2.1 2.8M6.3 7.1C3.9 8.8 2.5 12 2.5 12s3.5 6 9.5 6c1.4 0 2.7-.3 3.8-.8M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
+
+                {% if form.non_field_errors %}
+                    <p class="login-error" role="alert">{{ form.non_field_errors.0 }}</p>
+                {% endif %}
+
+                <div class="login-actions">
+                    <label class="remember-option" for="remember-me">
+                        <input
+                            id="remember-me"
+                            name="remember_me"
+                            type="checkbox"
+                            {% if remember_me %}checked{% endif %}
+                        >
+                        <span>Manter-me conectado</span>
+                    </label>
+
+                    <button class="login-button" type="submit">
+                        <span class="button-label">Entrar</span>
+                        <span class="button-loader" aria-hidden="true"></span>
+                        <svg class="button-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M5 12h14M14 7l5 5-5 5" />
+                        </svg>
+                    </button>
+                </div>
+            </form>
+
+        </section>
+    </main>
+
+    <script>
+        const passwordInput = document.querySelector("#password");
+        const passwordToggle = document.querySelector(".password-toggle");
+        const loginForm = document.querySelector(".login-form");
+        const loginButton = document.querySelector(".login-button");
+
+        if (passwordInput && passwordToggle) {
+            passwordToggle.addEventListener("click", () => {
+                const shouldShowPassword = passwordInput.type === "password";
+
+                passwordInput.type = shouldShowPassword ? "text" : "password";
+                passwordToggle.classList.toggle("is-visible", shouldShowPassword);
+                passwordToggle.setAttribute("aria-pressed", String(shouldShowPassword));
+
+                const accessibleLabel = shouldShowPassword ? "Ocultar senha" : "Mostrar senha";
+                passwordToggle.setAttribute("aria-label", accessibleLabel);
+                passwordToggle.title = accessibleLabel;
+                passwordInput.focus({ preventScroll: true });
+            });
+        }
+
+        if (loginForm && loginButton) {
+            loginForm.addEventListener("submit", () => {
+                loginButton.classList.add("is-loading");
+                loginButton.setAttribute("aria-busy", "true");
+            });
+        }
+    </script>
+
 </body>
 </html>

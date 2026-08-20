@@ -8,9 +8,10 @@ from .models import (
     Seguradora, TipoDocumento, Cliente, Apolice, PerfilUsuario,
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
-    IndicacaoExcluida,
+    IndicacaoExcluida, EstadoAnbima, FundoAnbima,
 )
-from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm
+from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
+from .anbima_processing import processar_planilha_anbima
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -21,6 +22,37 @@ from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login
+
+REMEMBER_ME_SECONDS = 24 * 60 * 60
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            
+            remember_me = request.POST.get('remember_me') == 'on'
+            request.session.set_expiry(REMEMBER_ME_SECONDS if remember_me else 0)
+            
+            return redirect('home')
+
+    else:
+        form = AuthenticationForm()
+
+    context = {
+        'form': form,
+        'remember_me': request.POST.get('remember_me') == 'on' if request.method == 'POST' else False,
+    }
+
+    return render(request, 'core/login.html', context)
+    
 def ler_excel_robusto(arquivo, dtype=None):
     """
     Lê um arquivo Excel enviado por upload tentando várias estratégias.
@@ -269,9 +301,15 @@ def excluir_em_massa(request):
             elif tipo == 'seguradora': 
                 Seguradora.objects.filter(id__in=ids).delete()
                 rota_destino = 'lista_seguradoras'
-            elif tipo == 'tipodoc': 
+            elif tipo == 'tipodoc':
                 TipoDocumento.objects.filter(id__in=ids).delete()
                 rota_destino = 'lista_tiposdoc'
+            elif tipo == 'estado_anbima':
+                EstadoAnbima.objects.filter(id__in=ids).delete()
+                rota_destino = 'lista_estados_anbima'
+            elif tipo == 'fundo_anbima':
+                FundoAnbima.objects.filter(id__in=ids).delete()
+                rota_destino = 'lista_fundos_anbima'
             elif tipo == 'cliente': 
                 Cliente.objects.filter(id__in=ids).delete()
                 rota_destino = 'lista_clientes'
@@ -458,6 +496,54 @@ def lista_tiposdoc(request):
         form = TipoDocumentoForm()
     items = TipoDocumento.objects.all().order_by('tipo_documento')
     return render(request, 'core/base/formularios/tiposdocumentos.html', {'tipos_documentos': items, 'form_tipodoc': form})
+
+# --- ESTADOS ANBIMA ---
+@login_required
+def lista_estados_anbima(request):
+
+    # negar acesso ao usuario
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_estados_anbima > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ----
+
+    if request.method == 'POST':
+        item_id = request.POST.get('item_id')
+        instancia = get_object_or_404(EstadoAnbima, id=item_id) if item_id else None
+        form = EstadoAnbimaForm(request.POST, instance=instancia)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_estados_anbima')
+    else:
+        form = EstadoAnbimaForm()
+    items = EstadoAnbima.objects.all().order_by('ordem_apresentacao', 'uf')
+    return render(request, 'core/base/formularios/estados_anbima.html', {'estados_anbima': items, 'form_estado_anbima': form})
+
+# --- VALORES POR FUNDOS (ANBIMA) ---
+@login_required
+def lista_fundos_anbima(request):
+
+    # negar acesso ao usuario
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.base_form_fundos_anbima > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ----
+
+    if request.method == 'POST':
+        item_id = request.POST.get('item_id')
+        instancia = get_object_or_404(FundoAnbima, id=item_id) if item_id else None
+        form = FundoAnbimaForm(request.POST, instance=instancia)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_fundos_anbima')
+    else:
+        form = FundoAnbimaForm()
+    items = FundoAnbima.objects.all().order_by('ordem_apresentacao', 'nome_fundo')
+    return render(request, 'core/base/formularios/fundos_anbima.html', {'fundos_anbima': items, 'form_fundo_anbima': form})
 
 @login_required
 def lista_clientes(request):
@@ -661,6 +747,76 @@ def producao_processamentos(request):
         'base_novo_parametrizacao_visivel': globals().get('BASE_NOVO_PARAMETRIZACAO_VISIVEL', False),
     })
 
+
+@login_required
+def producao_anbima_import(request):
+
+    # negar acesso ao usuario
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_proc_anbima > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ----
+
+    if request.method == 'POST':
+        arquivo = request.FILES.get('arquivo_relatorio')
+        data_corte_str = request.POST.get('data_corte', '').strip()
+
+        if not arquivo:
+            messages.error(request, 'Selecione o arquivo do Relatório de Clientes para processar.')
+            return redirect('producao_anbima_import')
+
+        data_limite = None
+        if data_corte_str:
+            try:
+                data_limite = datetime.strptime(data_corte_str, '%Y-%m-%d').date()
+            except ValueError:
+                messages.error(request, 'Data de corte inválida.')
+                return redirect('producao_anbima_import')
+
+        try:
+            df = ler_excel_robusto(arquivo)
+        except Exception as e:
+            messages.error(request, f'Não foi possível ler o arquivo: {str(e)}')
+            return redirect('producao_anbima_import')
+
+        fundos_cadastrados = FundoAnbima.objects.all().order_by('ordem_apresentacao', 'nome_fundo')
+        estados_cadastrados = EstadoAnbima.objects.all().order_by('ordem_apresentacao', 'uf')
+
+        if not fundos_cadastrados.exists() or not estados_cadastrados.exists():
+            messages.error(request, 'Cadastre os Estados e os Fundos (Base > Formulários) antes de processar a planilha.')
+            return redirect('producao_anbima_import')
+
+        try:
+            resultado = processar_planilha_anbima(df, data_limite, fundos_cadastrados, estados_cadastrados)
+        except Exception as e:
+            messages.error(request, f'Erro ao processar a planilha: {str(e)}')
+            return redirect('producao_anbima_import')
+
+        if not resultado['ok']:
+            if 'colunas_faltantes' in resultado:
+                messages.error(request, f"Colunas ausentes na planilha: {', '.join(resultado['colunas_faltantes'])}")
+                return redirect('producao_anbima_import')
+
+            return render(request, 'core/producao/processamentos/importacao_anbima.html', {
+                'fundos_desconhecidos': resultado['fundos_desconhecidos'],
+            })
+
+        registrar_auditoria_backend(
+            usuario=request.user,
+            acao="Exportou",
+            detalhe=f"Processamento ANBIMA ({resultado['total_registros']} registros)"
+        )
+
+        response = HttpResponse(
+            resultado['buffer'].read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{resultado["nome_arquivo"]}"'
+        return response
+
+    return render(request, 'core/producao/processamentos/importacao_anbima.html')
 
 
 @login_required
@@ -2526,7 +2682,8 @@ PERMISSOES_CAMPOS = [
     'base_form_unidade', 'base_form_colaboradores', 'base_form_contratados',
     'base_form_seguradoras', 'base_form_tiposdocumento', 'base_form_ramos',
     'base_form_produtos', 'base_form_agrupamentos', 'base_form_metas',
-    'base_form_tipopessoa', 'base_form_clientes', 'base_proc_unidade',
+    'base_form_tipopessoa', 'base_form_clientes', 'base_form_estados_anbima',
+    'base_form_fundos_anbima', 'base_proc_unidade',
     'base_proc_colaboradores', 'base_proc_ramos', 'base_rel',
     
     # PRODUÇÃO
@@ -2538,7 +2695,7 @@ PERMISSOES_CAMPOS = [
     'prod_form_habitacional', 'prod_proc_vida', 'prod_proc_bap',
     'prod_proc_prestamista', 'prod_proc_patrimonialedemais', 'prod_proc_consorcio',
     'prod_proc_odonto', 'prod_proc_previdencia', 'prod_proc_banescap',
-    'prod_proc_saude', 'prod_proc_habitacional', 'prod_proc_basenovo', 'prod_rel',
+    'prod_proc_saude', 'prod_proc_habitacional', 'prod_proc_basenovo', 'prod_proc_anbima', 'prod_rel',
     
     # FINANCEIRO
     'fin_form', 'fin_proc_habitacional', 'fin_rel',

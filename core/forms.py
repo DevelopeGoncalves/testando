@@ -1,5 +1,5 @@
 from django import forms
-from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, EstadoAnbima, FundoAnbima
 
 
 class BootstrapMixin:
@@ -201,6 +201,32 @@ class SeguradoraForm(BootstrapMixin, forms.ModelForm):
         if nome:
             if Seguradora.objects.filter(seguradora__iexact=nome).exclude(id=self.instance.id).exists():
                 raise forms.ValidationError("Esta Seguradora já está cadastrada.")
+        return nome
+
+class EstadoAnbimaForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = EstadoAnbima
+        fields = ['uf', 'estado', 'ordem_apresentacao']
+        widgets = {
+            'uf': forms.TextInput(attrs={'placeholder': 'Ex: SP', 'maxlength': 2}),
+        }
+
+    def clean_uf(self):
+        uf = (self.cleaned_data.get('uf') or '').strip().upper()
+        if EstadoAnbima.objects.filter(uf__iexact=uf).exclude(id=self.instance.id).exists():
+            raise forms.ValidationError("Este UF já está cadastrado.")
+        return uf
+
+class FundoAnbimaForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = FundoAnbima
+        fields = ['cnpj_fundo', 'nome_fundo', 'codigo_anbima', 'ordem_apresentacao']
+
+    def clean_nome_fundo(self):
+        nome = self.cleaned_data.get('nome_fundo')
+        if nome:
+            if FundoAnbima.objects.filter(nome_fundo__iexact=nome).exclude(id=self.instance.id).exists():
+                raise forms.ValidationError("Este Fundo já está cadastrado.")
         return nome
 
 class TipoDocumentoForm(BootstrapMixin, forms.ModelForm):
@@ -406,6 +432,8 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
     base_form_metas = criar_campo_permissao("↳ Form - Metas")
     base_form_tipopessoa = criar_campo_permissao("↳ Form - Tipo Pessoa")
     base_form_clientes = criar_campo_permissao("↳ Form - Clientes")
+    base_form_estados_anbima = criar_campo_permissao("↳ Form - Estados ANBIMA")
+    base_form_fundos_anbima = criar_campo_permissao("↳ Form - Fundos ANBIMA")
 
     base_proc_unidade = criar_campo_permissao("↳ Proc - Unidade")
     base_proc_colaboradores = criar_campo_permissao("↳ Proc - Colaboradores")
@@ -444,6 +472,7 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
     prod_proc_saude = criar_campo_permissao("↳ Proc - Saúde")
     prod_proc_habitacional = criar_campo_permissao("↳ Proc - Habitacional")
     prod_proc_basenovo = criar_campo_permissao("↳ Proc - Base Novo")
+    prod_proc_anbima = criar_campo_permissao("↳ Proc - ANBIMA")
 
     prod_rel = criar_campo_permissao("↳ Relatórios Prod")
 
