@@ -133,7 +133,7 @@ class Produto(models.Model):
         return self.produto
 
 class EstadoAnbima(models.Model):
-    uf = models.CharField("UF", max_length=2, unique=True)
+    uf = models.CharField("UF", max_length=2)
     estado = models.CharField("Estado", max_length=50)
     uf_estado = models.CharField("UF - Estado", max_length=60, blank=True)
     ordem_apresentacao = models.IntegerField("Ordem de Apresentação", default=0)

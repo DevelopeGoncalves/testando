@@ -212,10 +212,20 @@ class EstadoAnbimaForm(BootstrapMixin, forms.ModelForm):
         }
 
     def clean_uf(self):
-        uf = (self.cleaned_data.get('uf') or '').strip().upper()
-        if EstadoAnbima.objects.filter(uf__iexact=uf).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError("Este UF já está cadastrado.")
-        return uf
+        # Só normaliza (maiúsculo/sem espaço). A mesma UF pode repetir com regiões
+        # diferentes (ex.: "SP - São Paulo", "SP - Região Metropolitana").
+        return (self.cleaned_data.get('uf') or '').strip().upper()
+
+    def clean(self):
+        # Bloqueia apenas a duplicata EXATA (mesma UF + mesmo Estado).
+        cleaned = super().clean()
+        uf = (cleaned.get('uf') or '').strip().upper()
+        estado = (cleaned.get('estado') or '').strip()
+        if uf and estado and EstadoAnbima.objects.filter(
+            uf__iexact=uf, estado__iexact=estado
+        ).exclude(id=self.instance.id).exists():
+            raise forms.ValidationError("Já existe esse Estado com essa mesma região (UF + Estado).")
+        return cleaned
 
 class FundoAnbimaForm(BootstrapMixin, forms.ModelForm):
     class Meta:
