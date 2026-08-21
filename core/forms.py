@@ -217,14 +217,18 @@ class EstadoAnbimaForm(BootstrapMixin, forms.ModelForm):
         return (self.cleaned_data.get('uf') or '').strip().upper()
 
     def clean(self):
-        # Bloqueia apenas a duplicata EXATA (mesma UF + mesmo Estado).
+        # A CHAVE é a coluna "UF - Estado" (uf_estado): ela não pode repetir.
+        # A mesma UF pode ter várias regiões, desde que o "UF - Estado" seja diferente.
         cleaned = super().clean()
         uf = (cleaned.get('uf') or '').strip().upper()
         estado = (cleaned.get('estado') or '').strip()
-        if uf and estado and EstadoAnbima.objects.filter(
-            uf__iexact=uf, estado__iexact=estado
+        uf_estado = f"{uf} - {estado}".strip(' -')  # mesma regra do EstadoAnbima.save()
+        if uf_estado and EstadoAnbima.objects.filter(
+            uf_estado__iexact=uf_estado
         ).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError("Já existe esse Estado com essa mesma região (UF + Estado).")
+            raise forms.ValidationError(
+                f'Já existe o registro "{uf_estado}". A coluna "UF - Estado" não pode repetir.'
+            )
         return cleaned
 
 class FundoAnbimaForm(BootstrapMixin, forms.ModelForm):
