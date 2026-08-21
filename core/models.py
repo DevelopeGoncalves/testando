@@ -140,6 +140,9 @@ class EstadoAnbima(models.Model):
 
     def save(self, *args, **kwargs):
         self.uf = (self.uf or '').strip().upper()
+        # padroniza o Estado: 1ª letra maiúscula e o resto minúsculo
+        # (ex.: "SÃO PAULO" ou "são paulo" -> "São paulo")
+        self.estado = (self.estado or '').strip().capitalize()
         self.uf_estado = f"{self.uf} - {self.estado}".strip(' -')
         super().save(*args, **kwargs)
 
