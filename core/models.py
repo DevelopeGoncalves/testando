@@ -192,8 +192,8 @@ class Unidade(models.Model):
 
 class Ramo(models.Model):
     produto = models.ForeignKey('Produto', on_delete=models.CASCADE, verbose_name="Produto", null=True, blank=True)
-    cod_grupo = models.IntegerField("Cód. Grupo", blank=True, null=True)
-    grupo = models.CharField("Grupo", max_length=150, blank=True, null=True)
+    cod_grupo = models.IntegerField("Cód. Grupo SUSEP", blank=True, null=True)
+    grupo = models.CharField("Grupo SUSEP", max_length=150, blank=True, null=True)
     cod_ramo = models.IntegerField("Cód. Ramo", unique=True, null=True) 
     ramo = models.CharField("Ramo", max_length=150, unique=True, null=True)
     
