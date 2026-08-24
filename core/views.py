@@ -1298,6 +1298,25 @@ def definir_responsavel_demanda(request, id):
     nome = ind.responsavel_demanda.matricula_nome if ind.responsavel_demanda_id else ''
     return JsonResponse({'ok': True, 'nome': nome, 'id': ind.responsavel_demanda_id or ''})
 
+@login_required
+def definir_responsavel_massa(request):
+    """Indica o MESMO responsável para vários registros de uma vez (seleção por caixinha
+    no card Novo). Só Gestor. POST: ids[] + colaborador."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    if not (_usuario_e_gestor(request.user, 'prod_vendas_novo') or _usuario_e_gestor(request.user, 'prod_vendas_basenovo')):
+        return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem indicar o responsável.'}, status=403)
+    ids = request.POST.getlist('ids')
+    if not ids:
+        return JsonResponse({'ok': False, 'erro': 'Selecione ao menos um registro.'}, status=400)
+    col_id = request.POST.get('colaborador') or None
+    Indicacao.objects.filter(id__in=ids).update(responsavel_demanda_id=col_id)
+    nome = ''
+    if col_id:
+        col = Colaborador.objects.filter(id=col_id).first()
+        nome = col.matricula_nome if col else ''
+    return JsonResponse({'ok': True, 'nome': nome, 'id': col_id or '', 'total': len(ids)})
+
 def _parse_valor_moeda_brl(valor_str):
     if not valor_str: return None
     limpo = str(valor_str).strip().replace('R$', '').replace(' ', '')

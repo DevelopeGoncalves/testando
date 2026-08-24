@@ -24,6 +24,12 @@
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
                 {% endif %}
 
+                {% if usuario_gestor %}
+                <!-- alex: indicar responsável para VÁRIOS registros de uma vez (só Gestor).
+                     Seleciona pelas caixinhas e clica aqui. -->
+                <button class="btn btn-outline-success me-1" onclick="abrirIndicarResponsavelMassa()"><i class="fas fa-user-check"></i> Indicar responsável</button>
+                {% endif %}
+
                 {% if usuario_pode_editar %}
                 <!-- alex: "Novo" na tela Novo e Base Novo, para quem pode editar (Editor/Gestor). -->
                 <button class="btn btn-info text-white" onclick="abrirNovoRegistroDireto()"><i class="fas fa-plus"></i> Novo</button>
@@ -43,6 +49,7 @@
                 <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
                     <thead class="table-light">
                         <tr>
+                            {% if usuario_gestor %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
                             <th style="display:none;"></th>
                             <th class="text-center">Cadastrado em</th> <!-- 1 -->
                             <th class="text-center">Responsável</th> <!-- 2 -->
@@ -102,6 +109,11 @@
                             data-endosso="{{ i.numero_endosso|default:'' }}"
                             data-obs="{{ i.observacoes|default:'' }}">
 
+                            {% if usuario_gestor %}
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <input type="checkbox" value="{{ i.id }}" class="chk-row">
+                            </td>
+                            {% endif %}
                             <td style="display:none;" class="dados-ligacoes-extras">
                                 {% for l in i.ligacoes.all %}
                                 <span class="extra-item-ligacao"
@@ -666,6 +678,7 @@
     const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
     // alex: responsável pela demanda (indicado por Gestor)
     const URL_RESP_DEMANDA = "{% url 'definir_responsavel_demanda' 0 %}";
+    const URL_RESP_DEMANDA_MASSA = "{% url 'definir_responsavel_massa' %}";
     const LISTA_COLABORADORES_DEMANDA = [
         {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
     ];
@@ -914,14 +927,73 @@
         var el = document.getElementById('resp-demanda-nome');
         if (el) el.textContent = (nome && nome.trim()) ? nome : 'Em aberto';
     }
+    // alex: controle do modo do modal de responsável (individual x em massa)
+    var modoRespMassa = false;
+    var idsRespMassa = [];
+
     function abrirModalResponsavel() {
         if (!modalResponsavel) return;
+        modoRespMassa = false;   // veio da ficha -> individual
         var atual = document.getElementById('resp-demanda-nome');
         var nomeAtual = (atual && atual.textContent.trim() !== 'Em aberto') ? atual.textContent.trim() : '';
         document.getElementById('resp-demanda-input').value = nomeAtual;
         document.getElementById('resp-demanda-id-sel').value = '';
         if (nomeAtual) resolverColaboradorDemanda(document.getElementById('resp-demanda-input'));
         modalResponsavel.show();
+    }
+
+    // alex: abre o mesmo modal, mas para indicar o responsável de VÁRIOS registros marcados.
+    function abrirIndicarResponsavelMassa() {
+        if (!modalResponsavel) return;
+        idsRespMassa = $('#tabela-base-novo tbody .chk-row:checked').map(function() { return this.value; }).get();
+        if (idsRespMassa.length === 0) {
+            avisoElegante('Marque pelo menos um registro (caixinha) para indicar o responsável.', 'Nenhum registro selecionado');
+            return;
+        }
+        modoRespMassa = true;
+        document.getElementById('resp-demanda-input').value = '';
+        document.getElementById('resp-demanda-id-sel').value = '';
+        modalResponsavel.show();
+    }
+
+    function salvarResponsavelMassa() {
+        var txt = (document.getElementById('resp-demanda-input').value || '').trim();
+        var colId = document.getElementById('resp-demanda-id-sel').value || '';
+        if (txt && !colId) {
+            avisoElegante('Selecione um colaborador válido da lista, ou apague o campo para deixar "Em aberto".', 'Colaborador não encontrado');
+            return;
+        }
+        $.ajax({
+            url: URL_RESP_DEMANDA_MASSA,
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfAtendimento() },
+            traditional: true,
+            data: { colaborador: colId, ids: idsRespMassa }
+        }).done(function(resp) {
+            if (resp && resp.ok) {
+                idsRespMassa.forEach(function(id) {
+                    var tr = document.querySelector('#tabela-base-novo tbody tr[data-id="' + id + '"]');
+                    if (!tr) return;
+                    tr.setAttribute('data-responsavel-demanda', resp.id || '');
+                    tr.setAttribute('data-responsavel-demanda-nome', resp.nome || '');
+                    var celResp = tr.querySelector('.resp-demanda-cell');
+                    if (celResp) {
+                        var nomeCel = resp.nome || '-';
+                        try { $('#tabela-base-novo').DataTable().cell(celResp).data(nomeCel).draw(false); }
+                        catch (e) { celResp.textContent = nomeCel; }
+                    }
+                    var chk = tr.querySelector('.chk-row'); if (chk) chk.checked = false;
+                });
+                $('.chk-delete').prop('checked', false);
+                if (modalResponsavel) modalResponsavel.hide();
+                avisoElegante((resp.total || idsRespMassa.length) + ' registro(s) atualizado(s).', 'Responsável indicado');
+            } else {
+                avisoElegante((resp && resp.erro) || 'Não foi possível salvar o responsável.', 'Ação não permitida');
+            }
+        }).fail(function(xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível salvar o responsável.';
+            avisoElegante(msg, 'Ação não permitida');
+        });
     }
     // Descobre o id do colaborador pelo texto digitado (mesmo esquema da seguradora).
     function resolverColaboradorDemanda(input) {
@@ -933,6 +1005,7 @@
         hidden.value = item ? item.id : '';
     }
     function salvarResponsavel() {
+        if (modoRespMassa) { salvarResponsavelMassa(); return; }  // alex: indicação em massa
         var idReg = $('#base_novo_id_hidden').val();
         if (!idReg) return;
         var txt = (document.getElementById('resp-demanda-input').value || '').trim();

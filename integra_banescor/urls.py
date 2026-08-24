@@ -90,6 +90,8 @@ urlpatterns = [
     path('producao/vendas/atendimentos-ativos/', views.atendimentos_ativos, name='atendimentos_ativos'),
     # alex: Gestor indica o responsável pela demanda de um registro
     path('producao/vendas/responsavel-demanda/<int:id>/', views.definir_responsavel_demanda, name='definir_responsavel_demanda'),
+    # alex: indicar o responsável para vários registros de uma vez (card Novo)
+    path('producao/vendas/responsavel-demanda-massa/', views.definir_responsavel_massa, name='definir_responsavel_massa'),
 
 
     # 10. Rotas para cada Card específico de vendas
