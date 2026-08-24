@@ -19,15 +19,15 @@
                 <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
+                {% if usuario_gestor %}
+                <!-- alex: indicar responsável para VÁRIOS registros de uma vez (só Gestor).
+                     Fica à ESQUERDA do Exportar. Seleciona pelas caixinhas e clica aqui. -->
+                <button class="btn btn-outline-success me-1" onclick="abrirIndicarResponsavelMassa()"><i class="fas fa-user-check"></i> Indicar responsável</button>
+                {% endif %}
+
                 {% if usuario_pode_excluir %}
                 <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
-                {% endif %}
-
-                {% if usuario_gestor %}
-                <!-- alex: indicar responsável para VÁRIOS registros de uma vez (só Gestor).
-                     Seleciona pelas caixinhas e clica aqui. -->
-                <button class="btn btn-outline-success me-1" onclick="abrirIndicarResponsavelMassa()"><i class="fas fa-user-check"></i> Indicar responsável</button>
                 {% endif %}
 
                 {% if usuario_pode_editar %}
@@ -1202,7 +1202,12 @@
         }
 
         var elResp = document.getElementById('modalResponsavel');
-        if (elResp) modalResponsavel = new bootstrap.Modal(elResp);
+        if (elResp) {
+            // alex: o modal fica dentro da ficha (display:none). Move para o <body> para
+            // poder abrir também a partir da LISTA (indicação em massa) sem ficar só o fundo escuro.
+            document.body.appendChild(elResp);
+            modalResponsavel = new bootstrap.Modal(elResp);
+        }
 
         var elHist = document.getElementById('modalHistoricoLigacoes');
         if (elHist) {
