@@ -1,0 +1,197 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}Importação dos Relatórios Odonto (Odontoprev){% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Produção</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'producao_processamentos' %}" class="text-primary text-decoration-none">Processamentos</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">Odonto</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<!-- carregamento -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; color: white;">
+    <div class="spinner-border" style="width: 4rem; height: 4rem;" role="status">
+        <span class="visually-hidden">Carregando...</span>
+    </div>
+    <h4 class="mt-4 fw-bold">Processando arquivos...</h4>
+    <p>Isso pode levar alguns instantes. Por favor, aguarde.</p>
+</div>
+
+<div class="container-fluid pt-3">
+    <div class="row justify-content-center">
+        <!-- reduzao do card -->
+        <div class="col-lg-6 col-md-9">
+
+            {% if colunas_faltantes_pf or colunas_faltantes_pj %}
+            <div class="alert alert-danger shadow-sm">
+                <strong><i class="fas fa-exclamation-triangle"></i> Colunas ausentes nos relatórios!</strong>
+                {% if colunas_faltantes_pf %}
+                <p class="mb-1 mt-2"><b>Odonto PF:</b> {{ colunas_faltantes_pf|join:", " }}</p>
+                {% endif %}
+                {% if colunas_faltantes_pj %}
+                <p class="mb-1 mt-2"><b>Odonto PJ:</b> {{ colunas_faltantes_pj|join:", " }}</p>
+                {% endif %}
+                <p class="mb-0 mt-2 small">Confira se os arquivos enviados são os relatórios "Corretora Total Vidas PF" e "Corretora Total Vidas PME" exportados do site da Odontoprev, e se não foram trocados de lugar.</p>
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm" style="border-top: 4px solid #6f42c1 !important;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-1" style="color: #6f42c1;">
+                        <i class="fas fa-tooth me-2"></i> Importação dos Relatórios Odonto (Odontoprev)
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Enviar os dois relatórios exportados do site da Odontoprev — <b>Odonto PF</b> e <b>Odonto PJ</b>. <br>
+                        O sistema devolve o arquivo <b>PRODUÇÃO</b> do mês, com as abas <b>Pessoa Física</b> e <b>PJ</b> já preenchidas
+                        com Indicador, Matrícula, CID e Agência puxados do cadastro de Colaboradores.
+                    </p>
+
+                    <form method="post" enctype="multipart/form-data" id="formUpload">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Relatório Odonto PF <span class="text-muted fw-normal small">(Corretora Total Vidas PF)</span></label>
+                            <input class="form-control" type="file" name="arquivo_odonto_pf" accept=".xls,.xlsx" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Relatório Odonto PJ <span class="text-muted fw-normal small">(Corretora Total Vidas PME)</span></label>
+                            <input class="form-control" type="file" name="arquivo_odonto_pj" accept=".xls,.xlsx" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Mês de referência</label>
+
+                            <div class="col-12 col-sm-6 col-md-5">
+                                <input class="form-control" type="month" name="mes_referencia" value="{{ referencia_padrao }}">
+                            </div>
+
+                            <div class="form-text mt-2">
+                                Só entram na produção as vendas com <b>DT_VENDA</b> dentro desse mês.<br>
+                                Vendas de meses anteriores devem ser lançadas manualmente na aba Manual.
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-check">
+                            <input class="form-check-input" type="checkbox" name="apenas_concluidas" value="1" id="apenasConcluidas" checked>
+                            <label class="form-check-label" for="apenasConcluidas">
+                                Considerar apenas <b>"Proposta concluida com sucesso"</b>
+                            </label>
+                            <div class="form-text">
+                                Desmarque para incluir também as propostas aguardando pagamento.
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn fw-bold text-white" style="background-color: #6f42c1;">
+                                <i class="fas fa-cogs"></i> Processar e Exportar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="alert alert-light border shadow-sm mt-3 small mb-0">
+                <b><i class="fas fa-info-circle" style="color: #6f42c1;"></i> Como o arquivo é montado</b>
+                <ul class="mb-0 mt-2">
+                    <li><b>Indicador</b> e <b>Matrícula</b> vêm de Base &gt; Formulários &gt; Colaboradores, pelo CPF da força de vendas (com o nome como alternativa).</li>
+                    <li><b>CID</b> e <b>Agência</b> vêm da unidade (Agência CID) vinculada ao colaborador.</li>
+                    <li><b>Realizado (PF)</b> segue o tipo do plano: MENSAL = R$ 54,99 e ANUAL = R$ 659,88.</li>
+                    <li><b>Realizado (PJ)</b> é o valor da venda, que já soma todas as vidas — propostas repetidas por vida entram uma única vez.</li>
+                    <li>Forças de venda sem cadastro na base saem em uma aba <b>Pendências</b> dentro do próprio arquivo.</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPT QUE ATIVA O CARREGAMENTO E GERENCIA O DOWNLOAD -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var form = document.getElementById('formUpload');
+        var overlay = document.getElementById('loadingOverlay');
+
+        form.addEventListener('submit', function(e) {
+            // 1. Impede o envio padrão do formulário que causa o loop do spinner
+            e.preventDefault();
+
+            // 2. Mostra o overlay de carregamento
+            overlay.style.display = 'flex';
+
+            // 3. Empacota os dados (incluindo os arquivos e o token CSRF)
+            var formData = new FormData(form);
+
+            // 4. Envia a requisição via AJAX
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao processar os arquivos.');
+                }
+
+                // Se o Django devolveu HTML, é a própria tela com o aviso de erro
+                let tipo = response.headers.get('Content-Type') || '';
+                if (tipo.indexOf('text/html') !== -1) {
+                    return response.text().then(html => ({ html: html }));
+                }
+
+                // Tenta capturar o nome do arquivo original vindo do Django
+                let filename = "PRODUCAO ODONTO.xlsx";
+                let disposition = response.headers.get('Content-Disposition');
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    let utf8 = /filename\*=UTF-8''([^;\n]*)/.exec(disposition);
+                    if (utf8 != null && utf8[1]) {
+                        filename = decodeURIComponent(utf8[1]);
+                    } else {
+                        let matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+                }
+
+                // Transforma a resposta em um "Blob" (dados binários do arquivo)
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(data => {
+                // Erro tratado pelo Django: recarrega a tela para mostrar o aviso
+                if (data.html) {
+                    document.open();
+                    document.write(data.html);
+                    document.close();
+                    return;
+                }
+
+                // 5. Cria um link invisível na tela para forçar o download do arquivo
+                let url = window.URL.createObjectURL(data.blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename;
+                document.body.appendChild(a);
+                a.click(); // Clica automaticamente
+
+                // Limpa a memória e remove o link invisível
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                form.reset();
+            })
+            .catch(error => {
+                console.error(error);
+                alert("Ocorreu um erro durante o processamento. Verifique se as planilhas estão no formato correto.");
+            })
+            .finally(() => {
+                // 6. Esconde o spinner no final, dando sucesso ou erro!
+                overlay.style.display = 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

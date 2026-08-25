@@ -12,7 +12,10 @@ from .models import (
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
 from .anbima_processing import processar_planilha_anbima
+from .odonto_processing import processar_planilhas_odonto
 import pandas as pd
+import unicodedata
+from urllib.parse import quote
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
@@ -25,8 +28,13 @@ from django.utils import timezone
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login
 
+from django.core.cache import cache
+from django.contrib.sessions.models import Session
+from django.views.decorators.cache import never_cache
+
 REMEMBER_ME_SECONDS = 24 * 60 * 60
 
+@never_cache
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('home')
@@ -817,6 +825,82 @@ def producao_anbima_import(request):
         return response
 
     return render(request, 'core/producao/processamentos/importacao_anbima.html')
+
+
+@login_required
+def producao_odonto_import(request):
+
+    # negar acesso ao usuario
+    user = request.user
+
+    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_proc_odonto > 0)):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+    # ----
+
+    agora = timezone.localtime(timezone.now())
+    contexto_padrao = {'referencia_padrao': f'{agora.year}-{agora.month:02d}'}
+
+    if request.method == 'POST':
+        arquivo_pf = request.FILES.get('arquivo_odonto_pf')
+        arquivo_pj = request.FILES.get('arquivo_odonto_pj')
+        referencia_str = request.POST.get('mes_referencia', '').strip()
+        # Sem a marcação, considera todas as propostas (inclusive aguardando pagamento).
+        apenas_concluidas = request.POST.get('apenas_concluidas') == '1'
+
+        if not arquivo_pf or not arquivo_pj:
+            messages.error(request, 'Envie os dois relatórios: Odonto PF e Odonto PJ.')
+            return redirect('producao_odonto_import')
+
+        mes, ano = agora.month, agora.year
+        if referencia_str:
+            try:
+                referencia = datetime.strptime(referencia_str, '%Y-%m')
+                mes, ano = referencia.month, referencia.year
+            except ValueError:
+                messages.error(request, 'Mês de referência inválido.')
+                return redirect('producao_odonto_import')
+
+        colaboradores = Colaborador.objects.select_related('unidade').all()
+        if not colaboradores.exists():
+            messages.error(request, 'Cadastre os Colaboradores (Base > Formulários) antes de processar as planilhas.')
+            return redirect('producao_odonto_import')
+
+        try:
+            resultado = processar_planilhas_odonto(
+                arquivo_pf, arquivo_pj, mes, ano, apenas_concluidas, colaboradores
+            )
+        except Exception as e:
+            messages.error(request, f'Erro ao processar as planilhas: {str(e)}')
+            return redirect('producao_odonto_import')
+
+        if not resultado['ok']:
+            contexto = dict(contexto_padrao)
+            contexto['colunas_faltantes_pf'] = resultado['colunas_faltantes_pf']
+            contexto['colunas_faltantes_pj'] = resultado['colunas_faltantes_pj']
+            return render(request, 'core/producao/processamentos/importacao_odonto.html', contexto)
+
+        registrar_auditoria_backend(
+            usuario=request.user,
+            acao="Exportou",
+            detalhe=f"Processamento Odonto ({resultado['total_pf']} PF / {resultado['total_pj']} PJ)"
+        )
+
+        response = HttpResponse(
+            resultado['buffer'].read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        # O nome do arquivo tem acento ("PRODUÇÃO"), então vai também no formato
+        # RFC 5987 para os navegadores não trocarem os caracteres.
+        nome_arquivo = resultado['nome_arquivo']
+        nome_ascii = unicodedata.normalize('NFKD', nome_arquivo).encode('ascii', 'ignore').decode()
+        response['Content-Disposition'] = (
+            f'attachment; filename="{nome_ascii}"; '
+            f"filename*=UTF-8''{quote(nome_arquivo)}"
+        )
+        return response
+
+    return render(request, 'core/producao/processamentos/importacao_odonto.html', contexto_padrao)
 
 
 @login_required
@@ -2726,23 +2810,25 @@ PERMISSOES_CAMPOS = [
 @login_required
 def listar_usuarios(request):
 
-    # Parte de negar acesso quem não pode
     user = request.user
 
     if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.admin_usuario > 0)):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    #-----
 
     query = request.GET.get('q', '') 
     if query:
-        usuarios = User.objects.filter(
+        usuarios = list(User.objects.filter(
             Q(username__icontains=query) |
             Q(perfil__colaborador__matricula__icontains=query) |
             Q(first_name__icontains=query)
-        ).order_by('first_name')
+        ).order_by('first_name'))
     else:
-        usuarios = User.objects.all().order_by('first_name')
+        usuarios = list(User.objects.all().order_by('first_name'))
+
+    for u in usuarios:
+        cache_key = f'online_user_{u.id}'
+        u.is_online = bool(cache.get(cache_key))
 
     return render(request, 'core/administracao/usuarios/listar_usuarios.html', {
         'usuarios': usuarios,
@@ -3029,6 +3115,32 @@ def exportar_txt_habitacional(request):
     response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
     return response
 
+@login_required
+def ping_online(request):
+    # Salva no cache que este usuário está online. Expira em 40 segundos.
+    cache_key = f'online_user_{request.user.id}'
+    cache.set(cache_key, True, timeout=40)
+    return JsonResponse({'status': 'ok'})
 
+@login_required
+def desconectar_usuarios(request):
+    if request.method == 'POST':
+        ids_para_desconectar = request.POST.getlist('usuarios_ids')
+        
+        if ids_para_desconectar:
+            # 1. Varre as sessões ativas e apaga as dos usuários selecionados
+            sessions = Session.objects.filter(expire_date__gte=timezone.now())
+            for session in sessions:
+                data = session.get_decoded()
+                if str(data.get('_auth_user_id')) in ids_para_desconectar:
+                    session.delete()
+            
+            # 2. Apaga o cache imediatamente para a "bolinha verde" virar vermelha na hora
+            for uid in ids_para_desconectar:
+                cache.delete(f'online_user_{uid}')
+                
+            messages.success(request, 'Sessão dos usuários selecionados foi encerrada.')
+            
+    return redirect('listar_usuarios')
 
 

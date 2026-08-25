@@ -39,11 +39,11 @@
     {% if request.user.is_superuser or request.user.perfil.admin_feriasestagiarios > 0 %}
     <div class="col-lg-3 col-6">
         <a href="{% url 'ferias_estagiarios' %}" class="link-card">
-            <div class="card card-menu unidade mb-4" style="border-top-color: #6f42c1;">
-                <div class="card-body text-center p-4" >
+            <div class="card card-menu mb-4" style="border-top-color: #6f42c1">
+                <div class="card-body text-center p-4">
                     <i class="fa-solid fa-umbrella-beach fa-3x text-purple mb-3" style="color: #6f42c1;"> </i>
-                    <h5 class="card-title text-dark fw-bold">Ferias estagiarios</h5>
-                    <p class="card-text text-muted small">Ajustar as ferias dos estagiarios</p>
+                    <h5 class="card-title text-dark fw-bold">Lista estagiarios</h5>
+                    <p class="card-text text-muted small">Lista de estagiarios</p>
                 </div>
             </div>
         </a>

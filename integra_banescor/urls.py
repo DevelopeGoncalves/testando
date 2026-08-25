@@ -55,6 +55,7 @@ urlpatterns = [
 
     path('producao/processamentos/habitacional/', views.producao_habitacional_import, name='producao_habitacional_import'),
     path('producao/processamentos/anbima/', views.producao_anbima_import, name='producao_anbima_import'),
+    path('producao/processamentos/odonto/', views.producao_odonto_import, name='producao_odonto_import'),
     path('producao/processamentos/base-novo/', views.producao_base_novo_import, name='producao_base_novo_import'),
 
     
@@ -128,5 +129,8 @@ urlpatterns = [
     path('financeiro/processamentos/habitacional', views.financeiro_habitacional, name='financeiro_habitacional'),
     path('financeiro/habitacional/exportar-txt/', views.exportar_txt_habitacional, name='exportar_txt_habitacional'),
     path('financeiro/habitacional/processar/', views.processar_mensal_habitacional, name='processar_mensal_habitacional'),
+
+    path('ping-online/', views.ping_online, name='ping_online'),
+    path('desconectar_usuarios/', views.desconectar_usuarios, name='desconectar_usuarios'),
 ]
 

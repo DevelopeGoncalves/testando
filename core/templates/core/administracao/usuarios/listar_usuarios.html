@@ -30,6 +30,10 @@
             <i class="fas fa-plus"></i> Novo Usuário
         </a>
 
+        <button type="button" class="btn btn-warning me-1" onclick="desconectarSelecionados()">
+            <i class="fas fa-sign-out-alt"></i> Desconectar
+        </button>
+
     </div>
     
 </div>
@@ -44,6 +48,7 @@
                     <th>Usuário</th>
                     <th>Matrícula</th>
                     <th>Nome</th>
+                    <th>Ativo</th>
                     <th>Nivel Acesso</th>
                 </tr>
             </thead>
@@ -61,6 +66,13 @@
                     <td>{{ u.username }}</td>
                     <td>{{ u.perfil.colaborador.matricula|default:"-" }}</td>
                     <td>{{ u.perfil.colaborador|default:"-" }}</td>
+                    <td>
+                        {% if u.is_online %}
+                            <span style="color: green;">Online</span>
+                        {% else %}
+                            <span style="color: grey;">Offline</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if u.is_superuser %}
                             <span class="badge bg-danger">Superuser</span>
@@ -82,5 +94,13 @@
     $(document).ready(function() {
         iniciarTabelaExcel('tabela-usuarios');
     });
+
+    function desconectarSelecionados() {
+        confirmarElegante('Deseja realmente derrubar a sessão dos usuários selecionados?', function() {
+            var form = document.getElementById('form-usuarios');
+            form.action = "{% url 'desconectar_usuarios' %}";
+            form.submit();
+        }, { titulo: 'Desconectar Usuários', textoConfirmar: 'Desconectar', corBotao: 'warning' });
+    }
 </script>
 {% endblock %}

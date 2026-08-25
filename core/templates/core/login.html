@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#17100c">
     <title>Login | Meu Front</title>
     <link rel="stylesheet" href="{% static 'css/pages/login.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
         /* ==========================================================================
@@ -52,7 +53,7 @@
             min-height: 100dvh;
             margin: 0;
             color: var(--text-primary);
-            /* Fundo mantido com a sua imagem */
+            font-family: 'Montserrat', sans-serif;
             background:
                 linear-gradient(135deg, rgba(3, 7, 48, 0.1), rgba(8, 20, 221, 0.2)),
                 url("{% static 'img/Background_Day.jpg' %}") center / cover no-repeat fixed; 
@@ -276,10 +277,10 @@
             padding: 16px 12px;
             border: 0;
             outline: 0;
-            color: var(--brand-blue-bg); /* Texto azul escuro */
-            font-weight: 600;
+            color: #000000;
+            font-weight: 400;
             background: transparent;
-            caret-color: var(--brand-blue-card); /* Cursor azul */
+            caret-color: #000000;
         }
 
         .field-control input:-webkit-autofill,
