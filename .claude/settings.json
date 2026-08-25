@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py makemigrations core)",
+      "Bash(python manage.py makemigrations core --empty -n seed_anbima_defaults)",
+      "Bash(python manage.py migrate core)",
+      "Bash(python manage.py shell -c ' *)",
+      "Bash(python manage.py check)",
+      "Bash(python \"C:/Users/alexg/AppData/Local/Temp/claude/d--projetos-banescor-testando/8b8c9e99-747d-4055-9cea-8a9be379691f/scratchpad/test_anbima_flow.py\")",
+      "Bash(python -c ' *)",
+      "Bash(git status *)"
+    ]
+  }
+}

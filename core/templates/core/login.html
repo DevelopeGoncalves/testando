@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/pages/login.css' %}">
 
     <style>
-/* ==========================================================================
+        /* ==========================================================================
         TEMA MODERNO (LOGIN) - COR EXATA DA MARCA (#0814DD) E BRANCO
         ========================================================================== */
 
@@ -32,10 +32,10 @@
             --glass-border: rgba(255, 255, 255, 0.25); /* Borda sutil branca */
             --glass-highlight: rgba(255, 255, 255, 0.15);
             
-            /* CAMPOS DE FORMULÁRIO (INPUTS) - Mantém o efeito Glass aqui */
-            --input-surface: rgba(0, 0, 30, 0.4); 
+            /* CAMPOS DE FORMULÁRIO (INPUTS) - Fundo branco */
+            --input-surface: rgba(255, 255, 255, 0.95); 
             
-            --focus-ring: rgba(255, 255, 255, 0.6);
+            --focus-ring: rgba(179, 197, 255, 1);
         }
 
         * {
@@ -121,7 +121,7 @@
             overflow: hidden;
             border: 1px solid var(--glass-border);
             border-radius: 28px;
-            background: var(--card-surface); /* Aplica a cor pura #0814DD sem transparência */
+            background: var(--card-surface);
             box-shadow:
                 0 20px 60px rgba(0, 0, 0, 0.5),
                 inset 0 1px 0 var(--glass-highlight);
@@ -189,9 +189,9 @@
             position: absolute;
             top: 50%;
             left: 49px;
-            color: var(--text-muted);
+            color: rgba(3, 7, 48, 0.6); /* Azul escuro translúcido para leitura no fundo branco */
             font-size: 0.93rem;
-            font-weight: 400;
+            font-weight: 500;
             letter-spacing: 0.025em;
             line-height: 1;
             pointer-events: none;
@@ -206,26 +206,28 @@
         }
 
         /* ==========================================================================
-        CAMPOS DE ENTRADA (INPUTS) - Com leve transparência
+        CAMPOS DE ENTRADA (INPUTS) - Fundo Branco e Escrita Escura
         ========================================================================== */
         .field-control {
             position: relative;
             display: flex;
             align-items: center;
-            min-height: 54px;
+            margin-top: 7px;
+            margin-bottom: -2px;
+            height: 50px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 16px;
             background: var(--input-surface); 
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+
             transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
         }
 
         .field-control:focus-within {
             border-color: var(--brand-blue-accent);
-            background: rgba(0, 0, 20, 0.5);
-            box-shadow: 0 0 0 4px var(--focus-ring), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            background: #FFFFFF; /* Fundo 100% branco quando focado */
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), inset 0 2px 1px rgba(0, 0, 0, 0.05);
             transform: translateY(-1px);
         }
 
@@ -233,9 +235,9 @@
         .field-control input:not(:placeholder-shown) + .field-label,
         .field-control input:-webkit-autofill + .field-label,
         .field-control input:autofill + .field-label {
-            top: -19px;
+            top: -22px;
             left: 3px;
-            color: var(--text-muted);
+            color: var(--text-muted); /* Volta a ser claro para aparecer no card azul escuro */
             font-weight: 400;
             font-size: 0.8rem;
             transform: translateY(0);
@@ -260,12 +262,12 @@
         .field-icon {
             width: 20px;
             margin-left: 17px;
-            color: var(--text-muted);
+            color: rgba(3, 7, 48, 0.5); /* Ícone escuro */
             transition: color 180ms ease;
         }
         
         .field-control:focus-within .field-icon {
-            color: var(--brand-blue-accent);
+            color: var(--brand-blue-card); /* Ícone fica com o azul da marca ao clicar */
         }
 
         .field-control input {
@@ -274,23 +276,23 @@
             padding: 16px 12px;
             border: 0;
             outline: 0;
-            color: var(--text-primary);
+            color: var(--brand-blue-bg); /* Texto azul escuro */
             font-weight: 600;
             background: transparent;
-            caret-color: var(--brand-blue-accent);
+            caret-color: var(--brand-blue-card); /* Cursor azul */
         }
 
         .field-control input:-webkit-autofill,
         .field-control input:-webkit-autofill:hover,
         .field-control input:-webkit-autofill:focus,
         .field-control input:autofill {
-            -webkit-text-fill-color: var(--text-primary);
+            -webkit-text-fill-color: var(--brand-blue-bg);
             background-color: transparent !important;
             background-image: none !important;
             -webkit-background-clip: text;
             background-clip: text;
             box-shadow: 0 0 0 1000px transparent inset !important;
-            caret-color: var(--text-primary);
+            caret-color: var(--brand-blue-card);
         }
 
         .password-toggle {
@@ -302,7 +304,7 @@
             border: 0;
             border-radius: 12px;
             place-items: center;
-            color: var(--text-muted);
+            color: rgba(3, 7, 48, 0.5); /* Ícone do olho escuro */
             background: transparent;
             cursor: pointer;
             transition: color 160ms ease, background-color 160ms ease;
@@ -310,8 +312,8 @@
 
         .password-toggle:hover,
         .password-toggle:focus-visible {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.15);
+            color: var(--brand-blue-card);
+            background: rgba(8, 20, 221, 0.1);
             outline: 0;
         }
 
@@ -357,12 +359,27 @@
         }
 
         .remember-option input {
+            appearance: none;
+            -webkit-appearance: none;
+            
             width: 14px;
             height: 14px;
             margin: 0;
-            accent-color: var(--text-muted);
+            
+            background-color: #FFFFFF; 
+            border: 1px solid #FFFFFF;
+            border-radius: 3px;
+            
             cursor: pointer;
         }
+
+        .remember-option input:checked {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+            background-size: 80%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        
 
         /* ==========================================================================
         BOTÃO DE LOGIN - FUNDO VERDE, TEXTO BRANCO
@@ -378,12 +395,7 @@
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 16px;
-            
-            /* Fundo Verde exato */
             background: #00AB16; 
-            
-            
-            /* Sombra ajustada para o tom esverdeado */
             box-shadow: 0 4px 15px rgba(0, 171, 22, 0.3); 
             cursor: pointer;
             transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
@@ -399,7 +411,6 @@
         }
 
         .login-button:hover {
-            /* Verde um pouquinho mais escuro no hover para dar feedback visual */
             background: #009613; 
             border-color: rgba(255, 255, 255, 0.8);
             box-shadow: 0 6px 20px rgba(0, 171, 22, 0.4); 
@@ -415,22 +426,21 @@
         }
 
         .login-button:focus-visible {
-            outline: 3px solid var(--focus-ring);
-            outline-offset: 3px;
+            outline: 2px solid var(--focus-ring);
         }
 
         .button-label {
             position: relative;
-            color: #FFFFFF; /* Escrita Branca */
-            font-size: 1.4rem; /* Tamanho MAIOR */
-            font-weight: 600;  /* SEM NEGRITO */
+            color: #FFFFFF; 
+            font-size: 1.4rem; 
+            font-weight: 600;  
         }
 
         .button-arrow {
             position: absolute;
             right: 20px;
             width: 19px;
-            color: #FFFFFF; /* Seta branca acompanhando o texto */
+            color: #FFFFFF; 
             transition: transform 180ms ease;
         }
 
@@ -443,7 +453,7 @@
             width: 19px;
             height: 19px;
             border: 2px solid rgba(255, 255, 255, 0.4);
-            border-top-color: #FFFFFF; /* Ícone de carregamento branco */
+            border-top-color: #FFFFFF; 
             border-radius: 50%;
             animation: spin 700ms linear infinite;
         }
@@ -482,12 +492,12 @@
             from {
                 top: 50%;
                 left: 49px;
-                color: var(--text-muted);
+                color: rgba(3, 7, 48, 0.6);
                 font-size: 0.93rem;
                 transform: translateY(-50%);
             }
             to {
-                top: -19px;
+                top: -22px;
                 left: 3px;
                 color: var(--text-muted);
                 font-size: 0.8rem;

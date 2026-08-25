@@ -423,10 +423,19 @@
 
 {% block scripts %}
 <script>
+
+    function inverterLabelEspelho(label) {
+        let partes = label.split('-');
+        if (partes.length === 2) {
+            return partes[1].trim() + ' - ' + partes[0].trim();
+        }
+        return label;
+    }
+
     const currentUserId = {{ usuario_edit.id|default:"null" }};
     const colaboradores = [
         {% for c in colaboradores %}
-        { "matricula": "{{ c.matricula }}" }{% if not forloop.last %},{% endif %}
+        { "matricula": "{{ c.matricula }}", "colaborador": "{{ c.colaborador|default:''|escapejs }}" }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
     const perfisEspelho = {{ perfis_espelho_json|safe }};
@@ -548,6 +557,36 @@
 
     $(document).ready(function() {
         
+        // ==========================================
+        // TRUQUE DO INPUT OCULTO PARA A MATRÍCULA
+        // ==========================================
+        let $inputVisual = $('input[name="matricula"]');
+        
+        // 1. Muda o nome do campo visível para o Django ignorar
+        $inputVisual.attr('name', 'matricula_visual');
+        
+        // 2. Cria o campo oculto que o Django vai realmente ler
+        let $inputOculto = $('<input type="hidden" name="matricula" id="hidden_matricula">');
+        $inputVisual.after($inputOculto);
+
+        // 3. Se estiver editando um usuário (já tem matrícula preenchida), formata o visual
+        let matriculaInicial = $inputVisual.val();
+        if (matriculaInicial) {
+            $inputOculto.val(matriculaInicial);
+            let colabEncontrado = colaboradores.find(c => c.matricula === matriculaInicial);
+            if (colabEncontrado) {
+                let textoInit = colabEncontrado.colaborador ? colabEncontrado.matricula + ' - ' + colabEncontrado.colaborador : colabEncontrado.matricula;
+                $inputVisual.val(textoInit);
+            }
+        }
+
+        // 4. Sempre que o usuário digitar algo, garantimos que o oculto pegue só os números
+        $inputVisual.on('input', function() {
+            let valorDigitado = $(this).val();
+            let matriculaPura = valorDigitado.split('-')[0].trim();
+            $inputOculto.val(matriculaPura);
+        });
+        
         $('.slider-switch').attr('step', '0.01');
 
         // --- ANIMAÇÃO DA SETINHA ---
@@ -653,17 +692,19 @@
             let $dropdown = $('#dropdown-espelho');
             $dropdown.empty();
 
+            // Filtra usando a label invertida
             let filtrados = perfisEspelho.filter(p => 
-                p.label.toLowerCase().includes(valorDigitado) && p.id !== currentUserId
+                inverterLabelEspelho(p.label).toLowerCase().includes(valorDigitado) && p.id !== currentUserId
             );
-            filtrados.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+            filtrados.sort((a, b) => inverterLabelEspelho(a.label).localeCompare(inverterLabelEspelho(b.label), undefined, { numeric: true }));
 
             if (filtrados.length > 0) {
                 filtrados.forEach(p => {
-                    let $item = $('<div>').addClass('item-lista').text(p.label);
+                    let labelInvertida = inverterLabelEspelho(p.label);
+                    let $item = $('<div>').addClass('item-lista').text(labelInvertida);
                     $item.on('click', function(event) {
                         event.stopPropagation();
-                        $('#input-busca-espelho').val(p.label);
+                        $('#input-busca-espelho').val(labelInvertida);
                         $('#hidden-perms-espelho').val(JSON.stringify(p.perms));
                         $dropdown.addClass('d-none');
                     });
@@ -677,19 +718,30 @@
 
         // === DROPDOWN MATRICULA ===
         function abrirListaDropdown(inputId, dropdownId) {
-            let valorDigitado = $('#' + inputId).val().toLowerCase().trim();
+            let valorRaw = $('#' + inputId).val().toLowerCase().trim();
+            let valorDigitado = valorRaw.split('-')[0].trim();
+            
             let $dropdown = $('#' + dropdownId);
             $dropdown.empty();
 
-            let filtrados = colaboradores.filter(c => c.matricula.toLowerCase().includes(valorDigitado));
+            let filtrados = colaboradores.filter(c => {
+                let textoExibicao = c.colaborador ? c.matricula + ' - ' + c.colaborador : c.matricula;
+                return textoExibicao.toLowerCase().includes(valorRaw);
+            });
+            
             filtrados.sort((a, b) => a.matricula.localeCompare(b.matricula, undefined, { numeric: true }));
 
             if (filtrados.length > 0) {
                 filtrados.forEach(c => {
-                    let $item = $('<div>').addClass('item-lista').text(c.matricula);
+                    let textoExibicao = c.colaborador ? c.matricula + ' - ' + c.colaborador : c.matricula;
+                    let $item = $('<div>').addClass('item-lista').text(textoExibicao);
+                    
                     $item.on('click', function(event) {
                         event.stopPropagation();
-                        $('#' + inputId).val(c.matricula);
+                        $('#' + inputId).val(textoExibicao);
+                        
+                        $('#hidden_matricula').val(c.matricula);
+                        
                         $dropdown.addClass('d-none');
                     });
                     $dropdown.append($item);
