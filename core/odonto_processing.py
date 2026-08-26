@@ -1,28 +1,19 @@
 """
-Processamento das planilhas ODONTO (Odontoprev), no mesmo padrão do ANBIMA.
+Leitura e preparação das planilhas ODONTO (Odontoprev) para importação em
+RegistroProducao, no mesmo espírito do importador do Habitacional: o
+usuário parametriza (em Base > Formulários > Processamentos > Odonto) qual
+coluna de cada planilha (PF ou PJ) alimenta qual campo do sistema, e essa
+função aplica esse mapeamento linha a linha.
 
-Recebe os dois relatórios exportados do site da Odontoprev — "Corretora Total
-Vidas PF" e "Corretora Total Vidas PME" — cruza com o cadastro de Colaboradores
-e Unidades (Agência/CID) do banco e devolve o arquivo "PRODUÇÃO <MÊS> <ANO>.xlsx"
-já montado em memória, com as abas "Pessoa Física" e "PJ".
-
-As colunas aproveitadas de cada relatório são as marcadas em amarelo pelo
-usuário nas planilhas de origem:
-  PF : DT_VENDA, NOME_FORCA, CPF_FORCA, TIPO_PLANO, VALOR_VENDA, STATUS_PROPOSTA
-  PJ : DT_VENDA, CPF, VENDEDOR, VALOR_VENDA, STATUS
-
-Os campos "Indicador", "Matrícula", "CID" e "Agência" substituem os PROCVs da
-planilha manual: são resolvidos a partir de Base > Formulários > Colaboradores
-(nome e matrícula) e do cadastro de Unidades / Agência CID (CID e nome da
-agência), tendo o CPF da força de vendas como chave de busca.
+O casamento do vendedor (CPF/nome) com o cadastro de Colaboradores
+(BaseColaboradores) e a leitura do arquivo bruto da Odontoprev
+(ler_relatorio_odonto) são a lógica original do processamento — mantidas
+como estavam.
 """
 import re
 import unicodedata
-from io import BytesIO
 
 import pandas as pd
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 # Status considerado "produção válida" conforme a aba Orientações da planilha.
 STATUS_CONCLUIDO = 'PROPOSTA CONCLUIDA COM SUCESSO'
@@ -32,18 +23,13 @@ STATUS_CONCLUIDO = 'PROPOSTA CONCLUIDA COM SUCESSO'
 VALOR_MENSAL_PF = 54.99
 VALOR_ANUAL_PF = 659.88
 
-MESES_ABREV = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
-               'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
-
-# Colunas mínimas que cada relatório precisa ter para o processamento rodar.
-COLUNAS_PF = ['DT_VENDA', 'NOME_FORCA', 'CPF_FORCA', 'TIPO_PLANO', 'STATUS_PROPOSTA']
-COLUNAS_PJ = ['NUM_PROPOSTA', 'DT_VENDA', 'CPF', 'VENDEDOR', 'VALOR_VENDA', 'STATUS']
-
-CABECALHO_PF = ['CPF_FORCA', 'Indicador', 'Matrícula', 'CID', 'Realizado',
-                'Contagem de matriculas', 'DT_VENDA', 'TIPO', 'Agência']
-CABECALHO_PJ = ['CPF_FORCA', 'Indicador', 'Matrícula', 'CID', 'Realizado', 'Agência']
-
-FORMATO_MOEDA = 'R$ #,##0.00'
+# Nomes de coluna do export da Odontoprev que não mudam de arquivo pra
+# arquivo (são gerados pelo próprio site da Odontoprev) — por isso não
+# entram na tela de parametrização, ficam fixos aqui.
+COLUNA_STATUS = {'PF': 'STATUS_PROPOSTA', 'PJ': 'STATUS'}
+COLUNA_CPF_VENDEDOR = {'PF': 'CPF_FORCA', 'PJ': 'CPF'}
+COLUNA_NOME_VENDEDOR = {'PF': 'NOME_FORCA', 'PJ': 'VENDEDOR'}
+COLUNA_TIPO_PLANO_PF = 'TIPO_PLANO'
 
 
 # --------------------------------------------------------------------------- #
@@ -92,12 +78,6 @@ def _para_numero(valor):
         return float(texto)
     except ValueError:
         return 0.0
-
-
-def _matricula_exibicao(matricula):
-    """A planilha mostra a matrícula sem os zeros à esquerda (030085411 -> 30085411)."""
-    digitos = _so_digitos(matricula).lstrip('0')
-    return int(digitos) if digitos else None
 
 
 # --------------------------------------------------------------------------- #
@@ -156,9 +136,9 @@ class BaseColaboradores:
     """
     Índice de consulta em memória sobre o cadastro de Colaboradores.
 
-    Substitui os PROCVs da planilha manual: procura primeiro pelo CPF da força
-    de vendas e, quando o CPF não está preenchido na base, cai para o nome —
-    inclusive quando a Odontoprev trunca o nome em 30 caracteres.
+    Procura primeiro pelo CPF da força de vendas e, quando o CPF não está
+    preenchido na base, cai para o nome — inclusive quando a Odontoprev
+    trunca o nome em 30 caracteres.
     """
 
     def __init__(self, colaboradores):
@@ -207,202 +187,110 @@ class BaseColaboradores:
         return None
 
 
-def _dados_do_colaborador(colaborador, nome_planilha):
-    """Monta as colunas Indicador / Matrícula / CID / Agência de uma linha."""
-    if colaborador is None:
-        nome = str(nome_planilha or '').strip()
-        return {'Indicador': nome or '-', 'Matrícula': None, 'CID': None, 'Agência': None}
-
-    unidade = colaborador.unidade
-    return {
-        'Indicador': colaborador.nome_social or colaborador.colaborador,
-        'Matrícula': _matricula_exibicao(colaborador.matricula),
-        'CID': _matricula_exibicao(unidade.cid_unidade) if unidade else None,
-        'Agência': unidade.unidade if unidade else None,
-    }
-
-
 # --------------------------------------------------------------------------- #
-# Montagem das abas
+# Montagem das linhas para RegistroProducao
 # --------------------------------------------------------------------------- #
-def _filtrar(df, coluna_status, mes, ano, apenas_concluidas):
-    """Aplica o filtro de status e mantém apenas as vendas do mês de referência."""
-    df = df.copy()
-
-    if apenas_concluidas:
-        df = df[df[coluna_status].apply(lambda s: _sem_acento(s) == STATUS_CONCLUIDO)]
-
-    df['_data_venda'] = pd.to_datetime(df['DT_VENDA'], dayfirst=True, errors='coerce')
-    df = df[df['_data_venda'].notna()]
-    df = df[(df['_data_venda'].dt.month == mes) & (df['_data_venda'].dt.year == ano)]
-    return df
-
-
-def _montar_pf(df, base, mes, ano, apenas_concluidas):
-    df = _filtrar(df, 'STATUS_PROPOSTA', mes, ano, apenas_concluidas)
-
-    linhas = []
-    nao_encontrados = []
-    for _, registro in df.iterrows():
-        cpf = _cpf_normalizado(registro.get('CPF_FORCA'))
-        nome_planilha = registro.get('NOME_FORCA')
-        colaborador = base.buscar(cpf, nome_planilha)
-        if colaborador is None:
-            nao_encontrados.append((cpf, str(nome_planilha or '').strip(), 'PF'))
-
-        tipo = _sem_acento(registro.get('TIPO_PLANO'))
-        if tipo == 'MENSAL':
-            realizado = VALOR_MENSAL_PF
-        elif tipo == 'ANUAL':
-            realizado = VALOR_ANUAL_PF
-        else:
-            # Tipo fora do padrão: usa o valor da própria venda em vez de zerar.
-            realizado = _para_numero(registro.get('VALOR_VENDA'))
-
-        linha = {'CPF_FORCA': cpf}
-        linha.update(_dados_do_colaborador(colaborador, nome_planilha))
-        linha['Realizado'] = realizado
-        linha['DT_VENDA'] = registro['_data_venda'].strftime('%d/%m/%Y')
-        linha['TIPO'] = str(registro.get('TIPO_PLANO') or '').strip()
-        linhas.append(linha)
-
-    resultado = pd.DataFrame(linhas, columns=CABECALHO_PF)
-    if resultado.empty:
-        return resultado, nao_encontrados
-
-    # "Contagem de matriculas" reproduz o COUNTIF(C:C;C2) da planilha manual.
-    # Fica em branco nas linhas sem matrícula (força de vendas fora da base).
-    contagem = resultado['Matrícula'].map(resultado['Matrícula'].value_counts())
-    resultado['Contagem de matriculas'] = contagem.astype('Int64')
-
-    resultado['_ordem'] = resultado['Indicador'].map(_sem_acento)
-    resultado = resultado.sort_values(by=['_ordem', 'DT_VENDA']).drop(columns='_ordem')
-    return resultado.reset_index(drop=True), nao_encontrados
-
-
-def _montar_pj(df, base, mes, ano, apenas_concluidas):
-    df = _filtrar(df, 'STATUS', mes, ano, apenas_concluidas)
-
-    # Uma proposta PME aparece repetida uma vez por vida contratada, mas o
-    # VALOR_VENDA já é o total — então só a primeira linha de cada proposta entra.
-    df = df.drop_duplicates(subset=['NUM_PROPOSTA'], keep='first')
-
-    linhas = []
-    nao_encontrados = []
-    for _, registro in df.iterrows():
-        cpf = _cpf_normalizado(registro.get('CPF'))
-        nome_planilha = registro.get('VENDEDOR')
-        colaborador = base.buscar(cpf, nome_planilha)
-        if colaborador is None:
-            nao_encontrados.append((cpf, str(nome_planilha or '').strip(), 'PJ'))
-
-        linha = {'CPF_FORCA': cpf}
-        linha.update(_dados_do_colaborador(colaborador, nome_planilha))
-        linha['Realizado'] = _para_numero(registro.get('VALOR_VENDA'))
-        linhas.append(linha)
-
-    resultado = pd.DataFrame(linhas, columns=CABECALHO_PJ)
-    if resultado.empty:
-        return resultado, nao_encontrados
-
-    resultado['_ordem'] = resultado['Indicador'].map(_sem_acento)
-    resultado = resultado.sort_values(by='_ordem').drop(columns='_ordem')
-    return resultado.reset_index(drop=True), nao_encontrados
-
-
-# --------------------------------------------------------------------------- #
-# Formatação da saída
-# --------------------------------------------------------------------------- #
-def _formatar_aba(sheet, colunas):
-    preenchimento = PatternFill('solid', fgColor='6F42C1')
-    for indice, _ in enumerate(colunas, start=1):
-        celula = sheet.cell(row=1, column=indice)
-        celula.font = Font(bold=True, color='FFFFFF')
-        celula.fill = preenchimento
-        celula.alignment = Alignment(horizontal='center', vertical='center')
-
-    if 'Realizado' in colunas:
-        coluna_realizado = colunas.index('Realizado') + 1
-        for linha in range(2, sheet.max_row + 1):
-            celula = sheet.cell(row=linha, column=coluna_realizado)
-            if isinstance(celula.value, (int, float)):
-                celula.number_format = FORMATO_MOEDA
-
-    for indice, titulo in enumerate(colunas, start=1):
-        largura = len(str(titulo))
-        for linha in range(2, sheet.max_row + 1):
-            valor = sheet.cell(row=linha, column=indice).value
-            if valor is not None:
-                largura = max(largura, len(str(valor)))
-        sheet.column_dimensions[get_column_letter(indice)].width = min(largura + 4, 60)
-
-    sheet.freeze_panes = 'A2'
-    sheet.auto_filter.ref = sheet.dimensions
-
-
-# --------------------------------------------------------------------------- #
-# Entrada principal
-# --------------------------------------------------------------------------- #
-def processar_planilhas_odonto(arquivo_pf, arquivo_pj, mes, ano, apenas_concluidas, colaboradores):
+def preparar_linhas_odonto(df, origem, mapeamento, colaboradores):
     """
-    arquivo_pf / arquivo_pj: arquivos enviados (relatórios PF e PME da Odontoprev).
-    mes / ano: mês e ano de referência da produção.
-    apenas_concluidas: quando True, considera só "Proposta concluida com sucesso".
-    colaboradores: queryset de Colaborador (usar select_related('unidade')).
+    df: DataFrame devolvido por ler_relatorio_odonto (colunas já normalizadas
+        via _sem_acento: maiúsculas, sem acento).
+    origem: 'PF' ou 'PJ'.
+    mapeamento: dict {campo_sistema: {'col_excel': str, 'val_fixo': str}}, com
+        os campos que viram coluna no sistema: seguradora, tipo_documento,
+        documento, cpf_cnpj, cliente, celular, email, grupo_ramo, premio_bruto,
+        inicio_vigencia. O filtro de status e o casamento com Colaboradores
+        usam nomes de coluna fixos (COLUNA_STATUS/COLUNA_CPF_VENDEDOR/
+        COLUNA_NOME_VENDEDOR/COLUNA_TIPO_PLANO_PF) — não fazem parte do
+        mapeamento porque são sempre os mesmos no export da Odontoprev.
+    colaboradores: queryset/list de Colaborador (usar select_related('unidade')).
 
-    Retorna um dict:
-      {'ok': True, 'buffer': BytesIO, 'nome_arquivo': str, 'total_pf': int,
-       'total_pj': int, 'total_geral': float, 'nao_encontrados': [dict, ...]}
-      {'ok': False, 'colunas_faltantes_pf': [...], 'colunas_faltantes_pj': [...]}
+    Retorna:
+      {'ok': True, 'linhas': [dict, ...], 'nao_encontrados': [dict, ...],
+       'total_ignorados_status': int}
+      {'ok': False, 'colunas_faltantes': [str, ...]}
     """
-    df_pf = ler_relatorio_odonto(arquivo_pf)
-    df_pj = ler_relatorio_odonto(arquivo_pj)
+    col_status = COLUNA_STATUS[origem]
+    col_cpf_vend = COLUNA_CPF_VENDEDOR[origem]
 
-    faltantes_pf = [c for c in COLUNAS_PF if c not in df_pf.columns]
-    faltantes_pj = [c for c in COLUNAS_PJ if c not in df_pj.columns]
-    if faltantes_pf or faltantes_pj:
-        return {'ok': False, 'colunas_faltantes_pf': faltantes_pf, 'colunas_faltantes_pj': faltantes_pj}
+    colunas_faltantes = [c for c in (col_status, col_cpf_vend) if c not in df.columns]
+    if colunas_faltantes:
+        return {'ok': False, 'colunas_faltantes': colunas_faltantes}
+
+    col_nome_vend = COLUNA_NOME_VENDEDOR[origem]
+    col_nome_vend = col_nome_vend if col_nome_vend in df.columns else ''
+    col_tipo_plano = COLUNA_TIPO_PLANO_PF if origem == 'PF' and COLUNA_TIPO_PLANO_PF in df.columns else ''
 
     base = BaseColaboradores(colaboradores)
 
-    resultado_pf, nao_encontrados_pf = _montar_pf(df_pf, base, mes, ano, apenas_concluidas)
-    resultado_pj, nao_encontrados_pj = _montar_pj(df_pj, base, mes, ano, apenas_concluidas)
+    def coluna(campo):
+        col = (mapeamento.get(campo) or {}).get('col_excel')
+        col = _sem_acento(col) if col else ''
+        return col if col in df.columns else ''
 
-    # Lista única de forças de venda que não têm correspondência na base.
+    def valor(row, campo):
+        col = coluna(campo)
+        if col:
+            bruto = row[col]
+            return str(bruto).strip() if bruto is not None and str(bruto).strip().lower() != 'nan' else ''
+        fixo = (mapeamento.get(campo) or {}).get('val_fixo')
+        return (fixo or '').strip()
+
+    linhas = []
     nao_encontrados = []
-    vistos = set()
-    for cpf, nome, origem in nao_encontrados_pf + nao_encontrados_pj:
-        if (cpf, nome) in vistos:
+    vistos_nao_encontrados = set()
+    total_ignorados_status = 0
+
+    for _, row in df.iterrows():
+        if _sem_acento(row[col_status]) != STATUS_CONCLUIDO:
+            total_ignorados_status += 1
             continue
-        vistos.add((cpf, nome))
-        nao_encontrados.append({'cpf': cpf, 'nome': nome, 'origem': origem})
-    nao_encontrados.sort(key=lambda item: (item['origem'], _sem_acento(item['nome'])))
 
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        resultado_pf.to_excel(writer, sheet_name='Pessoa Física', index=False)
-        resultado_pj.to_excel(writer, sheet_name='PJ', index=False)
-        _formatar_aba(writer.sheets['Pessoa Física'], CABECALHO_PF)
-        _formatar_aba(writer.sheets['PJ'], CABECALHO_PJ)
+        cpf_vendedor = row[col_cpf_vend]
+        nome_vendedor = row[col_nome_vend] if col_nome_vend else None
+        colaborador = base.buscar(cpf_vendedor, nome_vendedor)
 
-        # As linhas sem correspondência saem com Matrícula/CID/Agência em branco;
-        # esta aba lista quem precisa ser acertado no cadastro de Colaboradores.
-        if nao_encontrados:
-            df_pendencias = pd.DataFrame(nao_encontrados).rename(
-                columns={'cpf': 'CPF_FORCA', 'nome': 'Nome na planilha', 'origem': 'Origem'}
-            )[['CPF_FORCA', 'Nome na planilha', 'Origem']]
-            df_pendencias.to_excel(writer, sheet_name='Pendências', index=False)
-            _formatar_aba(writer.sheets['Pendências'], list(df_pendencias.columns))
-    buffer.seek(0)
+        dados = {
+            'seguradora_valor': valor(row, 'seguradora'),
+            'tipo_documento_valor': valor(row, 'tipo_documento'),
+            'documento': valor(row, 'documento'),
+            'cpf_cnpj': _so_digitos(valor(row, 'cpf_cnpj')),
+            'cliente': valor(row, 'cliente'),
+            'celular': _so_digitos(valor(row, 'celular')),
+            'email': valor(row, 'email'),
+            'grupo_ramo_valor': valor(row, 'grupo_ramo'),
+            'inicio_vigencia_valor': valor(row, 'inicio_vigencia'),
+        }
 
-    total_geral = float(resultado_pf['Realizado'].sum() + resultado_pj['Realizado'].sum())
+        if col_tipo_plano:
+            tipo = _sem_acento(row[col_tipo_plano])
+            if tipo == 'MENSAL':
+                dados['premio_bruto'] = VALOR_MENSAL_PF
+            elif tipo == 'ANUAL':
+                dados['premio_bruto'] = VALOR_ANUAL_PF
+            else:
+                dados['premio_bruto'] = _para_numero(valor(row, 'premio_bruto'))
+        else:
+            dados['premio_bruto'] = _para_numero(valor(row, 'premio_bruto'))
+
+        if colaborador is None:
+            cpf_chave = _cpf_normalizado(cpf_vendedor)
+            nome_chave = str(nome_vendedor or '').strip()
+            dados['colaborador'] = ''
+            dados['nome_colaborador'] = ''
+            dados['unidade'] = None
+            if (cpf_chave, nome_chave) not in vistos_nao_encontrados:
+                vistos_nao_encontrados.add((cpf_chave, nome_chave))
+                nao_encontrados.append({'cpf': cpf_chave, 'nome': nome_chave, 'origem': origem})
+        else:
+            dados['colaborador'] = colaborador.matricula or ''
+            dados['nome_colaborador'] = colaborador.nome_social or colaborador.colaborador
+            dados['unidade'] = colaborador.unidade
+
+        linhas.append(dados)
 
     return {
         'ok': True,
-        'buffer': buffer,
-        'nome_arquivo': f'PRODUÇÃO ODONTO {MESES_ABREV[mes - 1]} {ano}.xlsx',
-        'total_pf': int(len(resultado_pf)),
-        'total_pj': int(len(resultado_pj)),
-        'total_geral': round(total_geral, 2),
+        'linhas': linhas,
         'nao_encontrados': nao_encontrados,
+        'total_ignorados_status': total_ignorados_status,
     }

@@ -8,6 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('core', '0006_remove_indicacao_chave_unica_and_more'),
+        ('core', '0008_remove_indicacao_numero_contrato_and_more'),
     ]
 
     operations = [
