@@ -13,7 +13,7 @@
 <div class="container-fluid pt-3">
     <div class="row mb-4">
         <div class="col-12">
-            <h4 class="text-secondary border-bottom pb-2"><i class="fas fa-cogs" style="color: #6f42c1;"></i> Processamentos e Importações</h4>
+            <h4 class="text-secondary border-bottom pb-2"><i class="fas fa-cog" style="color: #6f42c1;"></i> Processamentos e Importações</h4>
         </div>
     </div>
     
@@ -29,7 +29,7 @@
                     <a href="{% url 'producao_habitacional_import' %}" class="link-card">
                         <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
                             <div class="card-body text-center p-4">
-                                <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
+                                <i class="fas fa-cog fa-3x mb-3" style="color: #6f42c1;"></i>
                                 <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
                                 <p class="card-text text-muted small">Enviar planilha de dados</p>
                             </div>
@@ -41,9 +41,9 @@
                     <a href="{% url 'producao_odonto_import' %}" class="link-card">
                         <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
                             <div class="card-body text-center p-4">
-                                <i class="fas fa-tooth fa-3x mb-3" style="color: #6f42c1;"></i>
+                                <i class="fas fa-cog fa-3x mb-3" style="color: #6f42c1;"></i>
                                 <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
-                                <p class="card-text text-muted small">Processar relatórios PF e PJ (Odontoprev)</p>
+                                <p class="card-text text-muted small">Enviar planilha de dados</p>
                             </div>
                         </div>
                     </a>
@@ -53,7 +53,7 @@
                     <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImport-{{ agrupamento.id }}">
                         <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
                             <div class="card-body text-center p-4">
-                                <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
+                                <i class="fas fa-cog fa-3x mb-3" style="color: #6f42c1;"></i>
                                 <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
                                 <p class="card-text text-muted small">Enviar planilha de dados</p>
                             </div>
@@ -150,7 +150,7 @@
             <a href="{% url 'producao_base_novo_import' %}" class="link-card">
                 <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
                     <div class="card-body text-center p-4">
-                        <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
+                        <i class="fas fa-cog fa-3x mb-3" style="color: #6f42c1;"></i>
                         <h5 class="card-title text-dark fw-bold">Base Novo</h5>
                         <p class="card-text text-muted small">Importar e parametrizar planilha</p>
                     </div>
@@ -166,7 +166,7 @@
             <a href="{% url 'producao_anbima_import' %}" class="link-card">
                 <div class="card card-menu mb-4" style="border-top-color: #6f42c1;">
                     <div class="card-body text-center p-4">
-                        <i class="fas fa-upload fa-3x mb-3" style="color: #6f42c1;"></i>
+                        <i class="fas fa-cog fa-3x mb-3" style="color: #6f42c1;"></i>
                         <h5 class="card-title text-dark fw-bold">ANBIMA</h5>
                         <p class="card-text text-muted small">Processar planilha de previdência (ANBIMA)</p>
                     </div>

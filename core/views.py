@@ -11,8 +11,8 @@ from .models import (
     IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
-from .anbima_processing import processar_planilha_anbima
-from .odonto_processing import ler_relatorio_odonto, preparar_linhas_odonto
+from .anbima import processar_planilha_anbima
+from .odonto import ler_relatorio_odonto, preparar_linhas_odonto
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -828,20 +828,31 @@ def producao_anbima_import(request):
 # Campos do sistema que a parametrização Odonto liga a uma coluna do Excel
 # (ou a um valor fixo). Ambas as origens (PF/PJ) usam a mesma lista — são
 # exatamente as colunas que aparecem depois em Produção > Formulários > Odonto.
-# O filtro de status e o casamento do vendedor com Colaboradores não entram
-# aqui: usam nomes de coluna fixos do export da Odontoprev (ver
-# odonto_processing.COLUNA_STATUS/COLUNA_CPF_VENDEDOR/etc.), automático.
+# tipo_documento tem "Proposta" como padrão (aplicado em odonto.py
+# quando nada é mapeado), mas continua editável aqui como Seguradora/Grupo-Ramo.
+# Ficam de fora (automáticos, não entram na tela de parametrização):
+# - filtro de status e casamento do vendedor com Colaboradores (nomes de
+#   coluna fixos do export da Odontoprev, ver odonto.COLUNA_*);
+# - tipo_pessoa (PF/PJ conforme a planilha importada), fixo em odonto.py;
+# - mes_producao (puxado do "Mês Prod." do cadastro de Produtos).
 CAMPOS_ODONTO = [
     {'nome': 'seguradora', 'label': 'Seguradora'},
     {'nome': 'grupo_ramo', 'label': 'Grupo/Ramo (Plano)'},
     {'nome': 'tipo_documento', 'label': 'Tipo documento'},
     {'nome': 'documento', 'label': 'Documento (Nº Proposta)'},
     {'nome': 'cliente', 'label': 'Cliente'},
+    {'nome': 'nome_social', 'label': 'Nome social'},
     {'nome': 'cpf_cnpj', 'label': 'CPF / CNPJ'},
     {'nome': 'celular', 'label': 'Celular'},
+    {'nome': 'telefone', 'label': 'Telefone'},
     {'nome': 'email', 'label': 'E-mail'},
     {'nome': 'premio_bruto', 'label': 'Prêmio Bruto (R$)'},
+    {'nome': 'premio_liquido', 'label': 'Prêmio Líquido (R$)'},
+    {'nome': 'perc_comissao', 'label': '% de comissão'},
+    {'nome': 'realizado', 'label': 'Realizado'},
     {'nome': 'inicio_vigencia', 'label': 'Início de vigência'},
+    {'nome': 'fim_vigencia', 'label': 'Fim de vigência'},
+    {'nome': 'observacoes', 'label': 'Observações'},
 ]
 
 
@@ -878,7 +889,6 @@ def producao_odonto_import(request):
         # --- Importação de fato ---
         origem = request.POST.get('origem')
         arquivo = request.FILES.get('arquivo_odonto')
-        mes_referencia_str = request.POST.get('mes_referencia', '').strip()
 
         if origem not in ('PF', 'PJ') or not arquivo:
             messages.error(request, 'Selecione o arquivo e confirme se é Pessoa Física ou PJ.')
@@ -888,13 +898,13 @@ def producao_odonto_import(request):
             messages.error(request, 'Cadastre o Agrupamento "Odonto" (Base > Formulários) antes de importar.')
             return redirect('producao_odonto_import')
 
-        mes_producao = ''
-        if mes_referencia_str:
-            try:
-                mes_producao = datetime.strptime(mes_referencia_str, '%Y-%m').strftime('%m/%Y')
-            except ValueError:
-                messages.error(request, 'Mês de referência inválido.')
-                return redirect('producao_odonto_import')
+        # Mês da produção vem do "Mês Prod." do cadastro de Produtos (Base >
+        # Formulários > Produtos) — não é digitado na importação.
+        produto_odonto = Produto.objects.filter(agrupamento=agrupamento).first()
+        if not produto_odonto or not produto_odonto.mes_producao_em_aberto:
+            messages.error(request, 'Defina o "Mês Prod." do Produto Odonto (Base > Formulários > Produtos) antes de importar.')
+            return redirect('producao_odonto_import')
+        mes_producao = produto_odonto.mes_producao_em_aberto.strftime('%m/%Y')
 
         try:
             df = ler_relatorio_odonto(arquivo)
@@ -919,6 +929,14 @@ def producao_odonto_import(request):
             messages.error(request, f"Colunas obrigatórias não encontradas na planilha: {', '.join(resultado['colunas_faltantes'])}")
             return redirect('producao_odonto_import')
 
+        def _data_odonto(valor_str):
+            if not valor_str:
+                return None
+            try:
+                return pd.to_datetime(valor_str, dayfirst=True, errors='raise').date()
+            except Exception:
+                return None
+
         contador = 0
         with transaction.atomic():
             for linha in resultado['linhas']:
@@ -934,12 +952,8 @@ def producao_odonto_import(request):
                 if linha['grupo_ramo_valor']:
                     ramo_obj = Ramo.objects.filter(grupo_e_ramo__iexact=linha['grupo_ramo_valor']).first()
 
-                inicio_vigencia = None
-                if linha['inicio_vigencia_valor']:
-                    try:
-                        inicio_vigencia = pd.to_datetime(linha['inicio_vigencia_valor'], dayfirst=True, errors='raise').date()
-                    except Exception:
-                        inicio_vigencia = None
+                inicio_vigencia = _data_odonto(linha['inicio_vigencia_valor'])
+                fim_vigencia = _data_odonto(linha['fim_vigencia_valor'])
 
                 unidade_obj = linha['unidade']
 
@@ -953,13 +967,22 @@ def producao_odonto_import(request):
                             seguradora=seguradora_obj,
                             tipo_documento=tipo_doc_obj,
                             documento=linha['documento'][:100],
+                            endosso=str(linha['quantidade_vidas'])[:8],
+                            tipo_pessoa=linha['tipo_pessoa'][:50],
                             cpf_cnpj=linha['cpf_cnpj'][:50],
                             cliente=linha['cliente'][:200],
+                            nome_social=linha['nome_social'][:200],
                             celular=linha['celular'][:50],
+                            telefone=linha['telefone'][:50],
                             email=linha['email'][:150],
                             grupo_ramo=ramo_obj,
                             premio_bruto=linha['premio_bruto'],
+                            premio_liquido=linha['premio_liquido'],
+                            perc_comissao=linha['perc_comissao'],
+                            realizado=linha['realizado'][:100],
                             inicio_vigencia=inicio_vigencia,
+                            fim_vigencia=fim_vigencia,
+                            observacoes=linha['observacoes'],
                             colaborador=linha['colaborador'][:150],
                             nome_colaborador=linha['nome_colaborador'][:150],
                             unidade=unidade_obj,
@@ -992,11 +1015,14 @@ def producao_odonto_import(request):
             for p in ParametrizacaoOdonto.objects.filter(origem=origem)
         }
 
+    produto_odonto = Produto.objects.filter(agrupamento=agrupamento).first() if agrupamento else None
+
     return render(request, 'core/producao/processamentos/importacao_odonto.html', {
         'agrupamento': agrupamento,
         'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         'ramos': Ramo.objects.all().order_by('grupo_e_ramo'),
         'tipos_doc': TipoDocumento.objects.all().order_by('tipo_documento'),
+        'mes_producao_atual': produto_odonto.mes_producao_em_aberto if produto_odonto else None,
         'campos_odonto': CAMPOS_ODONTO,
         'parametros_pf': _carregar_parametros('PF'),
         'parametros_pj': _carregar_parametros('PJ'),

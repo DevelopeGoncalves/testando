@@ -1,10 +1,9 @@
 """
-Processamento da planilha ANBIMA (previdência), portado de analise/anbima.py.
+Processamento da planilha ANBIMA (previdência).
 
 Recebe o RelatorioCliente (extrato de clientes de previdência) já lido em um
-DataFrame, cruza com os cadastros de Fundos e Estados do banco (em vez das
-listas hardcoded do script original) e devolve o .xlsx pronto (duas abas:
-"Por Estado" e "Valores por Fundos") em memória.
+DataFrame, cruza com os cadastros de Fundos e Estados do banco e devolve o
+.xlsx pronto (duas abas: "Por Estado" e "Valores por Fundos") em memória.
 """
 import math
 from io import BytesIO

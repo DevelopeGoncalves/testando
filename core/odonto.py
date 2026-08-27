@@ -30,6 +30,19 @@ COLUNA_STATUS = {'PF': 'STATUS_PROPOSTA', 'PJ': 'STATUS'}
 COLUNA_CPF_VENDEDOR = {'PF': 'CPF_FORCA', 'PJ': 'CPF'}
 COLUNA_NOME_VENDEDOR = {'PF': 'NOME_FORCA', 'PJ': 'VENDEDOR'}
 COLUNA_TIPO_PLANO_PF = 'TIPO_PLANO'
+# Mesma coluna em PF e PJ. Uma proposta PME aparece uma vez por vida
+# contratada (mesmo NUM_PROPOSTA repetido), com o valor da venda já sendo o
+# total da proposta — não o valor de cada vida. A coluna TOTAL_VIDAS do
+# export não é confiável (vem "1" em toda linha), então a quantidade de
+# vidas é a própria contagem de linhas repetidas por NUM_PROPOSTA.
+COLUNA_NUM_PROPOSTA = 'NUM_PROPOSTA'
+
+# Valor padrão do Tipo documento quando a parametrização não mapeia nada pra
+# ele (continua editável na tela, como Seguradora/Grupo-Ramo). Tipo de pessoa
+# é sempre definido por qual planilha foi importada, esse sim automático e
+# fora da tela de parametrização.
+TIPO_DOCUMENTO_PADRAO = 'Proposta'
+TIPO_PESSOA = {'PF': 'Pessoa Física', 'PJ': 'Pessoa Jurídica'}
 
 
 # --------------------------------------------------------------------------- #
@@ -204,6 +217,10 @@ def preparar_linhas_odonto(df, origem, mapeamento, colaboradores):
         mapeamento porque são sempre os mesmos no export da Odontoprev.
     colaboradores: queryset/list de Colaborador (usar select_related('unidade')).
 
+    Uma linha por NUM_PROPOSTA (não por linha da planilha): quando a mesma
+    proposta se repete (uma linha por vida contratada), vira um único
+    registro com 'quantidade_vidas' = número de repetições.
+
     Retorna:
       {'ok': True, 'linhas': [dict, ...], 'nao_encontrados': [dict, ...],
        'total_ignorados_status': int}
@@ -211,8 +228,9 @@ def preparar_linhas_odonto(df, origem, mapeamento, colaboradores):
     """
     col_status = COLUNA_STATUS[origem]
     col_cpf_vend = COLUNA_CPF_VENDEDOR[origem]
+    col_num_proposta = COLUNA_NUM_PROPOSTA
 
-    colunas_faltantes = [c for c in (col_status, col_cpf_vend) if c not in df.columns]
+    colunas_faltantes = [c for c in (col_status, col_cpf_vend, col_num_proposta) if c not in df.columns]
     if colunas_faltantes:
         return {'ok': False, 'colunas_faltantes': colunas_faltantes}
 
@@ -235,9 +253,10 @@ def preparar_linhas_odonto(df, origem, mapeamento, colaboradores):
         fixo = (mapeamento.get(campo) or {}).get('val_fixo')
         return (fixo or '').strip()
 
-    linhas = []
-    nao_encontrados = []
-    vistos_nao_encontrados = set()
+    # 1ª passada: filtra por status e agrupa por NUM_PROPOSTA, contando quantas
+    # vezes cada proposta se repete (= quantidade de vidas daquela proposta).
+    propostas = {}
+    ordem_propostas = []
     total_ignorados_status = 0
 
     for _, row in df.iterrows():
@@ -245,20 +264,44 @@ def preparar_linhas_odonto(df, origem, mapeamento, colaboradores):
             total_ignorados_status += 1
             continue
 
+        num_proposta = str(row[col_num_proposta]).strip()
+        if num_proposta not in propostas:
+            propostas[num_proposta] = {'row': row, 'quantidade_vidas': 0}
+            ordem_propostas.append(num_proposta)
+        propostas[num_proposta]['quantidade_vidas'] += 1
+
+    linhas = []
+    nao_encontrados = []
+    vistos_nao_encontrados = set()
+
+    # 2ª passada: monta uma linha por proposta (não por linha da planilha).
+    for num_proposta in ordem_propostas:
+        row = propostas[num_proposta]['row']
+        quantidade_vidas = propostas[num_proposta]['quantidade_vidas']
+
         cpf_vendedor = row[col_cpf_vend]
         nome_vendedor = row[col_nome_vend] if col_nome_vend else None
         colaborador = base.buscar(cpf_vendedor, nome_vendedor)
 
         dados = {
             'seguradora_valor': valor(row, 'seguradora'),
-            'tipo_documento_valor': valor(row, 'tipo_documento'),
+            'tipo_documento_valor': valor(row, 'tipo_documento') or TIPO_DOCUMENTO_PADRAO,
             'documento': valor(row, 'documento'),
+            'tipo_pessoa': TIPO_PESSOA[origem],
             'cpf_cnpj': _so_digitos(valor(row, 'cpf_cnpj')),
             'cliente': valor(row, 'cliente'),
+            'nome_social': valor(row, 'nome_social'),
             'celular': _so_digitos(valor(row, 'celular')),
+            'telefone': _so_digitos(valor(row, 'telefone')),
             'email': valor(row, 'email'),
             'grupo_ramo_valor': valor(row, 'grupo_ramo'),
             'inicio_vigencia_valor': valor(row, 'inicio_vigencia'),
+            'fim_vigencia_valor': valor(row, 'fim_vigencia'),
+            'premio_liquido': _para_numero(valor(row, 'premio_liquido')),
+            'perc_comissao': _para_numero(valor(row, 'perc_comissao')),
+            'realizado': valor(row, 'realizado'),
+            'observacoes': valor(row, 'observacoes'),
+            'quantidade_vidas': quantidade_vidas,
         }
 
         if col_tipo_plano:

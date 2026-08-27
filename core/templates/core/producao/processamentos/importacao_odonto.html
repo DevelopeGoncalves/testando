@@ -59,8 +59,17 @@
             <li class="nav-item"><button type="button" class="nav-link" id="nav-importar-PJ" onclick="mostrarSubaba('importar', 'PJ')">PJ / PME</button></li>
         </ul>
 
+        {% if not mes_producao_atual %}
+        <div class="alert alert-danger">
+            O Produto "Odonto" não tem o <b>Mês Prod.</b> definido em <b>Base &gt; Formulários &gt; Produtos</b>. Defina antes de importar.
+        </div>
+        {% endif %}
+
         <div id="importar-PF" class="subaba-importar bg-white p-3 rounded border">
-            <p class="text-muted small mb-3">Os registos importados se somam aos que já existem em "Importados" — não é preciso limpar antes.</p>
+            <p class="text-muted small mb-3">
+                Os registos importados se somam aos que já existem em "Importados" — não é preciso limpar antes.<br>
+                Mês da produção: <b>{{ mes_producao_atual|date:"m/Y"|default:"-- não definido --" }}</b> (vem do "Mês Prod." do Produto Odonto, em Base &gt; Formulários &gt; Produtos).
+            </p>
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="origem" value="PF">
@@ -68,16 +77,15 @@
                     <label class="form-label fw-bold">Planilha Odontoprev — Pessoa Física</label>
                     <input type="file" name="arquivo_odonto" class="form-control" accept=".xls,.xlsx" required>
                 </div>
-                <div class="mb-3" style="max-width: 220px;">
-                    <label class="form-label fw-bold">Mês de referência (opcional)</label>
-                    <input type="month" name="mes_referencia" class="form-control">
-                </div>
-                <button type="submit" class="btn btn-primary fw-bold"><i class="fas fa-upload me-1"></i> Importar Pessoa Física</button>
+                <button type="submit" class="btn btn-primary fw-bold" {% if not mes_producao_atual %}disabled{% endif %}><i class="fas fa-upload me-1"></i> Importar Pessoa Física</button>
             </form>
         </div>
 
         <div id="importar-PJ" class="subaba-importar bg-white p-3 rounded border" style="display: none;">
-            <p class="text-muted small mb-3">Os registos importados se somam aos que já existem em "Importados" — não é preciso limpar antes.</p>
+            <p class="text-muted small mb-3">
+                Os registos importados se somam aos que já existem em "Importados" — não é preciso limpar antes.<br>
+                Mês da produção: <b>{{ mes_producao_atual|date:"m/Y"|default:"-- não definido --" }}</b> (vem do "Mês Prod." do Produto Odonto, em Base &gt; Formulários &gt; Produtos).
+            </p>
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="origem" value="PJ">
@@ -85,11 +93,7 @@
                     <label class="form-label fw-bold">Planilha Odontoprev — PJ / PME</label>
                     <input type="file" name="arquivo_odonto" class="form-control" accept=".xls,.xlsx" required>
                 </div>
-                <div class="mb-3" style="max-width: 220px;">
-                    <label class="form-label fw-bold">Mês de referência (opcional)</label>
-                    <input type="month" name="mes_referencia" class="form-control">
-                </div>
-                <button type="submit" class="btn btn-primary fw-bold"><i class="fas fa-upload me-1"></i> Importar PJ / PME</button>
+                <button type="submit" class="btn btn-primary fw-bold" {% if not mes_producao_atual %}disabled{% endif %}><i class="fas fa-upload me-1"></i> Importar PJ / PME</button>
             </form>
         </div>
     </div>
@@ -103,7 +107,7 @@
 
         <div class="alert alert-light border small mb-3">
             Mapeie abaixo só as colunas que viram informação em <b>Produção &gt; Formulários &gt; Odonto</b>. O que não mapear (nem preencher como valor fixo) fica em branco.<br>
-            O filtro de status ("Proposta concluída com sucesso") e o casamento do vendedor com o cadastro de Colaboradores são automáticos — não precisam ser configurados aqui.
+            Automáticos (não aparecem aqui): filtro de status ("Proposta concluída com sucesso"), casamento do vendedor com Colaboradores, <b>Tipo de pessoa</b> (Física na aba PF, Jurídica na aba PJ) e <b>Mês da produção</b> (vem do "Mês Prod." do Produto Odonto em Base &gt; Formulários &gt; Produtos). <b>Tipo documento</b> vem como "Proposta" se você não mapear nada — mas pode trocar aqui, igual Seguradora e Grupo/Ramo.
         </div>
 
         <ul class="nav nav-pills mb-3">
