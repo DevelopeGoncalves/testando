@@ -105,11 +105,6 @@
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="voltarParaAcoes()"><i class="fas fa-arrow-left"></i> Voltar</button>
         </div>
 
-        <div class="alert alert-light border small mb-3">
-            Mapeie abaixo só as colunas que viram informação em <b>Produção &gt; Formulários &gt; Odonto</b>. O que não mapear (nem preencher como valor fixo) fica em branco.<br>
-            Automáticos (não aparecem aqui): filtro de status ("Proposta concluída com sucesso"), casamento do vendedor com Colaboradores, <b>Tipo de pessoa</b> (Física na aba PF, Jurídica na aba PJ) e <b>Mês da produção</b> (vem do "Mês Prod." do Produto Odonto em Base &gt; Formulários &gt; Produtos). <b>Tipo documento</b> vem como "Proposta" se você não mapear nada — mas pode trocar aqui, igual Seguradora e Grupo/Ramo.
-        </div>
-
         <ul class="nav nav-pills mb-3">
             <li class="nav-item"><button type="button" class="nav-link active" id="nav-parametrizar-PF" onclick="mostrarSubaba('parametrizar', 'PF')">Pessoa Física</button></li>
             <li class="nav-item"><button type="button" class="nav-link" id="nav-parametrizar-PJ" onclick="mostrarSubaba('parametrizar', 'PJ')">PJ / PME</button></li>
@@ -262,12 +257,6 @@
         });
 
         $('#corpo-mapeamento-' + origem).html(html);
-
-        if (headersExcel.length === 0) {
-            $('#corpo-mapeamento-' + origem).prepend(
-                '<tr><td colspan="3" class="text-center text-muted small py-2">Clique em "Ler colunas" pra listar as colunas de um arquivo de exemplo (os valores já salvos continuam disponíveis mesmo sem isso).</td></tr>'
-            );
-        }
     }
 
     function lerColunas(origem, fileInput) {
