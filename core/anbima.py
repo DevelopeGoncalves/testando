@@ -1,10 +1,3 @@
-"""
-Processamento da planilha ANBIMA (previdência).
-
-Recebe o RelatorioCliente (extrato de clientes de previdência) já lido em um
-DataFrame, cruza com os cadastros de Fundos e Estados do banco e devolve o
-.xlsx pronto (duas abas: "Por Estado" e "Valores por Fundos") em memória.
-"""
 import math
 from io import BytesIO
 
@@ -95,17 +88,7 @@ def _mes_ano_um_mes_antes(ano, mes):
 
 
 def processar_planilha_anbima(df, data_limite, fundos_cadastrados, estados_cadastrados):
-    """
-    df: DataFrame lido do RelatorioCliente*.xlsx.
-    data_limite: date ou None (None = comportamento padrão, remove o mês atual).
-    fundos_cadastrados: iterável de FundoAnbima (ordenado por ordem_apresentacao).
-    estados_cadastrados: iterável de EstadoAnbima (ordenado por ordem_apresentacao).
-
-    Retorna um dict:
-      {'ok': True, 'buffer': BytesIO, 'nome_arquivo': str, 'total_registros': int}
-      {'ok': False, 'colunas_faltantes': [str, ...]}
-      {'ok': False, 'fundos_desconhecidos': [str, ...]}
-    """
+    
     fundos_cadastrados = list(fundos_cadastrados)
     estados_cadastrados = list(estados_cadastrados)
 
