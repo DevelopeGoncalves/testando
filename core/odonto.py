@@ -1,15 +1,3 @@
-"""
-Leitura e preparação das planilhas ODONTO (Odontoprev) para importação em
-RegistroProducao, no mesmo espírito do importador do Habitacional: o
-usuário parametriza (em Base > Formulários > Processamentos > Odonto) qual
-coluna de cada planilha (PF ou PJ) alimenta qual campo do sistema, e essa
-função aplica esse mapeamento linha a linha.
-
-O casamento do vendedor (CPF/nome) com o cadastro de Colaboradores
-(BaseColaboradores) e a leitura do arquivo bruto da Odontoprev
-(ler_relatorio_odonto) são a lógica original do processamento — mantidas
-como estavam.
-"""
 import re
 import unicodedata
 
@@ -18,38 +6,28 @@ import pandas as pd
 # Status considerado "produção válida" conforme a aba Orientações da planilha.
 STATUS_CONCLUIDO = 'PROPOSTA CONCLUIDA COM SUCESSO'
 
-# Valores de produção por tipo de plano PF (replica a fórmula da planilha:
-# =IF(TIPO="MENSAL";54,99;IF(TIPO="ANUAL";659,88;0))).
+# Valores de produção por tipo de plano PF replica a fórmula da planilha:
+
 VALOR_MENSAL_PF = 54.99
 VALOR_ANUAL_PF = 659.88
 
-# Nomes de coluna do export da Odontoprev que não mudam de arquivo pra
-# arquivo (são gerados pelo próprio site da Odontoprev) — por isso não
-# entram na tela de parametrização, ficam fixos aqui.
+# Nomes de coluna do export da Odontoprev que não mudam de arquivo pra arquivo
+
 COLUNA_STATUS = {'PF': 'STATUS_PROPOSTA', 'PJ': 'STATUS'}
 COLUNA_CPF_VENDEDOR = {'PF': 'CPF_FORCA', 'PJ': 'CPF'}
 COLUNA_NOME_VENDEDOR = {'PF': 'NOME_FORCA', 'PJ': 'VENDEDOR'}
 COLUNA_TIPO_PLANO_PF = 'TIPO_PLANO'
-# Mesma coluna em PF e PJ. Uma proposta PME aparece uma vez por vida
-# contratada (mesmo NUM_PROPOSTA repetido), com o valor da venda já sendo o
-# total da proposta — não o valor de cada vida. A coluna TOTAL_VIDAS do
-# export não é confiável (vem "1" em toda linha), então a quantidade de
-# vidas é a própria contagem de linhas repetidas por NUM_PROPOSTA.
+
+# as duas colunas PF e PJ. usando para a chave para somar a quantidade de vida.
+
 COLUNA_NUM_PROPOSTA = 'NUM_PROPOSTA'
 
-# Valor padrão do Tipo documento quando a parametrização não mapeia nada pra
-# ele (continua editável na tela, como Seguradora/Grupo-Ramo). Tipo de pessoa
-# é sempre definido por qual planilha foi importada, esse sim automático e
-# fora da tela de parametrização.
+# Valor padrão do Tipo documento quando a parametrização não mapeia nada fica proposta como padrao
+
 TIPO_DOCUMENTO_PADRAO = 'Proposta'
 TIPO_PESSOA = {'PF': 'Pessoa Física', 'PJ': 'Pessoa Jurídica'}
-
-
-# --------------------------------------------------------------------------- #
 # Normalizações
-# --------------------------------------------------------------------------- #
 def _sem_acento(texto):
-    """Maiúsculas, sem acento e com espaços colapsados — usado nas comparações."""
     if texto is None:
         return ''
     texto = unicodedata.normalize('NFKD', str(texto)).encode('ascii', 'ignore').decode()
@@ -91,19 +69,8 @@ def _para_numero(valor):
         return float(texto)
     except ValueError:
         return 0.0
-
-
-# --------------------------------------------------------------------------- #
 # Leitura dos relatórios da Odontoprev
-# --------------------------------------------------------------------------- #
 def ler_relatorio_odonto(arquivo):
-    """
-    Lê o .xls exportado pela Odontoprev.
-
-    O arquivo traz duas linhas de identificação da corretora antes do cabeçalho
-    real, então a linha de cabeçalho é localizada pelo conteúdo em vez de ser
-    fixada em uma posição.
-    """
     bruto = None
     for engine in ('xlrd', 'openpyxl'):
         try:
@@ -142,17 +109,8 @@ def ler_relatorio_odonto(arquivo):
     return df
 
 
-# --------------------------------------------------------------------------- #
 # Cruzamento com a base (Colaboradores + Agência CID)
-# --------------------------------------------------------------------------- #
 class BaseColaboradores:
-    """
-    Índice de consulta em memória sobre o cadastro de Colaboradores.
-
-    Procura primeiro pelo CPF da força de vendas e, quando o CPF não está
-    preenchido na base, cai para o nome — inclusive quando a Odontoprev
-    trunca o nome em 30 caracteres.
-    """
 
     def __init__(self, colaboradores):
         self.por_cpf = {}
@@ -198,34 +156,8 @@ class BaseColaboradores:
                 return next(iter(candidatos.values()))
 
         return None
-
-
-# --------------------------------------------------------------------------- #
 # Montagem das linhas para RegistroProducao
-# --------------------------------------------------------------------------- #
 def preparar_linhas_odonto(df, origem, mapeamento, colaboradores):
-    """
-    df: DataFrame devolvido por ler_relatorio_odonto (colunas já normalizadas
-        via _sem_acento: maiúsculas, sem acento).
-    origem: 'PF' ou 'PJ'.
-    mapeamento: dict {campo_sistema: {'col_excel': str, 'val_fixo': str}}, com
-        os campos que viram coluna no sistema: seguradora, tipo_documento,
-        documento, cpf_cnpj, cliente, celular, email, grupo_ramo, premio_bruto,
-        inicio_vigencia. O filtro de status e o casamento com Colaboradores
-        usam nomes de coluna fixos (COLUNA_STATUS/COLUNA_CPF_VENDEDOR/
-        COLUNA_NOME_VENDEDOR/COLUNA_TIPO_PLANO_PF) — não fazem parte do
-        mapeamento porque são sempre os mesmos no export da Odontoprev.
-    colaboradores: queryset/list de Colaborador (usar select_related('unidade')).
-
-    Uma linha por NUM_PROPOSTA (não por linha da planilha): quando a mesma
-    proposta se repete (uma linha por vida contratada), vira um único
-    registro com 'quantidade_vidas' = número de repetições.
-
-    Retorna:
-      {'ok': True, 'linhas': [dict, ...], 'nao_encontrados': [dict, ...],
-       'total_ignorados_status': int}
-      {'ok': False, 'colunas_faltantes': [str, ...]}
-    """
     col_status = COLUNA_STATUS[origem]
     col_cpf_vend = COLUNA_CPF_VENDEDOR[origem]
     col_num_proposta = COLUNA_NUM_PROPOSTA
