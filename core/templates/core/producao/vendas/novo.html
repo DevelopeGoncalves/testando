@@ -193,10 +193,13 @@
 
         /* No Novo, os dados ficam travados (só leitura) até abrir o pop-up do lápis.
            pointer-events:none impede a edição, mas os campos continuam sendo enviados no POST. */
-        #bloco-dados-editaveis.dados-travados { pointer-events: none; opacity: 0.92; }
+        /* alex: modo travado (leitura). Os INPUTS não recebem clique (não edita), mas a
+           coluna recebe o clique -> permite copiar o valor do campo. */
+        #bloco-dados-editaveis.dados-travados { opacity: 0.92; }
         #bloco-dados-editaveis.dados-travados input,
         #bloco-dados-editaveis.dados-travados select,
-        #bloco-dados-editaveis.dados-travados textarea { background-color: #f3f4f6; }
+        #bloco-dados-editaveis.dados-travados textarea { background-color: #f3f4f6; pointer-events: none; }
+        #bloco-dados-editaveis.dados-travados [class*="col-"] { cursor: copy; }
 
         .excel-header-btn {
             display: flex !important;
@@ -2127,5 +2130,48 @@
 
     modalEditarDados.show();
     }
+
+    // alex: clicar num campo travado da ficha COPIA o valor e mostra "Copiado".
+    // Mantém a ficha travada (não edita); só facilita copiar o dado pra pesquisar em outro lugar.
+    (function () {
+        function valorParaCopiar(campo) {
+            if (!campo) return '';
+            if (campo.tagName === 'SELECT') {
+                var op = campo.options[campo.selectedIndex];
+                return op ? (op.text || '').trim() : '';
+            }
+            return (campo.value || '').trim();
+        }
+        function mostrarToastCopiado(temValor) {
+            var t = document.createElement('div');
+            t.textContent = temValor ? 'Copiado!' : 'Nada para copiar';
+            t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+                'background:' + (temValor ? '#198754' : '#6c757d') + ';color:#fff;padding:8px 16px;' +
+                'border-radius:8px;z-index:99999;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.2);' +
+                'opacity:0;transition:opacity .15s;';
+            document.body.appendChild(t);
+            requestAnimationFrame(function () { t.style.opacity = '1'; });
+            setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 200); }, 1100);
+        }
+        document.addEventListener('click', function (e) {
+            var bloco = document.getElementById('bloco-dados-editaveis');
+            // Só no modo travado (leitura). Ao editar (pop-up), o clique funciona normal.
+            if (!bloco || !bloco.classList.contains('dados-travados') || !bloco.contains(e.target)) return;
+            var col = e.target.closest('[class*="col-"]');
+            if (!col || !bloco.contains(col)) return;
+            var campo = col.querySelector('input:not([type=hidden]), select, textarea');
+            var val = valorParaCopiar(campo);
+            if (!val) { mostrarToastCopiado(false); return; }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(val).then(function () { mostrarToastCopiado(true); })
+                                                  .catch(function () { mostrarToastCopiado(true); });
+            } else {
+                var tmp = document.createElement('textarea');
+                tmp.value = val; document.body.appendChild(tmp); tmp.select();
+                try { document.execCommand('copy'); } catch (err) {}
+                tmp.remove(); mostrarToastCopiado(true);
+            }
+        });
+    })();
 </script>
 {% endblock %}
