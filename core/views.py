@@ -898,6 +898,18 @@ def producao_odonto_import(request):
             messages.error(request, 'Cadastre o Agrupamento "Odonto" (Base > Formulários) antes de importar.')
             return redirect('producao_odonto_import')
 
+        tipo_pessoa_label = 'Pessoa Física' if origem == 'PF' else 'Pessoa Jurídica'
+        ja_tem_dados = RegistroProducao.objects.filter(
+            agrupamento=agrupamento, fase='IMPORTADOS', tipo_pessoa=tipo_pessoa_label
+        ).exists()
+        if ja_tem_dados:
+            messages.error(
+                request,
+                f'A aba "IMPORTADOS" já possui registros de {tipo_pessoa_label} para o Odonto. '
+                f'Envie-os para "Pendentes" antes de importar um novo arquivo de {tipo_pessoa_label}.'
+            )
+            return redirect('producao_odonto_import')
+
         # Mês da produção vem do "Mês Prod." do cadastro de Produtos (Base >
         # Formulários > Produtos) — não é digitado na importação.
         produto_odonto = Produto.objects.filter(agrupamento=agrupamento).first()
@@ -2227,43 +2239,45 @@ def sair_do_sistema(request):
 
 def _ids_duplicados_no_lote(fase_origem, agrupamento):
 
-    # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-    #
-    #registros = RegistroProducao.objects.filter(
-    #    agrupamento=agrupamento, fase__iexact=fase_origem
-    #).prefetch_related('endossos_extras')
-    #
-    #fase_seguinte = 'PENDENTES' if fase_origem.upper() == 'IMPORTADOS' else 'EMITIDOS'
-    #chaves_ja_existentes = set(
-    #    RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_seguinte)
-    #    .exclude(chave_unica__isnull=True).exclude(chave_unica='')
-    #    .values_list('chave_unica', flat=True)
-    #)
-    #
-    #contagem = {}
-    #dono_da_chave = {}
-    #
-    #for reg in registros:
-    #    chaves_deste_registro = [reg.chave_unica]
-    #
-    #    # Ao emitir, cada endosso adicional vira um registo próprio
-    #    if fase_origem.upper() == 'PENDENTES':
-    #        for extra in reg.endossos_extras.all():
-    #            chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
-    #                reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, extra.endosso
-    #            ))
-    #
-    #    for chave in chaves_deste_registro:
-    #        contagem[chave] = contagem.get(chave, 0) + 1
-    #        dono_da_chave.setdefault(chave, set()).add(reg.id)
-    #
-    #ids_duplicados = set()
-    #for chave, qtd in contagem.items():
-    #    if qtd > 1 or chave in chaves_ja_existentes:
-    #        ids_duplicados.update(dono_da_chave[chave])
-    #
-    #return ids_duplicados
-    return set()
+    # ATIVAR FUNCAO ALEX
+    # Para DESLIGAR a checagem de duplicado: comente o bloco abaixo e descomente o "return set()".
+    # Para LIGAR: mantenha o bloco abaixo ativo e o "return set()" comentado.
+
+    registros = RegistroProducao.objects.filter(
+        agrupamento=agrupamento, fase__iexact=fase_origem
+    ).prefetch_related('endossos_extras')
+
+    fase_seguinte = 'PENDENTES' if fase_origem.upper() == 'IMPORTADOS' else 'EMITIDOS'
+    chaves_ja_existentes = set(
+        RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_seguinte)
+        .exclude(chave_unica__isnull=True).exclude(chave_unica='')
+        .values_list('chave_unica', flat=True)
+    )
+
+    contagem = {}
+    dono_da_chave = {}
+
+    for reg in registros:
+        chaves_deste_registro = [reg.chave_unica]
+
+        # Ao emitir, cada endosso adicional vira um registo próprio
+        if fase_origem.upper() == 'PENDENTES':
+            for extra in reg.endossos_extras.all():
+                chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
+                    reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, extra.endosso
+                ))
+
+        for chave in chaves_deste_registro:
+            contagem[chave] = contagem.get(chave, 0) + 1
+            dono_da_chave.setdefault(chave, set()).add(reg.id)
+
+    ids_duplicados = set()
+    for chave, qtd in contagem.items():
+        if qtd > 1 or chave in chaves_ja_existentes:
+            ids_duplicados.update(dono_da_chave[chave])
+
+    return ids_duplicados
+    # return set()
 
 @login_required
 def producao_lista_fase(request, agrupamento_id, fase):
