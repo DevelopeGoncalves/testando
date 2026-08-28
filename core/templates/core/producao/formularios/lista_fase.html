@@ -297,7 +297,7 @@
 
                     <div id="container-endossos">
                         <div class="bloco-endosso" id="endosso-1">
-                            <h5 class="text-primary border-bottom pb-2 mb-3 mt-5 titulo-endosso"><i class="fas fa-sync-alt"></i> 1º Endosso</h5>
+                            <h5 class="text-primary border-bottom pb-2 mb-3 mt-5 titulo-endosso"><i class="fas fa-sync-alt"></i> {% if 'odonto' in agrupamento.agrupamento|lower %}Vidas{% else %}1º Endosso{% endif %}</h5>
                             <div class="row g-3">
                                 
                                 <div class="col-md-9">
@@ -308,7 +308,7 @@
                                             <input type="text" class="form-control" name="mes_producao" id="edit_mes">
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Endosso</label>
+                                            <label class="fw small mb-1">{% if 'odonto' in agrupamento.agrupamento|lower %}Quantidade de vidas{% else %}Endosso{% endif %}</label>
                                             <input type="text" min="1" maxlength="8" class="form-control fw" name="endosso" id="edit_endosso">
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
@@ -399,7 +399,7 @@
 
                     <div class="mt-4 text-end border-bottom pb-4">
                         <button type="button" class="btn btn-sm btn-outline-primary fw" onclick="abrirModalEndosso()">
-                            <i class="fas fa-plus"></i> Adicionar outro Endosso
+                            <i class="fas fa-plus"></i> {% if 'odonto' in agrupamento.agrupamento|lower %}Adicionar outra Vida{% else %}Adicionar outro Endosso{% endif %}
                         </button>
                     </div>
 
@@ -426,14 +426,14 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-light">
-                <h5 class="modal-title text-primary" id="modalNovoEndossoLabel"><i class="fas fa-plus-circle"></i> Inserir Novo Endosso</h5>
+                <h5 class="modal-title text-primary" id="modalNovoEndossoLabel"><i class="fas fa-plus-circle"></i> {% if 'odonto' in agrupamento.agrupamento|lower %}Inserir Nova Vida{% else %}Inserir Novo Endosso{% endif %}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="font-size: 0.95rem;">
                 
                 <div class="row g-3 mb-3">
                     <div class="col-md-2"><label class="fw small mb-1">Mês da Produção</label><input type="text" class="form-control" id="edit_mes_modal"></div>
-                    <div class="col-md-2"><label class="fw small mb-1">Endosso</label><input type="text" min="1" maxlength="8" class="form-control fw" style="background-color: #f8f9fc; font-size: 1.05rem;" id="edit_endosso_modal"></div>
+                    <div class="col-md-2"><label class="fw small mb-1">{% if 'odonto' in agrupamento.agrupamento|lower %}Quantidade de vidas{% else %}Endosso{% endif %}</label><input type="text" min="1" maxlength="8" class="form-control fw" style="background-color: #f8f9fc; font-size: 1.05rem;" id="edit_endosso_modal"></div>
                     <div class="col-md-4"><label class="fw small mb-1">Motivo do Endosso</label><input type="text" class="form-control" id="edit_motivo_endosso_modal"></div>
                     <div class="col-md-2"><label class="fw small mb-1">Início de Vigência</label><input type="date" class="form-control" id="edit_iniciovig_modal"></div>
                     <div class="col-md-2"><label class="fw small mb-1">Fim de Vigência</label><input type="date" class="form-control" id="edit_fimvig_modal"></div>
@@ -494,6 +494,7 @@
 <script>
     let contadorEndossos = 1;
     const FASE_ATUAL = "{{ fase_nome }}";
+    const EH_ODONTO = "{{ agrupamento.agrupamento|lower|escapejs }}".indexOf('odonto') !== -1;
 
     const listaSeguradoras = [
         {% for s in seguradoras_base %} { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
@@ -630,6 +631,13 @@
         }
     }
 
+    function fecharDetalhes() {
+        limparMarcacaoDuplicados();
+        $('#form-fase').fadeOut(200, function() {
+            $('#lista-fase').fadeIn(200);
+        });
+    }
+
     function abrirDetalhes(row) {
         const dados = row.dataset;
 
@@ -748,12 +756,12 @@
         
         let titulo = novoBloco.querySelector('.titulo-endosso');
         titulo.innerHTML = `
-            <i class="fas fa-sync-alt"></i> ${contadorEndossos}º Endosso
+            <i class="fas fa-sync-alt"></i> ${EH_ODONTO ? 'Vidas' : contadorEndossos + 'º Endosso'}
             <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerEndosso(this)">
                 <i class="fas fa-trash"></i> Remover
             </button>
         `;
-        
+
         // CORREÇÃO: Adicionado select e textarea para não quebrar a clonagem de IDs
         let inputsEdivs = novoBloco.querySelectorAll('input, select, textarea, div.lista-suspensa');
         inputsEdivs.forEach(el => {
@@ -793,7 +801,7 @@
             let titulo = bloco.querySelector('.titulo-endosso');
             if(titulo) {
                 titulo.innerHTML = `
-                    <i class="fas fa-sync-alt"></i> ${contadorEndossos}º Endosso
+                    <i class="fas fa-sync-alt"></i> ${EH_ODONTO ? 'Vidas' : contadorEndossos + 'º Endosso'}
                     <button type="button" class="btn btn-sm btn-outline-danger float-end py-0" onclick="removerEndosso(this)">
                         <i class="fas fa-trash"></i> Remover
                     </button>

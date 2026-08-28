@@ -8,14 +8,12 @@ from .models import (
     Seguradora, TipoDocumento, Cliente, Apolice, PerfilUsuario,
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
-    IndicacaoExcluida, EstadoAnbima, FundoAnbima,
+    IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
-from .anbima_processing import processar_planilha_anbima
-from .odonto_processing import processar_planilhas_odonto
+from .anbima import processar_planilha_anbima
+from .odonto import ler_relatorio_odonto, preparar_linhas_odonto
 import pandas as pd
-import unicodedata
-from urllib.parse import quote
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
@@ -827,6 +825,37 @@ def producao_anbima_import(request):
     return render(request, 'core/producao/processamentos/importacao_anbima.html')
 
 
+# Campos do sistema que a parametrização Odonto liga a uma coluna do Excel
+# (ou a um valor fixo). Ambas as origens (PF/PJ) usam a mesma lista — são
+# exatamente as colunas que aparecem depois em Produção > Formulários > Odonto.
+# tipo_documento tem "Proposta" como padrão (aplicado em odonto.py
+# quando nada é mapeado), mas continua editável aqui como Seguradora/Grupo-Ramo.
+# Ficam de fora (automáticos, não entram na tela de parametrização):
+# - filtro de status e casamento do vendedor com Colaboradores (nomes de
+#   coluna fixos do export da Odontoprev, ver odonto.COLUNA_*);
+# - tipo_pessoa (PF/PJ conforme a planilha importada), fixo em odonto.py;
+# - mes_producao (puxado do "Mês Prod." do cadastro de Produtos).
+CAMPOS_ODONTO = [
+    {'nome': 'seguradora', 'label': 'Seguradora'},
+    {'nome': 'grupo_ramo', 'label': 'Grupo/Ramo (Plano)'},
+    {'nome': 'tipo_documento', 'label': 'Tipo documento'},
+    {'nome': 'documento', 'label': 'Documento (Nº Proposta)'},
+    {'nome': 'cliente', 'label': 'Cliente'},
+    {'nome': 'nome_social', 'label': 'Nome social'},
+    {'nome': 'cpf_cnpj', 'label': 'CPF / CNPJ'},
+    {'nome': 'celular', 'label': 'Celular'},
+    {'nome': 'telefone', 'label': 'Telefone'},
+    {'nome': 'email', 'label': 'E-mail'},
+    {'nome': 'premio_bruto', 'label': 'Prêmio Bruto (R$)'},
+    {'nome': 'premio_liquido', 'label': 'Prêmio Líquido (R$)'},
+    {'nome': 'perc_comissao', 'label': '% de comissão'},
+    {'nome': 'realizado', 'label': 'Realizado'},
+    {'nome': 'inicio_vigencia', 'label': 'Início de vigência'},
+    {'nome': 'fim_vigencia', 'label': 'Fim de vigência'},
+    {'nome': 'observacoes', 'label': 'Observações'},
+]
+
+
 @login_required
 def producao_odonto_import(request):
 
@@ -838,69 +867,178 @@ def producao_odonto_import(request):
         return redirect('home')
     # ----
 
-    agora = timezone.localtime(timezone.now())
-    contexto_padrao = {'referencia_padrao': f'{agora.year}-{agora.month:02d}'}
+    agrupamento = Agrupamento.objects.filter(agrupamento__icontains='Odonto').first()
 
     if request.method == 'POST':
-        arquivo_pf = request.FILES.get('arquivo_odonto_pf')
-        arquivo_pj = request.FILES.get('arquivo_odonto_pj')
-        referencia_str = request.POST.get('mes_referencia', '').strip()
-        # Sem a marcação, considera todas as propostas (inclusive aguardando pagamento).
-        apenas_concluidas = request.POST.get('apenas_concluidas') == '1'
+        acao = request.POST.get('acao')
 
-        if not arquivo_pf or not arquivo_pj:
-            messages.error(request, 'Envie os dois relatórios: Odonto PF e Odonto PJ.')
+        if acao in ('salvar_parametrizacao_pf', 'salvar_parametrizacao_pj'):
+            origem = 'PF' if acao == 'salvar_parametrizacao_pf' else 'PJ'
+
+            with transaction.atomic():
+                for nome in [c['nome'] for c in CAMPOS_ODONTO]:
+                    col_excel = request.POST.get(f'map_{origem}_{nome}', '').strip()
+                    val_fixo = request.POST.get(f'fixo_{origem}_{nome}', '').strip()
+                    ParametrizacaoOdonto.objects.update_or_create(
+                        origem=origem, campo_sistema=nome,
+                        defaults={'coluna_excel': col_excel, 'valor_fixo': val_fixo}
+                    )
+            messages.success(request, f'Parametrização {origem} salva com sucesso!')
             return redirect('producao_odonto_import')
 
-        mes, ano = agora.month, agora.year
-        if referencia_str:
-            try:
-                referencia = datetime.strptime(referencia_str, '%Y-%m')
-                mes, ano = referencia.month, referencia.year
-            except ValueError:
-                messages.error(request, 'Mês de referência inválido.')
-                return redirect('producao_odonto_import')
+        # --- Importação de fato ---
+        origem = request.POST.get('origem')
+        arquivo = request.FILES.get('arquivo_odonto')
 
-        colaboradores = Colaborador.objects.select_related('unidade').all()
-        if not colaboradores.exists():
-            messages.error(request, 'Cadastre os Colaboradores (Base > Formulários) antes de processar as planilhas.')
+        if origem not in ('PF', 'PJ') or not arquivo:
+            messages.error(request, 'Selecione o arquivo e confirme se é Pessoa Física ou PJ.')
             return redirect('producao_odonto_import')
+
+        if not agrupamento:
+            messages.error(request, 'Cadastre o Agrupamento "Odonto" (Base > Formulários) antes de importar.')
+            return redirect('producao_odonto_import')
+
+        tipo_pessoa_label = 'Pessoa Física' if origem == 'PF' else 'Pessoa Jurídica'
+        ja_tem_dados = RegistroProducao.objects.filter(
+            agrupamento=agrupamento, fase='IMPORTADOS', tipo_pessoa=tipo_pessoa_label
+        ).exists()
+        if ja_tem_dados:
+            messages.error(
+                request,
+                f'A aba "IMPORTADOS" já possui registros de {tipo_pessoa_label} para o Odonto. '
+                f'Envie-os para "Pendentes" antes de importar um novo arquivo de {tipo_pessoa_label}.'
+            )
+            return redirect('producao_odonto_import')
+
+        # Mês da produção vem do "Mês Prod." do cadastro de Produtos (Base >
+        # Formulários > Produtos) — não é digitado na importação.
+        produto_odonto = Produto.objects.filter(agrupamento=agrupamento).first()
+        if not produto_odonto or not produto_odonto.mes_producao_em_aberto:
+            messages.error(request, 'Defina o "Mês Prod." do Produto Odonto (Base > Formulários > Produtos) antes de importar.')
+            return redirect('producao_odonto_import')
+        mes_producao = produto_odonto.mes_producao_em_aberto.strftime('%m/%Y')
 
         try:
-            resultado = processar_planilhas_odonto(
-                arquivo_pf, arquivo_pj, mes, ano, apenas_concluidas, colaboradores
-            )
+            df = ler_relatorio_odonto(arquivo)
         except Exception as e:
-            messages.error(request, f'Erro ao processar as planilhas: {str(e)}')
+            messages.error(request, str(e))
+            return redirect('producao_odonto_import')
+
+        mapeamento = {
+            p.campo_sistema: {'col_excel': p.coluna_excel or '', 'val_fixo': p.valor_fixo or ''}
+            for p in ParametrizacaoOdonto.objects.filter(origem=origem)
+        }
+
+        colaboradores = Colaborador.objects.select_related('unidade').all()
+
+        try:
+            resultado = preparar_linhas_odonto(df, origem, mapeamento, colaboradores)
+        except Exception as e:
+            messages.error(request, f'Erro ao processar a planilha: {str(e)}')
             return redirect('producao_odonto_import')
 
         if not resultado['ok']:
-            contexto = dict(contexto_padrao)
-            contexto['colunas_faltantes_pf'] = resultado['colunas_faltantes_pf']
-            contexto['colunas_faltantes_pj'] = resultado['colunas_faltantes_pj']
-            return render(request, 'core/producao/processamentos/importacao_odonto.html', contexto)
+            messages.error(request, f"Colunas obrigatórias não encontradas na planilha: {', '.join(resultado['colunas_faltantes'])}")
+            return redirect('producao_odonto_import')
+
+        def _data_odonto(valor_str):
+            if not valor_str:
+                return None
+            try:
+                return pd.to_datetime(valor_str, dayfirst=True, errors='raise').date()
+            except Exception:
+                return None
+
+        contador = 0
+        with transaction.atomic():
+            for linha in resultado['linhas']:
+                seguradora_obj = None
+                if linha['seguradora_valor']:
+                    seguradora_obj = Seguradora.objects.filter(seguradora__iexact=linha['seguradora_valor']).first()
+
+                tipo_doc_obj = None
+                if linha['tipo_documento_valor']:
+                    tipo_doc_obj = TipoDocumento.objects.filter(tipo_documento__iexact=linha['tipo_documento_valor']).first()
+
+                ramo_obj = None
+                if linha['grupo_ramo_valor']:
+                    ramo_obj = Ramo.objects.filter(grupo_e_ramo__iexact=linha['grupo_ramo_valor']).first()
+
+                inicio_vigencia = _data_odonto(linha['inicio_vigencia_valor'])
+                fim_vigencia = _data_odonto(linha['fim_vigencia_valor'])
+
+                unidade_obj = linha['unidade']
+
+                try:
+                    with transaction.atomic():
+                        RegistroProducao.objects.create(
+                            agrupamento=agrupamento,
+                            fase='IMPORTADOS',
+                            usuario_cadastro=request.user.username,
+                            mes_producao=mes_producao,
+                            seguradora=seguradora_obj,
+                            tipo_documento=tipo_doc_obj,
+                            documento=linha['documento'][:100],
+                            endosso=str(linha['quantidade_vidas'])[:8],
+                            tipo_pessoa=linha['tipo_pessoa'][:50],
+                            cpf_cnpj=linha['cpf_cnpj'][:50],
+                            cliente=linha['cliente'][:200],
+                            nome_social=linha['nome_social'][:200],
+                            celular=linha['celular'][:50],
+                            telefone=linha['telefone'][:50],
+                            email=linha['email'][:150],
+                            grupo_ramo=ramo_obj,
+                            premio_bruto=linha['premio_bruto'],
+                            premio_liquido=linha['premio_liquido'],
+                            perc_comissao=linha['perc_comissao'],
+                            realizado=linha['realizado'][:100],
+                            inicio_vigencia=inicio_vigencia,
+                            fim_vigencia=fim_vigencia,
+                            observacoes=linha['observacoes'],
+                            colaborador=linha['colaborador'][:150],
+                            nome_colaborador=linha['nome_colaborador'][:150],
+                            unidade=unidade_obj,
+                            nome_unidade=unidade_obj.unidade if unidade_obj else '',
+                            superintendencia=unidade_obj.superintendencia if unidade_obj else '',
+                        )
+                        contador += 1
+                except IntegrityError:
+                    continue
 
         registrar_auditoria_backend(
             usuario=request.user,
-            acao="Exportou",
-            detalhe=f"Processamento Odonto ({resultado['total_pf']} PF / {resultado['total_pj']} PJ)"
+            acao="Importou",
+            detalhe=f"Odonto {origem} ({contador} registos)"
         )
 
-        response = HttpResponse(
-            resultado['buffer'].read(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        # O nome do arquivo tem acento ("PRODUÇÃO"), então vai também no formato
-        # RFC 5987 para os navegadores não trocarem os caracteres.
-        nome_arquivo = resultado['nome_arquivo']
-        nome_ascii = unicodedata.normalize('NFKD', nome_arquivo).encode('ascii', 'ignore').decode()
-        response['Content-Disposition'] = (
-            f'attachment; filename="{nome_ascii}"; '
-            f"filename*=UTF-8''{quote(nome_arquivo)}"
-        )
-        return response
+        msg = f'{contador} registo(s) importado(s) para {"Pessoa Física" if origem == "PF" else "PJ"}.'
+        if resultado['total_ignorados_status']:
+            msg += f" {resultado['total_ignorados_status']} linha(s) ignorada(s) por não estarem com proposta concluída."
+        if resultado['nao_encontrados']:
+            msg += f" {len(resultado['nao_encontrados'])} vendedor(es) não encontrado(s) no cadastro de Colaboradores (ficaram sem matrícula)."
+        messages.success(request, msg)
 
-    return render(request, 'core/producao/processamentos/importacao_odonto.html', contexto_padrao)
+        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+
+    # GET
+    def _carregar_parametros(origem):
+        return {
+            p.campo_sistema: {'col': p.coluna_excel or '', 'fixo': p.valor_fixo or ''}
+            for p in ParametrizacaoOdonto.objects.filter(origem=origem)
+        }
+
+    produto_odonto = Produto.objects.filter(agrupamento=agrupamento).first() if agrupamento else None
+
+    return render(request, 'core/producao/processamentos/importacao_odonto.html', {
+        'agrupamento': agrupamento,
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
+        'ramos': Ramo.objects.all().order_by('grupo_e_ramo'),
+        'tipos_doc': TipoDocumento.objects.all().order_by('tipo_documento'),
+        'mes_producao_atual': produto_odonto.mes_producao_em_aberto if produto_odonto else None,
+        'campos_odonto': CAMPOS_ODONTO,
+        'parametros_pf': _carregar_parametros('PF'),
+        'parametros_pj': _carregar_parametros('PJ'),
+    })
 
 
 @login_required
@@ -2101,43 +2239,45 @@ def sair_do_sistema(request):
 
 def _ids_duplicados_no_lote(fase_origem, agrupamento):
 
-    # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-    #
-    #registros = RegistroProducao.objects.filter(
-    #    agrupamento=agrupamento, fase__iexact=fase_origem
-    #).prefetch_related('endossos_extras')
-    #
-    #fase_seguinte = 'PENDENTES' if fase_origem.upper() == 'IMPORTADOS' else 'EMITIDOS'
-    #chaves_ja_existentes = set(
-    #    RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_seguinte)
-    #    .exclude(chave_unica__isnull=True).exclude(chave_unica='')
-    #    .values_list('chave_unica', flat=True)
-    #)
-    #
-    #contagem = {}
-    #dono_da_chave = {}
-    #
-    #for reg in registros:
-    #    chaves_deste_registro = [reg.chave_unica]
-    #
-    #    # Ao emitir, cada endosso adicional vira um registo próprio
-    #    if fase_origem.upper() == 'PENDENTES':
-    #        for extra in reg.endossos_extras.all():
-    #            chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
-    #                reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, extra.endosso
-    #            ))
-    #
-    #    for chave in chaves_deste_registro:
-    #        contagem[chave] = contagem.get(chave, 0) + 1
-    #        dono_da_chave.setdefault(chave, set()).add(reg.id)
-    #
-    #ids_duplicados = set()
-    #for chave, qtd in contagem.items():
-    #    if qtd > 1 or chave in chaves_ja_existentes:
-    #        ids_duplicados.update(dono_da_chave[chave])
-    #
-    #return ids_duplicados
-    return set()
+    # ATIVAR FUNCAO ALEX
+    # Para DESLIGAR a checagem de duplicado: comente o bloco abaixo e descomente o "return set()".
+    # Para LIGAR: mantenha o bloco abaixo ativo e o "return set()" comentado.
+
+    registros = RegistroProducao.objects.filter(
+        agrupamento=agrupamento, fase__iexact=fase_origem
+    ).prefetch_related('endossos_extras')
+
+    fase_seguinte = 'PENDENTES' if fase_origem.upper() == 'IMPORTADOS' else 'EMITIDOS'
+    chaves_ja_existentes = set(
+        RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_seguinte)
+        .exclude(chave_unica__isnull=True).exclude(chave_unica='')
+        .values_list('chave_unica', flat=True)
+    )
+
+    contagem = {}
+    dono_da_chave = {}
+
+    for reg in registros:
+        chaves_deste_registro = [reg.chave_unica]
+
+        # Ao emitir, cada endosso adicional vira um registo próprio
+        if fase_origem.upper() == 'PENDENTES':
+            for extra in reg.endossos_extras.all():
+                chaves_deste_registro.append(RegistroProducao.montar_chave_unica(
+                    reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, extra.endosso
+                ))
+
+        for chave in chaves_deste_registro:
+            contagem[chave] = contagem.get(chave, 0) + 1
+            dono_da_chave.setdefault(chave, set()).add(reg.id)
+
+    ids_duplicados = set()
+    for chave, qtd in contagem.items():
+        if qtd > 1 or chave in chaves_ja_existentes:
+            ids_duplicados.update(dono_da_chave[chave])
+
+    return ids_duplicados
+    # return set()
 
 @login_required
 def producao_lista_fase(request, agrupamento_id, fase):

@@ -1,6 +1,6 @@
 {% extends 'core/layout.html' %}
 
-{% block title %}Importação dos Relatórios Odonto (Odontoprev){% endblock %}
+{% block title %}Importação Odonto{% endblock %}
 
 {% block breadcrumb %}
     <span style="font-size: 1rem; font-weight: normal;">
@@ -13,185 +13,299 @@
 {% endblock %}
 
 {% block content %}
-<!-- carregamento -->
-<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; color: white;">
-    <div class="spinner-border" style="width: 4rem; height: 4rem;" role="status">
-        <span class="visually-hidden">Carregando...</span>
-    </div>
-    <h4 class="mt-4 fw-bold">Processando arquivos...</h4>
-    <p>Isso pode levar alguns instantes. Por favor, aguarde.</p>
-</div>
+<div class="container-fluid">
 
-<div class="container-fluid pt-3">
-    <div class="row justify-content-center">
-        <!-- reduzao do card -->
-        <div class="col-lg-6 col-md-9">
-
-            {% if colunas_faltantes_pf or colunas_faltantes_pj %}
-            <div class="alert alert-danger shadow-sm">
-                <strong><i class="fas fa-exclamation-triangle"></i> Colunas ausentes nos relatórios!</strong>
-                {% if colunas_faltantes_pf %}
-                <p class="mb-1 mt-2"><b>Odonto PF:</b> {{ colunas_faltantes_pf|join:", " }}</p>
-                {% endif %}
-                {% if colunas_faltantes_pj %}
-                <p class="mb-1 mt-2"><b>Odonto PJ:</b> {{ colunas_faltantes_pj|join:", " }}</p>
-                {% endif %}
-                <p class="mb-0 mt-2 small">Confira se os arquivos enviados são os relatórios "Corretora Total Vidas PF" e "Corretora Total Vidas PME" exportados do site da Odontoprev, e se não foram trocados de lugar.</p>
-            </div>
-            {% endif %}
-
-            <div class="card border-0 shadow-sm" style="border-top: 4px solid #6f42c1 !important;">
-                <div class="card-body p-4">
-                    <h5 class="fw-bold mb-1" style="color: #6f42c1;">
-                        <i class="fas fa-tooth me-2"></i> Importação dos Relatórios Odonto (Odontoprev)
-                    </h5>
-                    <p class="text-muted small mb-4">
-                        Enviar os dois relatórios exportados do site da Odontoprev — <b>Odonto PF</b> e <b>Odonto PJ</b>. <br>
-                        O sistema devolve o arquivo <b>PRODUÇÃO</b> do mês, com as abas <b>Pessoa Física</b> e <b>PJ</b> já preenchidas
-                        com Indicador, Matrícula, CID e Agência puxados do cadastro de Colaboradores.
-                    </p>
-
-                    <form method="post" enctype="multipart/form-data" id="formUpload">
-                        {% csrf_token %}
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Relatório Odonto PF <span class="text-muted fw-normal small">(Corretora Total Vidas PF)</span></label>
-                            <input class="form-control" type="file" name="arquivo_odonto_pf" accept=".xls,.xlsx" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Relatório Odonto PJ <span class="text-muted fw-normal small">(Corretora Total Vidas PME)</span></label>
-                            <input class="form-control" type="file" name="arquivo_odonto_pj" accept=".xls,.xlsx" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Mês de referência</label>
-
-                            <div class="col-12 col-sm-6 col-md-5">
-                                <input class="form-control" type="month" name="mes_referencia" value="{{ referencia_padrao }}">
-                            </div>
-
-                            <div class="form-text mt-2">
-                                Só entram na produção as vendas com <b>DT_VENDA</b> dentro desse mês.<br>
-                                Vendas de meses anteriores devem ser lançadas manualmente na aba Manual.
-                            </div>
-                        </div>
-
-                        <div class="mb-4 form-check">
-                            <input class="form-check-input" type="checkbox" name="apenas_concluidas" value="1" id="apenasConcluidas" checked>
-                            <label class="form-check-label" for="apenasConcluidas">
-                                Considerar apenas <b>"Proposta concluida com sucesso"</b>
-                            </label>
-                            <div class="form-text">
-                                Desmarque para incluir também as propostas aguardando pagamento.
-                            </div>
-                        </div>
-
-                        <div class="text-end">
-                            <button type="submit" class="btn fw-bold text-white" style="background-color: #6f42c1;">
-                                <i class="fas fa-cogs"></i> Processar e Exportar
-                            </button>
-                        </div>
-                    </form>
+    <div id="menu-inicial" class="row mt-2">
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #6f42c1;" onclick="mostrarAcoes()">
+                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                    <i class="fas fa-tooth fa-3x mb-3" style="color: #6f42c1;"></i>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Odonto</h6>
                 </div>
             </div>
-
-            <div class="alert alert-light border shadow-sm mt-3 small mb-0">
-                <b><i class="fas fa-info-circle" style="color: #6f42c1;"></i> Como o arquivo é montado</b>
-                <ul class="mb-0 mt-2">
-                    <li><b>Indicador</b> e <b>Matrícula</b> vêm de Base &gt; Formulários &gt; Colaboradores, pelo CPF da força de vendas (com o nome como alternativa).</li>
-                    <li><b>CID</b> e <b>Agência</b> vêm da unidade (Agência CID) vinculada ao colaborador.</li>
-                    <li><b>Realizado (PF)</b> segue o tipo do plano: MENSAL = R$ 54,99 e ANUAL = R$ 659,88.</li>
-                    <li><b>Realizado (PJ)</b> é o valor da venda, que já soma todas as vidas — propostas repetidas por vida entram uma única vez.</li>
-                    <li>Forças de venda sem cadastro na base saem em uma aba <b>Pendências</b> dentro do próprio arquivo.</li>
-                </ul>
-            </div>
-
         </div>
     </div>
+
+    <div id="menu-acoes" style="display: none;" class="mt-2">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #0d6efd;" onclick="mostrarTelaImportar()">
+                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                        <i class="fas fa-file-excel fa-3x mb-3" style="color: #0d6efd;"></i>
+                        <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Importar</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #198754;" onclick="mostrarTelaParametrizar()">
+                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                        <i class="fas fa-cogs fa-3x mb-3" style="color: #198754;"></i>
+                        <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Parametrizar a importação</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA IMPORTAR -->
+    <div id="area-importar" style="display: none;" class="mt-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <h5 class="text-dark fw-bold mb-0"><i class="fas fa-file-excel text-primary me-2"></i> Importar planilha Odontoprev</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="voltarParaAcoes()"><i class="fas fa-arrow-left"></i> Voltar</button>
+        </div>
+
+        <ul class="nav nav-pills mb-3" id="nav-importar">
+            <li class="nav-item"><button type="button" class="nav-link active" id="nav-importar-PF" onclick="mostrarSubaba('importar', 'PF')">Pessoa Física</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" id="nav-importar-PJ" onclick="mostrarSubaba('importar', 'PJ')">PJ / PME</button></li>
+        </ul>
+
+        {% if not mes_producao_atual %}
+        <div class="alert alert-danger">
+            O Produto "Odonto" não tem o <b>Mês Prod.</b> definido em <b>Base &gt; Formulários &gt; Produtos</b>. Defina antes de importar.
+        </div>
+        {% endif %}
+
+        <div id="importar-PF" class="subaba-importar bg-white p-3 rounded border">
+            <p class="text-muted small mb-3">
+                Os registos importados se somam aos que já existem em "Importados" — não é preciso limpar antes.<br>
+                Mês da produção: <b>{{ mes_producao_atual|date:"m/Y"|default:"-- não definido --" }}</b> (vem do "Mês Prod." do Produto Odonto, em Base &gt; Formulários &gt; Produtos).
+            </p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="origem" value="PF">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Planilha Odontoprev — Pessoa Física</label>
+                    <input type="file" name="arquivo_odonto" class="form-control" accept=".xls,.xlsx" required>
+                </div>
+                <button type="submit" class="btn btn-primary fw-bold" {% if not mes_producao_atual %}disabled{% endif %}><i class="fas fa-upload me-1"></i> Importar Pessoa Física</button>
+            </form>
+        </div>
+
+        <div id="importar-PJ" class="subaba-importar bg-white p-3 rounded border" style="display: none;">
+            <p class="text-muted small mb-3">
+                Os registos importados se somam aos que já existem em "Importados" — não é preciso limpar antes.<br>
+                Mês da produção: <b>{{ mes_producao_atual|date:"m/Y"|default:"-- não definido --" }}</b> (vem do "Mês Prod." do Produto Odonto, em Base &gt; Formulários &gt; Produtos).
+            </p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="origem" value="PJ">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Planilha Odontoprev — PJ / PME</label>
+                    <input type="file" name="arquivo_odonto" class="form-control" accept=".xls,.xlsx" required>
+                </div>
+                <button type="submit" class="btn btn-primary fw-bold" {% if not mes_producao_atual %}disabled{% endif %}><i class="fas fa-upload me-1"></i> Importar PJ / PME</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ÁREA PARAMETRIZAR -->
+    <div id="area-parametrizar" style="display: none;" class="mt-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <h5 class="text-dark fw-bold mb-0"><i class="fas fa-sliders-h text-success me-2"></i> Parametrizar Colunas</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="voltarParaAcoes()"><i class="fas fa-arrow-left"></i> Voltar</button>
+        </div>
+
+        <ul class="nav nav-pills mb-3">
+            <li class="nav-item"><button type="button" class="nav-link active" id="nav-parametrizar-PF" onclick="mostrarSubaba('parametrizar', 'PF')">Pessoa Física</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" id="nav-parametrizar-PJ" onclick="mostrarSubaba('parametrizar', 'PJ')">PJ / PME</button></li>
+        </ul>
+
+        <div id="parametrizar-PF" class="subaba-parametrizar bg-white p-3 rounded border">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <input type="file" id="arquivo-ler-colunas-PF" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PF', this)">
+                <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="document.getElementById('arquivo-ler-colunas-PF').click()">
+                    <i class="fas fa-file-excel me-1"></i> Ler colunas de um arquivo PF de exemplo
+                </button>
+                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="salvarParametrizacao('PF')">
+                    <i class="fas fa-save me-1"></i> Salvar
+                </button>
+            </div>
+            <form id="form-param-PF" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="acao" id="acao_param_PF" value="">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light border-bottom">
+                            <tr class="small text-muted">
+                                <th width="30%" class="ps-3 py-2">Campo do sistema</th>
+                                <th width="40%" class="py-2">Coluna da planilha</th>
+                                <th width="30%" class="pe-3 py-2">Valor fixo (se não mapear coluna)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-mapeamento-PF"></tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+
+        <div id="parametrizar-PJ" class="subaba-parametrizar bg-white p-3 rounded border" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <input type="file" id="arquivo-ler-colunas-PJ" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PJ', this)">
+                <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="document.getElementById('arquivo-ler-colunas-PJ').click()">
+                    <i class="fas fa-file-excel me-1"></i> Ler colunas de um arquivo PJ de exemplo
+                </button>
+                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="salvarParametrizacao('PJ')">
+                    <i class="fas fa-save me-1"></i> Salvar
+                </button>
+            </div>
+            <form id="form-param-PJ" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="acao" id="acao_param_PJ" value="">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light border-bottom">
+                            <tr class="small text-muted">
+                                <th width="30%" class="ps-3 py-2">Campo do sistema</th>
+                                <th width="40%" class="py-2">Coluna da planilha</th>
+                                <th width="30%" class="pe-3 py-2">Valor fixo (se não mapear coluna)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-mapeamento-PJ"></tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
 </div>
+{% endblock %}
 
-<!-- SCRIPT QUE ATIVA O CARREGAMENTO E GERENCIA O DOWNLOAD -->
+{% block scripts %}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var form = document.getElementById('formUpload');
-        var overlay = document.getElementById('loadingOverlay');
+    const CAMPOS_ODONTO = [
+        {% for c in campos_odonto %}{nome: "{{ c.nome|escapejs }}", label: "{{ c.label|escapejs }}"},{% endfor %}
+    ];
 
-        form.addEventListener('submit', function(e) {
-            // 1. Impede o envio padrão do formulário que causa o loop do spinner
-            e.preventDefault();
+    // Campos de relacionamento (FK): em vez de digitar o valor fixo, escolhe
+    // um cadastro que já existe na Base (igual o Habitacional faz).
+    const OPCOES_RELACIONAMENTO = {
+        seguradora: [{% for s in seguradoras %}"{{ s.seguradora|escapejs }}",{% endfor %}],
+        grupo_ramo: [{% for r in ramos %}"{{ r.grupo_e_ramo|escapejs }}",{% endfor %}],
+        tipo_documento: [{% for t in tipos_doc %}"{{ t.tipo_documento|escapejs }}",{% endfor %}],
+    };
 
-            // 2. Mostra o overlay de carregamento
-            overlay.style.display = 'flex';
+    const parametrosSalvos = {
+        PF: { {% for campo, dados in parametros_pf.items %}"{{ campo|escapejs }}": {col: "{{ dados.col|escapejs }}", fixo: "{{ dados.fixo|escapejs }}"},{% endfor %} },
+        PJ: { {% for campo, dados in parametros_pj.items %}"{{ campo|escapejs }}": {col: "{{ dados.col|escapejs }}", fixo: "{{ dados.fixo|escapejs }}"},{% endfor %} }
+    };
 
-            // 3. Empacota os dados (incluindo os arquivos e o token CSRF)
-            var formData = new FormData(form);
+    function semAcento(texto) {
+        return (texto || '').toString().normalize('NFKD').replace(/[̀-ͯ]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
+    }
 
-            // 4. Envia a requisição via AJAX
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao processar os arquivos.');
-                }
+    // --- NAVEGAÇÃO ---
+    function mostrarAcoes() { $('#menu-inicial').hide(); $('#menu-acoes').fadeIn(200); }
+    function voltarParaAcoes() {
+        $('#area-importar, #area-parametrizar').hide();
+        $('#menu-inicial').hide();
+        $('#menu-acoes').fadeIn(200);
+    }
+    function mostrarTelaImportar() { $('#menu-acoes').hide(); $('#area-importar').fadeIn(200); }
+    function mostrarTelaParametrizar() {
+        $('#menu-acoes').hide();
+        $('#area-parametrizar').fadeIn(200);
+        renderizarTabela('PF');
+        renderizarTabela('PJ');
+    }
+    function mostrarSubaba(area, origem) {
+        $('.subaba-' + area).hide();
+        $('#' + area + '-' + origem).show();
+        $('#nav-' + area + '-PF, #nav-' + area + '-PJ').removeClass('active');
+        $('#nav-' + area + '-' + origem).addClass('active');
+    }
 
-                // Se o Django devolveu HTML, é a própria tela com o aviso de erro
-                let tipo = response.headers.get('Content-Type') || '';
-                if (tipo.indexOf('text/html') !== -1) {
-                    return response.text().then(html => ({ html: html }));
-                }
+    // --- PARAMETRIZAÇÃO ---
+    function renderizarTabela(origem, headersExcel) {
+        headersExcel = headersExcel || JSON.parse(sessionStorage.getItem('odonto_headers_' + origem) || '[]');
+        const salvos = parametrosSalvos[origem] || {};
+        let html = '';
 
-                // Tenta capturar o nome do arquivo original vindo do Django
-                let filename = "PRODUCAO ODONTO.xlsx";
-                let disposition = response.headers.get('Content-Disposition');
-                if (disposition && disposition.indexOf('attachment') !== -1) {
-                    let utf8 = /filename\*=UTF-8''([^;\n]*)/.exec(disposition);
-                    if (utf8 != null && utf8[1]) {
-                        filename = decodeURIComponent(utf8[1]);
-                    } else {
-                        let matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
-                        if (matches != null && matches[1]) {
-                            filename = matches[1].replace(/['"]/g, '');
-                        }
-                    }
-                }
-
-                // Transforma a resposta em um "Blob" (dados binários do arquivo)
-                return response.blob().then(blob => ({ blob, filename }));
-            })
-            .then(data => {
-                // Erro tratado pelo Django: recarrega a tela para mostrar o aviso
-                if (data.html) {
-                    document.open();
-                    document.write(data.html);
-                    document.close();
-                    return;
-                }
-
-                // 5. Cria um link invisível na tela para forçar o download do arquivo
-                let url = window.URL.createObjectURL(data.blob);
-                let a = document.createElement('a');
-                a.href = url;
-                a.download = data.filename;
-                document.body.appendChild(a);
-                a.click(); // Clica automaticamente
-
-                // Limpa a memória e remove o link invisível
-                a.remove();
-                window.URL.revokeObjectURL(url);
-                form.reset();
-            })
-            .catch(error => {
-                console.error(error);
-                alert("Ocorreu um erro durante o processamento. Verifique se as planilhas estão no formato correto.");
-            })
-            .finally(() => {
-                // 6. Esconde o spinner no final, dando sucesso ou erro!
-                overlay.style.display = 'none';
+        CAMPOS_ODONTO.forEach(function(campo) {
+            const salvo = salvos[campo.nome] || {col: '', fixo: ''};
+            let opcoesHtml = '<option value="">-- Sem mapear --</option>';
+            headersExcel.forEach(function(h) {
+                opcoesHtml += `<option value="${h}" ${h === salvo.col ? 'selected' : ''}>${h}</option>`;
             });
+            if (salvo.col && headersExcel.indexOf(salvo.col) === -1) {
+                opcoesHtml += `<option value="${salvo.col}" selected>${salvo.col} (salvo)</option>`;
+            }
+
+            const opcoesRelacionamento = OPCOES_RELACIONAMENTO[campo.nome];
+            let fixoHtml;
+            if (opcoesRelacionamento) {
+                let opcoesFixoHtml = '<option value="">-- Branco --</option>';
+                opcoesRelacionamento.forEach(function(nomeCadastro) {
+                    opcoesFixoHtml += `<option value="${nomeCadastro}" ${nomeCadastro === salvo.fixo ? 'selected' : ''}>${nomeCadastro}</option>`;
+                });
+                if (salvo.fixo && opcoesRelacionamento.indexOf(salvo.fixo) === -1) {
+                    opcoesFixoHtml += `<option value="${salvo.fixo}" selected>${salvo.fixo} (salvo)</option>`;
+                }
+                fixoHtml = `<select name="fixo_${origem}_${campo.nome}" class="form-select form-select-sm">${opcoesFixoHtml}</select>`;
+            } else {
+                fixoHtml = `<input type="text" name="fixo_${origem}_${campo.nome}" class="form-control form-control-sm" value="${salvo.fixo || ''}" placeholder="Valor fixo">`;
+            }
+
+            html += `<tr>
+                <td class="small fw-bold ps-3 py-2">${campo.label}</td>
+                <td class="py-2">
+                    <select name="map_${origem}_${campo.nome}" class="form-select form-select-sm">${opcoesHtml}</select>
+                </td>
+                <td class="pe-3 py-2">${fixoHtml}</td>
+            </tr>`;
         });
+
+        $('#corpo-mapeamento-' + origem).html(html);
+    }
+
+    function lerColunas(origem, fileInput) {
+        const arquivo = fileInput.files[0];
+        if (!arquivo) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const primeiraAba = workbook.SheetNames[0];
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[primeiraAba], {header: 1, defval: ''});
+
+            // A planilha da Odontoprev traz linhas de identificação da corretora
+            // antes do cabeçalho de verdade — acha a linha certa pelo conteúdo
+            // (mesma lógica do ler_relatorio_odonto no servidor), em vez de
+            // pegar a primeira linha não vazia.
+            let headers = [];
+            for (let i = 0; i < jsonData.length; i++) {
+                const linha = jsonData[i];
+                if (!Array.isArray(linha)) continue;
+                const linhaNormalizada = linha.map(function(c) { return semAcento(c); });
+                if (linhaNormalizada.indexOf('NUM_PROPOSTA') !== -1) {
+                    headers = linhaNormalizada.filter(function(h) { return h !== ''; });
+                    break;
+                }
+            }
+
+            if (headers.length === 0) {
+                avisoElegante('Não achei a coluna NUM_PROPOSTA nessa planilha. Confirme se é o relatório exportado pelo site da Odontoprev.');
+                fileInput.value = '';
+                return;
+            }
+
+            sessionStorage.setItem('odonto_headers_' + origem, JSON.stringify(headers));
+            renderizarTabela(origem, headers);
+            fileInput.value = '';
+        };
+        reader.readAsArrayBuffer(arquivo);
+    }
+
+    function salvarParametrizacao(origem) {
+        document.getElementById('acao_param_' + origem).value = 'salvar_parametrizacao_' + origem.toLowerCase();
+        document.getElementById('form-param-' + origem).submit();
+    }
+
+    $(document).ready(function() {
+        renderizarTabela('PF');
+        renderizarTabela('PJ');
     });
 </script>
 {% endblock %}

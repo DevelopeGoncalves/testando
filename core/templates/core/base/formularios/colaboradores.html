@@ -77,7 +77,7 @@
                             data-matricula="{{ c.matricula|default:'' }}"
                             data-colaborador="{{ c.colaborador }}" 
                             data-nomesocial="{{ c.nome_social|default:'' }}"   
-                            data-agencia="{{ c.agencia.id|default:'' }}" 
+                            data-agencia="{{ c.unidade.id|default:'' }}" 
                             data-funcao="{{ c.funcao|default:'' }}" 
                             data-suspenso="{{ c.suspenso|yesno:'true,false' }}"
                             data-impedido="{{ c.impedido|yesno:'true,false' }}"
@@ -91,7 +91,7 @@
                             <td class="text-center">{{ c.matricula|default:'-' }}</td>
                             <td class="text-start">{{ c.colaborador }}</td>
                             <td class="text-start">{{ c.nome_social|default:'-' }}</td>
-                            <td class="text-center">{{ c.agencia.cid_agencia|default:'-' }}</td>
+                            <td class="text-center">{{ c.unidade.cid_unidade|default:'-' }}</td>
                             <td class="text-center">{{ c.funcao|default:'-' }}</td>
                             <td class="text-center">{{ c.suspenso|yesno:'Sim,Não' }}</td>
                             <td class="text-center">{{ c.impedido|yesno:'Sim,Não' }}</td>
@@ -155,7 +155,7 @@
         $('#colaborador_id_hidden').val(id);
         
         // Povoando os campos do formulário
-        $('#id_agencia').val(row.getAttribute('data-agencia'));
+        $('#id_unidade').val(row.getAttribute('data-agencia'));
         $('#id_matricula').val(row.getAttribute('data-matricula'));
         $('#id_colaborador').val(row.getAttribute('data-colaborador'));
         $('#id_nome_social').val(row.getAttribute('data-nomesocial'));

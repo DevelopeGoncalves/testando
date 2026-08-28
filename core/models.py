@@ -672,6 +672,22 @@ class ParametrizacaoBaseNovo(models.Model):
     def __str__(self):
         return self.campo_sistema
 
+class ParametrizacaoOdonto(models.Model):
+    ORIGEM_CHOICES = [('PF', 'Pessoa Física'), ('PJ', 'PJ / PME')]
+
+    origem = models.CharField(max_length=2, choices=ORIGEM_CHOICES)
+    campo_sistema = models.CharField(max_length=100)
+    coluna_excel = models.CharField(max_length=150, blank=True, null=True)
+    valor_fixo = models.CharField(max_length=150, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.origem} - {self.campo_sistema}"
+
+    class Meta:
+        verbose_name = "Parametrização Odonto"
+        verbose_name_plural = "Parametrizações Odonto"
+        unique_together = [('origem', 'campo_sistema')]
+
 
 """                             HENRIQUE                                                                    """
 from datetime import timedelta
