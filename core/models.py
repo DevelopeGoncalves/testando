@@ -315,14 +315,14 @@ class Indicacao(models.Model):
     observacoes = models.TextField("Observações", blank=True, null=True)
 
     # --- Vínculo com a apólice (mesmos cadastros usados em Produção) ---
-    #seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
+    seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
     ramo = models.ForeignKey('Ramo', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Grupo/Ramo")
-    #tipo_documento = models.ForeignKey('TipoDocumento', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Tipo de Documento")
-    #numero_contrato = models.CharField("Número do contrato/apólice", max_length=50, blank=True, null=True)
-    #numero_endosso = models.CharField("Número do endosso", max_length=50, blank=True, null=True)
+    tipo_documento = models.ForeignKey('TipoDocumento', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Tipo de Documento")
+    numero_contrato = models.CharField("Número do contrato/apólice", max_length=50, blank=True, null=True)
+    numero_endosso = models.CharField("Número do endosso", max_length=50, blank=True, null=True)
     ## chave para nao duplicar a mesma apólice/endosso (mesmo padrão do RegistroProducao)
     # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-    #chave_unica = models.CharField("Chave única", max_length=255, null=True, blank=True, db_index=True)
+    chave_unica = models.CharField("Chave única", max_length=255, null=True, blank=True, db_index=True)
 
     # nao pode abrir outra ligacao enquanto estiver uma aberta 
     atendimento_por = models.CharField("Em atendimento por", max_length=150, blank=True, null=True)
@@ -332,22 +332,22 @@ class Indicacao(models.Model):
     responsavel_demanda = models.ForeignKey('Colaborador', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandas_responsavel', verbose_name="Responsável pela demanda")
 
     # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-    #@staticmethod
-    #def montar_chave_unica(seguradora_id, ramo_id, tipo_documento_id, numero_contrato, numero_endosso):
-    #    partes = [
-    #        str(seguradora_id or ''),
-    #        str(ramo_id or ''),
-    #        str(tipo_documento_id or ''),
-    #        (numero_contrato or '').strip().upper(),
-    #        (numero_endosso or '').strip().upper(),
-    #    ]
-    #    return '&'.join(partes)
+    @staticmethod
+    def montar_chave_unica(seguradora_id, ramo_id, tipo_documento_id, numero_contrato, numero_endosso):
+        partes = [
+            str(seguradora_id or ''),
+            str(ramo_id or ''),
+            str(tipo_documento_id or ''),
+            (numero_contrato or '').strip().upper(),
+            (numero_endosso or '').strip().upper(),
+        ]
+        return '&'.join(partes)
 
     def save(self, *args, **kwargs):
     # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-    #    self.chave_unica = Indicacao.montar_chave_unica(
-    #        self.seguradora_id, self.ramo_id, self.tipo_documento_id, self.numero_contrato, self.numero_endosso
-    #    )
+        self.chave_unica = Indicacao.montar_chave_unica(
+            self.seguradora_id, self.ramo_id, self.tipo_documento_id, self.numero_contrato, self.numero_endosso
+        )
         super().save(*args, **kwargs)
 
     def __str__(self):

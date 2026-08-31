@@ -2337,24 +2337,24 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 reg.endosso = endosso_principal_input.strip()
 
                 # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-                #if reg.fase.upper() == 'PENDENTES':
-                #    nova_chave = RegistroProducao.montar_chave_unica(
-                #        reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
-                #    )
-                #    ja_existe = RegistroProducao.objects.filter(
-                #        agrupamento=agrupamento, fase__iexact='PENDENTES', chave_unica=nova_chave
-                #    ).exclude(id=reg.id).exists()
-                #    if ja_existe:
-                #        erro = ('Já existe um registo em Pendentes com a mesma Seguradora, Grupo/Ramo, '
-                #                'Tipo de Documento, Documento e Endosso. Altere um desses campos antes de guardar.')
-                #        if is_ajax:
-                #            return JsonResponse({
-                #                'sucesso': False,
-                #                'erro': erro,
-                #                'campos_duplicados': ['seguradora', 'grupo_ramo', 'tipo_documento', 'documento', 'endosso'],
-                #            }, status=409)
-                #        messages.error(request, erro)
-                #        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                if reg.fase.upper() == 'PENDENTES':
+                    nova_chave = RegistroProducao.montar_chave_unica(
+                        reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
+                    )
+                    ja_existe = RegistroProducao.objects.filter(
+                        agrupamento=agrupamento, fase__iexact='PENDENTES', chave_unica=nova_chave
+                    ).exclude(id=reg.id).exists()
+                    if ja_existe:
+                        erro = ('Já existe um registo em Pendentes com a mesma Seguradora, Grupo/Ramo, '
+                                'Tipo de Documento, Documento e Endosso. Altere um desses campos antes de guardar.')
+                        if is_ajax:
+                            return JsonResponse({
+                                'sucesso': False,
+                                'erro': erro,
+                                'campos_duplicados': ['seguradora', 'grupo_ramo', 'tipo_documento', 'documento', 'endosso'],
+                            }, status=409)
+                        messages.error(request, erro)
+                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
                 reg.mes_producao = request.POST.get('mes_producao')
                 reg.nome_social = request.POST.get('nome_social')
