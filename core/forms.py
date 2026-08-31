@@ -12,6 +12,20 @@ class BootstrapMixin:
                 field.widget.attrs['class'] = 'form-control'
 
 
+class ErrosSemTexto(forms.utils.ErrorList):
+    """Guarda os erros normalmente (o alerta do topo continua a aparecer),
+    mas não imprime a frase acima do campo — quem avisa é a borda vermelha."""
+
+    def __str__(self):
+        return ''
+
+    def as_ul(self):
+        return ''
+
+    def as_text(self):
+        return ''
+
+
 # --- 2. AGRUPAMENTO (NOVO) ---
 class AgrupamentoForm(BootstrapMixin, forms.ModelForm):
     class Meta:
@@ -126,6 +140,19 @@ class RamoForm(BootstrapMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         if 'produto' in self.fields:
             self.fields['produto'].queryset = Produto.objects.filter(inativo=False).order_by('produto')
+        self.error_class = ErrosSemTexto
+
+    def full_clean(self):
+        super().full_clean()
+        # Em vez da frase "Este Nome de Ramo já está cadastrado.", o campo
+        # repetido fica com a borda vermelha para o utilizador corrigir.
+        for nome_campo in self.errors:
+            campo = self.fields.get(nome_campo)
+            if not campo:
+                continue
+            classes = campo.widget.attrs.get('class', '')
+            if 'is-invalid' not in classes:
+                campo.widget.attrs['class'] = f'{classes} is-invalid'.strip()
 
     def clean_cod_ramo(self):
         cod = self.cleaned_data.get('cod_ramo')

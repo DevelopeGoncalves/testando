@@ -9,10 +9,11 @@ from .models import (
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
     IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
+    CompatibilidadeRamoOdonto,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
 from .anbima import processar_planilha_anbima
-from .odonto import ler_relatorio_odonto, preparar_linhas_odonto
+from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -872,6 +873,21 @@ def producao_odonto_import(request):
     if request.method == 'POST':
         acao = request.POST.get('acao')
 
+        if acao == 'salvar_compatibilidade_ramo':
+            list_ramo_planilha = request.POST.getlist('ramo_planilha[]')
+            list_ramo_base_ids = request.POST.getlist('ramo_base[]')
+            with transaction.atomic():
+                CompatibilidadeRamoOdonto.objects.all().delete()
+                for de_txt, para_id in zip(list_ramo_planilha, list_ramo_base_ids):
+                    de_txt_clean = de_txt.strip().upper()
+                    if de_txt_clean and para_id:
+                        CompatibilidadeRamoOdonto.objects.create(
+                            nome_planilha=de_txt_clean,
+                            ramo_base_id=para_id
+                        )
+            messages.success(request, 'Relacionamentos de Ramo salvos com sucesso!')
+            return redirect('producao_odonto_import')
+
         if acao in ('salvar_parametrizacao_pf', 'salvar_parametrizacao_pj'):
             origem = 'PF' if acao == 'salvar_parametrizacao_pf' else 'PJ'
 
@@ -931,6 +947,15 @@ def producao_odonto_import(request):
 
         colaboradores = Colaborador.objects.select_related('unidade').all()
 
+        # De-para "Relacionar Ramos": o texto que vem da coluna da planilha
+        # mapeada em Grupo/Ramo (Plano) aponta para um Ramo já cadastrado em
+        # Base > Formulários > Ramos. A chave ignora acento, caixa e espaço a
+        # mais, porque o nome do plano na planilha nunca vem igualzinho.
+        depara_ramos = {
+            _texto_comparavel(regra.nome_planilha): regra.ramo_base
+            for regra in CompatibilidadeRamoOdonto.objects.select_related('ramo_base').all()
+        }
+
         try:
             resultado = preparar_linhas_odonto(df, origem, mapeamento, colaboradores)
         except Exception as e:
@@ -962,7 +987,13 @@ def producao_odonto_import(request):
 
                 ramo_obj = None
                 if linha['grupo_ramo_valor']:
-                    ramo_obj = Ramo.objects.filter(grupo_e_ramo__iexact=linha['grupo_ramo_valor']).first()
+                    valor_ramo = linha['grupo_ramo_valor'].strip()
+                    ramo_obj = depara_ramos.get(_texto_comparavel(valor_ramo))
+                    if not ramo_obj:
+                        ramo_obj = (
+                            Ramo.objects.filter(grupo_e_ramo__iexact=valor_ramo).first()
+                            or Ramo.objects.filter(ramo__iexact=valor_ramo).first()
+                        )
 
                 inicio_vigencia = _data_odonto(linha['inicio_vigencia_valor'])
                 fim_vigencia = _data_odonto(linha['fim_vigencia_valor'])
@@ -1038,6 +1069,8 @@ def producao_odonto_import(request):
         'campos_odonto': CAMPOS_ODONTO,
         'parametros_pf': _carregar_parametros('PF'),
         'parametros_pj': _carregar_parametros('PJ'),
+        'ramos_base': Ramo.objects.filter(inativo=False).order_by('ramo'),
+        'regras_ramo_salvas': CompatibilidadeRamoOdonto.objects.select_related('ramo_base').order_by('id'),
     })
 
 
@@ -2498,6 +2531,20 @@ def producao_lista_fase(request, agrupamento_id, fase):
             return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
 
         elif acao == 'emitir':
+            # Registo sem Seguradora não pode ir para Emitidos: volta para a
+            # lista com as linhas destacadas para o utilizador preencher.
+            ids_sem_seguradora = list(
+                RegistroProducao.objects.filter(
+                    agrupamento=agrupamento, fase__iexact='PENDENTES', seguradora__isnull=True
+                ).values_list('id', flat=True)
+            )
+            if ids_sem_seguradora:
+                ids_str = ','.join(str(i) for i in ids_sem_seguradora)
+                return redirect(
+                    f"{reverse('producao_lista_fase', args=[agrupamento.id, 'pendentes'])}"
+                    f"?sem_seguradora={ids_str}&bloqueio=emitir"
+                )
+
             ids_duplicados = _ids_duplicados_no_lote('PENDENTES', agrupamento)
 
             campos_identificacao = [
@@ -2586,6 +2633,14 @@ def producao_lista_fase(request, agrupamento_id, fase):
     else:
         ids_duplicados = set()
 
+    # Pendentes sem Seguradora — ficam destacados e travam o envio para Emitidos
+    if fase_banco == 'PENDENTES':
+        ids_sem_seguradora = set(
+            registros.filter(seguradora__isnull=True).values_list('id', flat=True)
+        )
+    else:
+        ids_sem_seguradora = set()
+
     ids_duplicados_str = request.GET.get('duplicados', '')
     if ids_duplicados_str:
         ids_duplicados |= {int(i) for i in ids_duplicados_str.split(',') if i.strip().isdigit()}
@@ -2601,6 +2656,7 @@ def producao_lista_fase(request, agrupamento_id, fase):
         'colaboradores': colaboradores,
         'ramos_hab': ramos_hab,
         'ids_duplicados': ids_duplicados,
+        'ids_sem_seguradora': ids_sem_seguradora,
     }
 
     return render(request, 'core/producao/formularios/lista_fase.html', context)

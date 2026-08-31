@@ -138,7 +138,14 @@
         
         {% if form_ramo.errors %}
             toggleFormLocal('ramos', true);
+            // Foca o primeiro campo repetido (o que ficou com a borda vermelha)
+            $('#form-ramos .is-invalid').first().trigger('focus');
         {% endif %}
+    });
+
+    // Assim que o utilizador corrige o valor repetido, a borda vermelha sai
+    $(document).on('input change', '#form-ramos .is-invalid', function() {
+        $(this).removeClass('is-invalid');
     });
 
     function toggleFormLocal(tipo, mostrar) {

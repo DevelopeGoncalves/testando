@@ -145,7 +145,7 @@
                             <tr 
                             
                                 {% if request.user.is_superuser or request.user.perfil.prod_form_habitacional > 1 %}
-                                class="tr-clickable{% if reg.id in ids_duplicados %} table-danger{% endif %}" ondblclick="abrirDetalhes(this)" style="cursor: pointer;"
+                                class="tr-clickable{% if reg.id in ids_duplicados %} table-danger{% elif reg.id in ids_sem_seguradora %} table-warning linha-sem-seguradora{% endif %}" ondblclick="abrirDetalhes(this)" style="cursor: pointer;"
                                 {% endif %}
 
                                 data-id="{{ reg.id }}"
@@ -594,6 +594,7 @@
     $(document).ready(function() {
         if (typeof iniciarTabelaExcel === 'function') iniciarTabelaExcel('tabela-fase');
         avisarDuplicadosDaUrl();
+        avisarSemSeguradoraDaUrl();
         configurarSubmissaoEdicao();
 
         inicializarDropdownPesquisa('edit_seguradora_texto', 'edit_seguradora_val', 'dropdown_seguradora', listaSeguradoras);
@@ -972,6 +973,19 @@ function configurarSubmissaoEdicao() {
             mensagem = `Os registos não duplicados já foram enviados para Emitidos. ${qtd} registo(s) duplicado(s) permaneceram em Pendentes (destacados em vermelho) — apague ou edite-os antes de tentar emitir novamente.`;
         }
         if (mensagem) avisoElegante(mensagem, 'Duplicidade encontrada');
+    }
+
+    function avisarSemSeguradoraDaUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const semSeguradora = params.get('sem_seguradora');
+        if (!semSeguradora) return;
+
+        const qtd = semSeguradora.split(',').filter(Boolean).length;
+        avisoElegante(
+            `${qtd} registo(s) estão sem Seguradora (destacados em amarelo). ` +
+            `Preencha a Seguradora nesses registos antes de enviar para Emitidos.`,
+            'Seguradora em falta'
+        );
     }
 
     function toggleDeleteAll(source) {

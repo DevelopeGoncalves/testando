@@ -672,6 +672,20 @@ class ParametrizacaoBaseNovo(models.Model):
     def __str__(self):
         return self.campo_sistema
 
+# De-para do Odonto: liga o nome do plano que vem na planilha da Odontoprev
+# com o Ramo já cadastrado em Base > Formulários > Ramos (campo "Ramo").
+class CompatibilidadeRamoOdonto(models.Model):
+    nome_planilha = models.CharField("Ramo da planilha", max_length=150, unique=True)
+    ramo_base = models.ForeignKey('Ramo', on_delete=models.CASCADE, verbose_name="Ramo da base")
+
+    def __str__(self):
+        return f"{self.nome_planilha} -> {self.ramo_base.ramo}"
+
+    class Meta:
+        verbose_name = "Compatibilidade de Ramo (Odonto)"
+        verbose_name_plural = "Compatibilidades de Ramo (Odonto)"
+
+
 class ParametrizacaoOdonto(models.Model):
     ORIGEM_CHOICES = [('PF', 'Pessoa Física'), ('PJ', 'PJ / PME')]
 
