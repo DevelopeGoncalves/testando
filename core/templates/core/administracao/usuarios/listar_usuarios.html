@@ -12,6 +12,45 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    .excel-header-btn {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+        font-weight: bold !important;
+        color: #495057 !important;
+        padding: 8px !important;
+    }
+
+    /* Centraliza as colunas que possuem 'text-center' */
+    th.text-center .excel-header-btn {
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    /* Alinha à esquerda a coluna que possui 'text-start' */
+    th.text-start .excel-header-btn {
+        justify-content: flex-start !important;
+        text-align: left !important;
+    }
+
+    /* Ajuste do ícone do filtro */
+    .excel-header-btn::after {
+        margin-left: 5px;
+    }
+
+    /* Alinhamento vertical do corpo da tabela */
+    #tabela-usuarios td {
+        vertical-align: middle !important;
+    }
+    
+    /* Correção do Dropdown de filtro */
+    .dropdown-menu {
+        text-align: left !important;
+    }
+</style>
 
 <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
     
@@ -45,11 +84,11 @@
             <thead class="table-light">
                 <tr>
                     <th width="40" class="text-center"><input type="checkbox" onclick="toggleDeleteAll(this)"></th>
-                    <th>Usuário</th>
-                    <th>Matrícula</th>
+                    <th class="text-center">Nivel Acesso</th>
+                    <th class="text-center">Ativo</th>
+                    <th class="text-center">Usuário</th>
+                    <th class="text-center">Matrícula</th>
                     <th>Nome</th>
-                    <th>Ativo</th>
-                    <th>Nivel Acesso</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,23 +102,23 @@
                         {% endif %}
                     </td>
                     
-                    <td>{{ u.username }}</td>
-                    <td>{{ u.perfil.colaborador.matricula|default:"-" }}</td>
-                    <td>{{ u.perfil.colaborador|default:"-" }}</td>
-                    <td>
-                        {% if u.is_online %}
-                            <span style="color: green;">Online</span>
-                        {% else %}
-                            <span style="color: grey;">Offline</span>
-                        {% endif %}
-                    </td>
-                    <td>
+                    <td class="text-center">
                         {% if u.is_superuser %}
                             <span class="badge bg-danger">Superuser</span>
                         {% else %}
                             <span class="badge bg-secondary">Comum</span>
                         {% endif %}
                     </td>
+                    <td class="text-center">
+                        {% if u.is_online %}
+                            <span style="color: green; font-weight: 800;">Online</span>
+                        {% else %}
+                            <span style="color: grey;">Offline</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ u.username }}</td>
+                    <td class="text-center">{{ u.perfil.colaborador.matricula|default:"-" }}</td>
+                    <td>{{ u.perfil.colaborador|default:"-" }}</td>
                 </tr>
                 {% endfor %}
 
