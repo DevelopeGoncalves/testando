@@ -400,21 +400,12 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-
-        chave = Indicacao.montar_chave_unica(
-            cleaned_data.get('seguradora').id if cleaned_data.get('seguradora') else None,
-            cleaned_data.get('ramo').id if cleaned_data.get('ramo') else None,
-            cleaned_data.get('tipo_documento').id if cleaned_data.get('tipo_documento') else None,
-            cleaned_data.get('numero_contrato'),
-            cleaned_data.get('numero_endosso'),
-        )
-        # só bloqueia duplicidade quando a chave tem algo além dos separadores
-        if chave.strip('&') and Indicacao.objects.filter(chave_unica=chave).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError(
-                "Já existe uma indicação cadastrada com essa Seguradora, Ramo, Tipo de Documento, "
-                "Número do Contrato e Endosso. Verifique se não é uma ligação duplicada."
-            )
+        # alex: no Novo e no Base Novo a ÚNICA chave que não pode repetir é o ID do
+        # registro (gerado automaticamente pelo banco - nunca repete). Todos os outros
+        # campos (Seguradora, Grupo/Ramo, Documento, Endosso, etc.) PODEM repetir.
+        # Por isso a checagem de duplicidade por "chave_unica" fica desativada aqui.
+        # OBS.: Odonto e Habitacional usam outra tabela/lógica (RegistroProducao) e
+        # NÃO são afetados por esta mudança.
 
         return cleaned_data
 
