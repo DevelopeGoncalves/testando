@@ -110,7 +110,6 @@
 
     <!-- ÁREA PARAMETRIZAR -->
     <div id="area-parametrizar" style="display: none;" class="mt-2">
-        <!-- pf, pf e ler colunas alinhada na mesma linha do titulo -->
         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
             <h5 class="text-dark fw-bold mb-0"><i class="fas fa-sliders-h text-success me-2"></i> Parametrizar Colunas</h5>
             <div class="d-flex align-items-center gap-2">
@@ -137,8 +136,8 @@
                             <tr class="small text-muted">
                                 <th width="20%" class="ps-3 py-2">Campo no Sistema</th>
                                 <th width="30%" class="py-2">Coluna no Excel (Origem)</th>
-                                <th width="25%" class="py-2">Valor Fixo</th>
-                                <th width="25%" class="pe-3 py-2">Origem de relacionamento</th>
+                                <th width="25%" class="py-2">Origem de relacionamento</th>
+                                <th width="25%" class="pe-3 py-2">Valor Fixo</th>
                             </tr>
                         </thead>
                         <tbody id="corpo-mapeamento-PF"></tbody>
@@ -157,8 +156,8 @@
                             <tr class="small text-muted">
                                 <th width="20%" class="ps-3 py-2">Campo no Sistema</th>
                                 <th width="30%" class="py-2">Coluna no Excel (Origem)</th>
-                                <th width="25%" class="py-2">Valor Fixo</th>
-                                <th width="25%" class="pe-3 py-2">Origem de relacionamento</th>
+                                <th width="25%" class="py-2">Origem de relacionamento</th>
+                                <th width="25%" class="pe-3 py-2">Valor Fixo</th>
                             </tr>
                         </thead>
                         <tbody id="corpo-mapeamento-PJ"></tbody>
@@ -296,7 +295,7 @@
     </div>
 </div>
 
-<!--  preenchimento incompleto -->
+<!-- preenchimento incompleto -->
 <div class="modal fade" id="modalErroValidacaoRamo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-top: 4px solid #ffc107; border-radius: 8px;">
@@ -324,8 +323,6 @@
         {% for c in campos_odonto %}{nome: "{{ c.nome|escapejs }}", label: "{{ c.label|escapejs }}"},{% endfor %}
     ];
 
-    // Campos de relacionamento (FK): em vez de digitar o valor fixo, escolhe
-    // um cadastro que já existe na Base (igual o Habitacional faz).
     const OPCOES_RELACIONAMENTO = {
         seguradora: [{% for s in seguradoras %}"{{ s.seguradora|escapejs }}",{% endfor %}],
         grupo_ramo: [{% for r in ramos %}"{{ r.grupo_e_ramo|escapejs }}",{% endfor %}],
@@ -356,8 +353,7 @@
         renderizarTabela('PJ');
         mostrarSubaba('parametrizar', 'PF');
     }
-    // alex: guarda qual aba da parametrizacao esta aberta (PF ou PJ), porque agora os
-    // botoes "Ler Colunas" e "Salvar" ficam no topo e agem sobre a aba ativa.
+
     let origemParamAtiva = 'PF';
 
     function mostrarSubaba(area, origem) {
@@ -395,10 +391,6 @@
                 opcoesHtml += `<option value="${salvo.col}" selected>${salvo.col} (salvo)</option>`;
             }
 
-            // alex: agora em DUAS colunas separadas (igual Habitacional):
-            //  - "Valor Fixo": texto livre (campos sem relacionamento)
-            //  - "Origem de relacionamento": dropdown (campos de cadastro: Seguradora, Grupo/Ramo, Tipo Documento)
-            // O name continua o mesmo (fixo_...), então o backend não muda.
             const opcoesRelacionamento = OPCOES_RELACIONAMENTO[campo.nome];
             let fixoHtml, relacionamentoHtml;
             if (opcoesRelacionamento) {
@@ -421,8 +413,8 @@
                 <td class="py-2">
                     <select name="map_${origem}_${campo.nome}" class="form-select form-select-sm">${opcoesHtml}</select>
                 </td>
-                <td class="py-2">${fixoHtml}</td>
-                <td class="pe-3 py-2">${relacionamentoHtml}</td>
+                <td class="py-2">${relacionamentoHtml}</td>
+                <td class="pe-3 py-2">${fixoHtml}</td>
             </tr>`;
         });
 
@@ -440,10 +432,6 @@
             const primeiraAba = workbook.SheetNames[0];
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[primeiraAba], {header: 1, defval: ''});
 
-            // A planilha da Odontoprev traz linhas de identificação da corretora
-            // antes do cabeçalho de verdade — acha a linha certa pelo conteúdo
-            // (mesma lógica do ler_relatorio_odonto no servidor), em vez de
-            // pegar a primeira linha não vazia.
             let headers = [];
             for (let i = 0; i < jsonData.length; i++) {
                 const linha = jsonData[i];
@@ -570,7 +558,6 @@
         renderizarTabela('PF');
         renderizarTabela('PJ');
 
-        // Mostra o botão de salvar assim que o utilizador mexe em alguma linha
         $('#corpo-relacionamento-ramo').on('input change', 'input[type="text"], select', function() {
             $('#btn-salvar-ramo').fadeIn(200);
             if ($(this).closest('tr').hasClass('linha-existente')) {
