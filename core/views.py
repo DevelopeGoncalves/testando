@@ -2312,6 +2312,44 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
     return ids_duplicados
     # return set()
 
+
+# ============================================================
+# CAMPOS OBRIGATÓRIOS PARA EMITIR (Pendentes -> Emitidos)
+# ------------------------------------------------------------
+# Um registro só vai para EMITIDOS se TODOS estes campos estiverem preenchidos.
+# Os que faltarem algum ficam em Pendentes (destacados em amarelo).
+#
+# >>> Para tornar OUTRO campo obrigatório, é só adicionar o nome dele nesta lista. <<<
+#     (use o nome do campo no modelo RegistroProducao; FK ou texto, tanto faz)
+# ============================================================
+CAMPOS_OBRIGATORIOS_EMISSAO = [
+    'seguradora',      # Seguradora
+    'grupo_ramo',      # Grupo/Ramo
+    'tipo_documento',  # Tipo Documento
+    'documento',       # Documento
+    'colaborador',     # Matrícula do Colaborador
+]
+
+
+def _faltam_campos_emissao(reg):
+    """Retorna a lista de campos obrigatórios que estão VAZIOS neste registro.
+    Lista vazia = registro completo (pode emitir)."""
+    faltando = []
+    for nome in CAMPOS_OBRIGATORIOS_EMISSAO:
+        try:
+            campo = RegistroProducao._meta.get_field(nome)
+        except Exception:
+            campo = None
+        if campo is not None and campo.is_relation:
+            if not getattr(reg, nome + '_id', None):
+                faltando.append(nome)
+        else:
+            val = getattr(reg, nome, None)
+            if val is None or (isinstance(val, str) and not val.strip()):
+                faltando.append(nome)
+    return faltando
+
+
 @login_required
 def producao_lista_fase(request, agrupamento_id, fase):
 
@@ -2531,20 +2569,9 @@ def producao_lista_fase(request, agrupamento_id, fase):
             return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
 
         elif acao == 'emitir':
-            # Registo sem Seguradora não pode ir para Emitidos: volta para a
-            # lista com as linhas destacadas para o utilizador preencher.
-            ids_sem_seguradora = list(
-                RegistroProducao.objects.filter(
-                    agrupamento=agrupamento, fase__iexact='PENDENTES', seguradora__isnull=True
-                ).values_list('id', flat=True)
-            )
-            if ids_sem_seguradora:
-                ids_str = ','.join(str(i) for i in ids_sem_seguradora)
-                return redirect(
-                    f"{reverse('producao_lista_fase', args=[agrupamento.id, 'pendentes'])}"
-                    f"?sem_seguradora={ids_str}&bloqueio=emitir"
-                )
-
+            # alex: emite só os registros COMPLETOS (todos os campos obrigatórios
+            # preenchidos - ver CAMPOS_OBRIGATORIOS_EMISSAO). Os incompletos ficam
+            # em Pendentes, destacados para o usuário preencher.
             ids_duplicados = _ids_duplicados_no_lote('PENDENTES', agrupamento)
 
             campos_identificacao = [
@@ -2552,14 +2579,19 @@ def producao_lista_fase(request, agrupamento_id, fase):
                 'cpf_cnpj', 'cliente', 'nome_social', 'celular', 'telefone', 'email',
                 'agencia', 'contrato', 'segurado', 'vlr_seguro', 'grupo_ramo', 'unidade'
             ]
-            
+
             registos_pendentes = RegistroProducao.objects.filter(
                 agrupamento=agrupamento, fase__iexact='PENDENTES'
             ).exclude(id__in=ids_duplicados).prefetch_related('endossos_extras')
 
             total_emitidos = 0
+            ids_incompletos = []
             with transaction.atomic():
                 for reg in registos_pendentes:
+                    # Falta algum campo obrigatório? Fica em Pendentes.
+                    if _faltam_campos_emissao(reg):
+                        ids_incompletos.append(reg.id)
+                        continue
                     endossos = list(reg.endossos_extras.all())
 
                     for end in endossos:
@@ -2601,12 +2633,18 @@ def producao_lista_fase(request, agrupamento_id, fase):
 
             if total_emitidos:
                 messages.success(request, f'{total_emitidos} registo(s) enviado(s) para Emitidos!')
-            elif not ids_duplicados:
+            elif not ids_duplicados and not ids_incompletos:
                 messages.warning(request, 'Não há registos em Pendentes para enviar para Emitidos.')
 
-            if ids_duplicados:
-                ids_str = ','.join(str(i) for i in ids_duplicados)
-                return redirect(f"{reverse('producao_lista_fase', args=[agrupamento.id, 'pendentes'])}?duplicados={ids_str}&bloqueio=emitir")
+            # Quem ficou (faltando campo obrigatório ou duplicado) volta destacado em Pendentes.
+            if ids_incompletos or ids_duplicados:
+                partes = []
+                if ids_incompletos:
+                    partes.append('sem_seguradora=' + ','.join(str(i) for i in ids_incompletos))
+                if ids_duplicados:
+                    partes.append('duplicados=' + ','.join(str(i) for i in ids_duplicados))
+                partes.append('bloqueio=emitir')
+                return redirect(f"{reverse('producao_lista_fase', args=[agrupamento.id, 'pendentes'])}?{'&'.join(partes)}")
 
             return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
 
@@ -2633,11 +2671,9 @@ def producao_lista_fase(request, agrupamento_id, fase):
     else:
         ids_duplicados = set()
 
-    # Pendentes sem Seguradora — ficam destacados e travam o envio para Emitidos
+    # Pendentes incompletos (falta algum campo obrigatório) ficam destacados.
     if fase_banco == 'PENDENTES':
-        ids_sem_seguradora = set(
-            registros.filter(seguradora__isnull=True).values_list('id', flat=True)
-        )
+        ids_sem_seguradora = set(r.id for r in registros if _faltam_campos_emissao(r))
     else:
         ids_sem_seguradora = set()
 

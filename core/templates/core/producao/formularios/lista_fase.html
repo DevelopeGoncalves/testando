@@ -982,9 +982,10 @@ function configurarSubmissaoEdicao() {
 
         const qtd = semSeguradora.split(',').filter(Boolean).length;
         avisoElegante(
-            `${qtd} registo(s) estão sem Seguradora (destacados em amarelo). ` +
-            `Preencha a Seguradora nesses registos antes de enviar para Emitidos.`,
-            'Seguradora em falta'
+            `${qtd} registo(s) ficaram em Pendentes (destacados em amarelo) por faltar ` +
+            `campo obrigatório: Seguradora, Grupo/Ramo, Tipo Documento, Documento ou ` +
+            `Matrícula do Colaborador. Preencha esses campos e envie para Emitidos de novo.`,
+            'Campos obrigatórios em falta'
         );
     }
 
