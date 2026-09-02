@@ -8,7 +8,7 @@
         <span class="text-primary text-decoration-none">/</span>
         <a href="{% url 'producao_processamentos' %}" class="text-primary text-decoration-none">Processamentos</a>
         <span class="text-primary text-decoration-none">/</span>
-        <span class="text-primary text-decoration-none">Odonto</span>
+        <span class="text-primary text-decoration-none">Embracon</span>
     </span>
 {% endblock %}
 
@@ -20,7 +20,7 @@
             <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #6f42c1;" onclick="mostrarAcoes()">
                 <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
                     <i class="fas fa-tooth fa-3x mb-3" style="color: #6f42c1;"></i>
-                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Odonto</h6>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Embracon</h6>
                 </div>
             </div>
         </div>
@@ -137,9 +137,10 @@
                     <table class="table table-sm mb-0 align-middle">
                         <thead class="table-light border-bottom">
                             <tr class="small text-muted">
-                                <th width="30%" class="ps-3 py-2">Campo do sistema</th>
-                                <th width="40%" class="py-2">Coluna da planilha</th>
-                                <th width="30%" class="pe-3 py-2">Valor fixo (se não mapear coluna)</th>
+                                <th width="20%" class="ps-3 py-2">Campo no Sistema</th>
+                                <th width="30%" class="py-2">Coluna no Excel (Origem)</th>
+                                <th width="25%" class="py-2">Valor Fixo</th>
+                                <th width="25%" class="pe-3 py-2">Origem de relacionamento</th>
                             </tr>
                         </thead>
                         <tbody id="corpo-mapeamento-PF"></tbody>
@@ -165,9 +166,10 @@
                     <table class="table table-sm mb-0 align-middle">
                         <thead class="table-light border-bottom">
                             <tr class="small text-muted">
-                                <th width="30%" class="ps-3 py-2">Campo do sistema</th>
-                                <th width="40%" class="py-2">Coluna da planilha</th>
-                                <th width="30%" class="pe-3 py-2">Valor fixo (se não mapear coluna)</th>
+                                <th width="20%" class="ps-3 py-2">Campo no Sistema</th>
+                                <th width="30%" class="py-2">Coluna no Excel (Origem)</th>
+                                <th width="25%" class="py-2">Valor Fixo</th>
+                                <th width="25%" class="pe-3 py-2">Origem de relacionamento</th>
                             </tr>
                         </thead>
                         <tbody id="corpo-mapeamento-PJ"></tbody>
@@ -387,8 +389,12 @@
                 opcoesHtml += `<option value="${salvo.col}" selected>${salvo.col} (salvo)</option>`;
             }
 
+            // alex: agora em DUAS colunas separadas (igual Habitacional):
+            //  - "Valor Fixo": texto livre (campos sem relacionamento)
+            //  - "Origem de relacionamento": dropdown (campos de cadastro: Seguradora, Grupo/Ramo, Tipo Documento)
+            // O name continua o mesmo (fixo_...), então o backend não muda.
             const opcoesRelacionamento = OPCOES_RELACIONAMENTO[campo.nome];
-            let fixoHtml;
+            let fixoHtml, relacionamentoHtml;
             if (opcoesRelacionamento) {
                 let opcoesFixoHtml = '<option value="">-- Branco --</option>';
                 opcoesRelacionamento.forEach(function(nomeCadastro) {
@@ -397,9 +403,11 @@
                 if (salvo.fixo && opcoesRelacionamento.indexOf(salvo.fixo) === -1) {
                     opcoesFixoHtml += `<option value="${salvo.fixo}" selected>${salvo.fixo} (salvo)</option>`;
                 }
-                fixoHtml = `<select name="fixo_${origem}_${campo.nome}" class="form-select form-select-sm">${opcoesFixoHtml}</select>`;
+                relacionamentoHtml = `<select name="fixo_${origem}_${campo.nome}" class="form-select form-select-sm">${opcoesFixoHtml}</select>`;
+                fixoHtml = `<span class="text-muted small">—</span>`;
             } else {
                 fixoHtml = `<input type="text" name="fixo_${origem}_${campo.nome}" class="form-control form-control-sm" value="${salvo.fixo || ''}" placeholder="Valor fixo">`;
+                relacionamentoHtml = `<span class="text-muted small">—</span>`;
             }
 
             html += `<tr>
@@ -407,7 +415,8 @@
                 <td class="py-2">
                     <select name="map_${origem}_${campo.nome}" class="form-select form-select-sm">${opcoesHtml}</select>
                 </td>
-                <td class="pe-3 py-2">${fixoHtml}</td>
+                <td class="py-2">${fixoHtml}</td>
+                <td class="pe-3 py-2">${relacionamentoHtml}</td>
             </tr>`;
         });
 
