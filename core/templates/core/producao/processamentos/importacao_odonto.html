@@ -110,26 +110,27 @@
 
     <!-- ÁREA PARAMETRIZAR -->
     <div id="area-parametrizar" style="display: none;" class="mt-2">
-        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <!-- alex: abas (PF/PJ) e acoes (Ler Colunas / Salvar) alinhadas na MESMA linha do
+             titulo, igual ao Habitacional. O botao "Voltar" foi removido daqui. -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
             <h5 class="text-dark fw-bold mb-0"><i class="fas fa-sliders-h text-success me-2"></i> Parametrizar Colunas</h5>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="voltarParaAcoes()"><i class="fas fa-arrow-left"></i> Voltar</button>
-        </div>
-
-        <ul class="nav nav-pills mb-3">
-            <li class="nav-item"><button type="button" class="nav-link active" id="nav-parametrizar-PF" onclick="mostrarSubaba('parametrizar', 'PF')">Pessoa Física</button></li>
-            <li class="nav-item"><button type="button" class="nav-link" id="nav-parametrizar-PJ" onclick="mostrarSubaba('parametrizar', 'PJ')">PJ / PME</button></li>
-        </ul>
-
-        <div id="parametrizar-PF" class="subaba-parametrizar bg-white p-3 rounded border">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <ul class="nav nav-pills mb-0">
+                    <li class="nav-item"><button type="button" class="nav-link active py-1 px-3" id="nav-parametrizar-PF" onclick="mostrarSubaba('parametrizar', 'PF')" style="font-size:.875rem;">Pessoa Física</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link py-1 px-3" id="nav-parametrizar-PJ" onclick="mostrarSubaba('parametrizar', 'PJ')" style="font-size:.875rem;">PJ / PME</button></li>
+                </ul>
                 <input type="file" id="arquivo-ler-colunas-PF" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PF', this)">
-                <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="document.getElementById('arquivo-ler-colunas-PF').click()">
-                    <i class="fas fa-file-excel me-1"></i> Ler colunas de um arquivo PF de exemplo
+                <input type="file" id="arquivo-ler-colunas-PJ" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PJ', this)">
+                <button type="button" class="btn btn-outline-success btn-sm fw-bold d-flex align-items-center" onclick="lerColunasAbaAtiva()">
+                    <i class="fas fa-file-excel me-2"></i> Ler Colunas
                 </button>
-                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="salvarParametrizacao('PF')">
-                    <i class="fas fa-save me-1"></i> Salvar
+                <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center" onclick="salvarAbaAtiva()">
+                    <i class="fas fa-save me-2"></i> Salvar
                 </button>
             </div>
+        </div>
+
+        <div id="parametrizar-PF" class="subaba-parametrizar bg-white p-3 rounded border">
             <form id="form-param-PF" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="acao" id="acao_param_PF" value="">
@@ -150,15 +151,6 @@
         </div>
 
         <div id="parametrizar-PJ" class="subaba-parametrizar bg-white p-3 rounded border" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <input type="file" id="arquivo-ler-colunas-PJ" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PJ', this)">
-                <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="document.getElementById('arquivo-ler-colunas-PJ').click()">
-                    <i class="fas fa-file-excel me-1"></i> Ler colunas de um arquivo PJ de exemplo
-                </button>
-                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="salvarParametrizacao('PJ')">
-                    <i class="fas fa-save me-1"></i> Salvar
-                </button>
-            </div>
             <form id="form-param-PJ" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="acao" id="acao_param_PJ" value="">
@@ -365,12 +357,26 @@
         $('#area-parametrizar').fadeIn(200);
         renderizarTabela('PF');
         renderizarTabela('PJ');
+        mostrarSubaba('parametrizar', 'PF');
     }
+    // alex: guarda qual aba da parametrizacao esta aberta (PF ou PJ), porque agora os
+    // botoes "Ler Colunas" e "Salvar" ficam no topo e agem sobre a aba ativa.
+    let origemParamAtiva = 'PF';
+
     function mostrarSubaba(area, origem) {
         $('.subaba-' + area).hide();
         $('#' + area + '-' + origem).show();
         $('#nav-' + area + '-PF, #nav-' + area + '-PJ').removeClass('active');
         $('#nav-' + area + '-' + origem).addClass('active');
+        if (area === 'parametrizar') origemParamAtiva = origem;
+    }
+
+    function lerColunasAbaAtiva() {
+        document.getElementById('arquivo-ler-colunas-' + origemParamAtiva).click();
+    }
+
+    function salvarAbaAtiva() {
+        salvarParametrizacao(origemParamAtiva);
     }
 
     // --- PARAMETRIZAÇÃO ---
