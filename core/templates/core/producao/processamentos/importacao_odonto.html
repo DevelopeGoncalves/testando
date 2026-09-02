@@ -110,21 +110,17 @@
 
     <!-- ÁREA PARAMETRIZAR -->
     <div id="area-parametrizar" style="display: none;" class="mt-2">
-        <!-- alex: abas (PF/PJ) e acoes (Ler Colunas / Salvar) alinhadas na MESMA linha do
-             titulo, igual ao Habitacional. O botao "Voltar" foi removido daqui. -->
+        <!-- pf, pf e ler colunas alinhada na mesma linha do titulo -->
         <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
             <h5 class="text-dark fw-bold mb-0"><i class="fas fa-sliders-h text-success me-2"></i> Parametrizar Colunas</h5>
             <div class="d-flex align-items-center gap-2">
-                <!-- alex: PF/PJ como botoes outline (mesmo padrao do "Ler Colunas"): sem
-                     preenchimento quando NAO selecionado, preenchido so na aba ativa. -->
                 <button type="button" class="btn btn-outline-primary btn-sm fw-bold active" id="nav-parametrizar-PF" onclick="mostrarSubaba('parametrizar', 'PF')">Pessoa Física</button>
                 <button type="button" class="btn btn-outline-primary btn-sm fw-bold" id="nav-parametrizar-PJ" onclick="mostrarSubaba('parametrizar', 'PJ')">PJ / PME</button>
                 <input type="file" id="arquivo-ler-colunas-PF" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PF', this)">
                 <input type="file" id="arquivo-ler-colunas-PJ" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PJ', this)">
                 <button type="button" class="btn btn-outline-success btn-sm fw-bold d-flex align-items-center" onclick="lerColunasAbaAtiva()">
-                    <i class="fas fa-file-excel me-2"></i> Ler Colunas
+                    <i class="fas fa-file-excel me-2"></i> <span id="texto-btn-ler-colunas">Ler Colunas PF</span>
                 </button>
-                <!-- alex: Salvar segue o MESMO padrao (outline) do "Ler Colunas", so que azul. -->
                 <button type="button" class="btn btn-outline-primary btn-sm fw-bold d-flex align-items-center" onclick="salvarAbaAtiva()">
                     <i class="fas fa-save me-2"></i> Salvar
                 </button>
@@ -258,7 +254,7 @@
 
 </div>
 
-<!-- Modal: confirmar exclusão de relacionamentos -->
+<!-- confirmar exclusão de relacionamentos -->
 <div class="modal fade" id="modalConfirmarExclusaoRamo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-top: 4px solid #dc3545; border-radius: 8px;">
@@ -279,7 +275,7 @@
     </div>
 </div>
 
-<!-- Modal: confirmar alteração de regra existente -->
+<!-- confirmar alteração de regra existente -->
 <div class="modal fade" id="modalConfirmarEdicaoRamo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-top: 4px solid #fd7e14; border-radius: 8px;">
@@ -300,7 +296,7 @@
     </div>
 </div>
 
-<!-- Modal: preenchimento incompleto -->
+<!--  preenchimento incompleto -->
 <div class="modal fade" id="modalErroValidacaoRamo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-top: 4px solid #ffc107; border-radius: 8px;">
@@ -369,7 +365,10 @@
         $('#' + area + '-' + origem).show();
         $('#nav-' + area + '-PF, #nav-' + area + '-PJ').removeClass('active');
         $('#nav-' + area + '-' + origem).addClass('active');
-        if (area === 'parametrizar') origemParamAtiva = origem;
+        if (area === 'parametrizar') {
+            origemParamAtiva = origem;
+            $('#texto-btn-ler-colunas').text('Ler Colunas ' + origem);
+        }
     }
 
     function lerColunasAbaAtiva() {
