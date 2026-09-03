@@ -69,7 +69,7 @@ class Contratado(models.Model):
         return self.contratado
 
 class Seguradora(models.Model):
-    cod_seguradora = models.CharField("Cód. Seguradora", max_length=4, unique=True, null=True)
+    cod_seguradora = models.CharField("Cód. Seguradora", max_length=9, unique=True, null=True)
     seguradora = models.CharField("Seguradora", max_length=50, null=True)
     cnpj = models.CharField("CNPJ", max_length=14, blank=True)
     observacoes = models.CharField("Observações", max_length=80, blank=True, null=True)
