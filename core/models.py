@@ -555,6 +555,16 @@ class RegistroProducao(models.Model):
     celular = models.CharField('Celular', max_length=50, null=True, blank=True)
     telefone = models.CharField('Telefone', max_length=50, null=True, blank=True)
     email = models.CharField('E-mail', max_length=150, null=True, blank=True)
+    # ID do cadastro do cliente (Base > Formulários > Clientes).
+    # Preenchido automaticamente na importação a partir do CPF/CNPJ da planilha.
+    cliente_cadastro = models.ForeignKey(
+        'Cliente',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='registros_producao',
+        verbose_name='Cliente (cadastro)',
+    )
     
     # --- Dados da Agência (Preenchidos na hora da importação) ---
     grupo = models.CharField('Grupo', max_length=100, null=True, blank=True)
