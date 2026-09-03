@@ -5,7 +5,8 @@ from django.dispatch import receiver
 
 from django.db.models.signals import post_save
 from decimal import Decimal
-from .models import RegistroProducao, FinanceiroHabitacional
+from .models import Cliente, RegistroProducao, FinanceiroHabitacional
+from .clientes_sync import propagar_para_registros
 
 @receiver(user_logged_in)
 def funcao_ao_logar(request, user, **kwargs):
@@ -14,6 +15,14 @@ def funcao_ao_logar(request, user, **kwargs):
 @receiver(user_logged_out)
 def funcao_ao_deslogar(request, user, **kwargs):
     registrar_auditoria_backend(usuario=request.user, acao="Saiu", detalhe="Integra Banescor")
+
+# O card Clientes e a base do cadastro: alterou ali (nome, e-mail, celular,
+# telefone, nome social, CPF/CNPJ), a mudanca desce na hora para os registos
+# de producao do Odonto e do Habitacional ligados aquele cliente.
+@receiver(post_save, sender=Cliente)
+def espelhar_cliente_nos_registros(sender, instance, **kwargs):
+    propagar_para_registros(instance)
+
 
 @receiver(post_save, sender=RegistroProducao)
 def criar_financeiro_habitacional(sender, instance, created, **kwargs):

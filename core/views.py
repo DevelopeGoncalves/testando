@@ -14,6 +14,8 @@ from .models import (
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
 from .anbima import processar_planilha_anbima
 from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
+# Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
+from .clientes_sync import sincronizar_cliente, dados_do_cliente
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -658,80 +660,6 @@ def producao_formularios_painel(request, agrupamento_id):
         'valor_emitidos': valor_emitidos
     })
 
-# ---------------------------------------------------------------------------
-# Cadastro automatico de clientes na importacao (Odonto e Habitacional)
-# ---------------------------------------------------------------------------
-# Toda vez que a planilha parametrizada e importada, os dados do cliente
-# (Cliente, CPF/CNPJ, Celular, Telefone e E-mail) sao levados para o card
-# Base > Formularios > Clientes. A chave de busca e o CPF/CNPJ da planilha:
-# se o cliente ja existe, reaproveita o ID do banco; se nao existe, cadastra um
-# cliente novo e devolve o ID recem-criado para gravar no registro de producao.
-
-def _somente_digitos(valor):
-    """Deixa so os numeros (tira ponto, traco, barra e espaco do CPF/CNPJ)."""
-    if valor is None:
-        return ''
-    return ''.join(c for c in str(valor) if c.isdigit())
-
-
-def _cortar(valor, tamanho):
-    """Corta o texto no limite do campo do card Clientes."""
-    return str(valor or '').strip()[:tamanho]
-
-
-def _tipo_pessoa_cliente(cpf_cnpj_digitos, tipo_pessoa_texto=''):
-    """Acha o TipoPessoa cadastrado (Fisica / Juridica) para vincular ao cliente."""
-    texto = _texto_comparavel(tipo_pessoa_texto)
-    if texto:
-        juridica = texto.startswith('PJ') or 'JURID' in texto
-    else:
-        juridica = len(cpf_cnpj_digitos) > 11
-    procura = 'JURID' if juridica else 'FIS'
-    for tp in TipoPessoa.objects.all():
-        if procura in _texto_comparavel(tp.tipo_pessoa):
-            return tp
-    return None
-
-
-def _obter_ou_criar_cliente(cpf_cnpj, nome, celular='', telefone='', email='', tipo_pessoa=''):
-    """Puxa o ID do cliente no banco pelo CPF/CNPJ; cadastra se nao existir.
-
-    Retorna o objeto Cliente (para gravar o ID no registro de producao) ou
-    None quando a linha da planilha nao tem CPF/CNPJ.
-    """
-    documento = _somente_digitos(cpf_cnpj)[:14]
-    if not documento:
-        return None
-
-    # Procura o cliente ja cadastrado. Alem do numero limpo, testa o CPF
-    # formatado (000.000.000-00), que e como alguns cadastros antigos ficaram.
-    candidatos = [documento]
-    if len(documento) == 11:
-        candidatos.append(
-            f'{documento[:3]}.{documento[3:6]}.{documento[6:9]}-{documento[9:]}'
-        )
-
-    cliente = Cliente.objects.filter(cpf_cnpj__in=candidatos).first()
-    if cliente:
-        return cliente
-
-    try:
-        with transaction.atomic():
-            cliente = Cliente.objects.create(
-                cpf_cnpj=documento,
-                nome=_cortar(nome, 60) or documento,
-                celular=_somente_digitos(celular)[:11],
-                telefone=_somente_digitos(telefone)[:10],
-                email=_cortar(email, 80),
-                tipo_pessoa=_tipo_pessoa_cliente(documento, tipo_pessoa),
-            )
-    except IntegrityError:
-        # Outra linha da mesma planilha ja cadastrou esse CPF/CNPJ
-        cliente = Cliente.objects.filter(cpf_cnpj=documento).first()
-
-    return cliente
-
-
 @login_required
 def producao_processamentos(request):
 
@@ -1074,16 +1002,32 @@ def producao_odonto_import(request):
 
                 unidade_obj = linha['unidade']
 
-                # Cadastro automatico no card Clientes: puxa o ID pelo CPF/CNPJ
-                # da planilha e cadastra o cliente novo quando ainda nao existe.
-                cliente_obj = _obter_ou_criar_cliente(
+                # O card Clientes e a base: procura o cadastro pelo CPF/CNPJ da
+                # planilha (a chave que nunca muda), atualiza o que veio
+                # diferente (nome, e-mail, celular...) e devolve o ID.
+                cliente_obj = sincronizar_cliente(
                     cpf_cnpj=linha['cpf_cnpj'],
                     nome=linha['cliente'],
+                    nome_social=linha['nome_social'],
                     celular=linha['celular'],
                     telefone=linha['telefone'],
                     email=linha['email'],
                     tipo_pessoa=linha['tipo_pessoa'],
                 )
+
+                # Os dados do cliente no registo saem do cadastro (nao da
+                # planilha); a planilha so vale quando a linha veio sem CPF/CNPJ.
+                dados_cliente = {
+                    'tipo_pessoa': linha['tipo_pessoa'][:50],
+                    'cpf_cnpj': linha['cpf_cnpj'][:50],
+                    'cliente': linha['cliente'][:200],
+                    'nome_social': linha['nome_social'][:200],
+                    'celular': linha['celular'][:50],
+                    'telefone': linha['telefone'][:50],
+                    'email': linha['email'][:150],
+                }
+                if cliente_obj:
+                    dados_cliente.update(dados_do_cliente(cliente_obj))
 
                 try:
                     with transaction.atomic():
@@ -1096,14 +1040,8 @@ def producao_odonto_import(request):
                             tipo_documento=tipo_doc_obj,
                             documento=linha['documento'][:100],
                             endosso=str(linha['quantidade_vidas'])[:8],
-                            tipo_pessoa=linha['tipo_pessoa'][:50],
-                            cpf_cnpj=linha['cpf_cnpj'][:50],
-                            cliente=linha['cliente'][:200],
-                            nome_social=linha['nome_social'][:200],
-                            celular=linha['celular'][:50],
-                            telefone=linha['telefone'][:50],
-                            email=linha['email'][:150],
                             cliente_cadastro=cliente_obj,
+                            **dados_cliente,
                             grupo_ramo=ramo_obj,
                             premio_bruto=linha['premio_bruto'],
                             premio_liquido=linha['premio_liquido'],
@@ -1387,17 +1325,22 @@ def producao_habitacional_import(request):
                             colaborador_db = Colaborador.objects.filter(matricula=matricula_colaborador).first()
                             dados_salvar['nome_colaborador'] = colaborador_db.colaborador if colaborador_db else ''
 
-                        # Cadastro automatico no card Clientes: puxa o ID pelo
-                        # CPF/CNPJ da planilha parametrizada e cadastra o
-                        # cliente novo quando ainda nao existe no banco.
-                        dados_salvar['cliente_cadastro'] = _obter_ou_criar_cliente(
+                        # O card Clientes e a base: procura o cadastro pelo
+                        # CPF/CNPJ da planilha (a chave que nunca muda),
+                        # atualiza o que veio diferente e devolve o ID.
+                        cliente_obj = sincronizar_cliente(
                             cpf_cnpj=dados_salvar.get('cpf_cnpj'),
                             nome=dados_salvar.get('cliente') or dados_salvar.get('segurado'),
+                            nome_social=dados_salvar.get('nome_social'),
                             celular=dados_salvar.get('celular'),
                             telefone=dados_salvar.get('telefone'),
                             email=dados_salvar.get('email'),
                             tipo_pessoa=dados_salvar.get('tipo_pessoa'),
                         )
+                        dados_salvar['cliente_cadastro'] = cliente_obj
+                        if cliente_obj:
+                            # Os dados do cliente no registo saem do cadastro
+                            dados_salvar.update(dados_do_cliente(cliente_obj))
 
                         # PROTEÇÃO CONTRA FALHAS E DUPLICATAS USANDO SAVEPOINT
                         try:
@@ -2610,7 +2553,25 @@ def producao_lista_fase(request, agrupamento_id, fase):
 
                 reg.inicio_vigencia = _parse_date(request.POST.get('inicio_vigencia'))
                 reg.fim_vigencia = _parse_date(request.POST.get('fim_vigencia'))
-                reg.save() 
+
+                # O card Clientes e a base: o que foi digitado na ficha atualiza
+                # o cadastro do cliente (achado pelo CPF/CNPJ) e volta espelhado
+                # para o registo, deixando os dois lados sempre iguais.
+                cliente_obj = sincronizar_cliente(
+                    cpf_cnpj=reg.cpf_cnpj,
+                    nome=reg.cliente,
+                    nome_social=reg.nome_social,
+                    celular=reg.celular,
+                    telefone=reg.telefone,
+                    email=reg.email,
+                    tipo_pessoa=reg.tipo_pessoa,
+                )
+                reg.cliente_cadastro = cliente_obj
+                if cliente_obj:
+                    for campo, valor in dados_do_cliente(cliente_obj).items():
+                        setattr(reg, campo, valor)
+
+                reg.save()
                 
                 reg.endossos_extras.all().delete()
                 contador = 2

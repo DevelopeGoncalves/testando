@@ -162,6 +162,7 @@
                                 data-renovacao_propria="{{ reg.renovacao_propria|default:'' }}"
                                 data-tipopessoa="{{ reg.tipo_pessoa|default:'' }}"                               
                                 data-cpfcnpj="{{ reg.cpf_cnpj|default:'' }}"
+                                data-clienteid="{{ reg.cliente_cadastro_id|default:'' }}"
                                 data-cliente="{{ reg.cliente|default:'' }}"
                                 data-nomesocial="{{ reg.nome_social|default:'' }}"
                                 data-celular="{{ reg.celular|default:'' }}"
@@ -280,6 +281,11 @@
                         </div>
                         
                         <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ</label><input type="text" class="form-control" name="cpf_cnpj" id="edit_cpfcnpj"></div>
+                        <div class="col-md-3">
+                            <label class="fw small mb-1">ID do Cliente (cadastro)</label>
+                            <input type="text" class="form-control bg-light" id="edit_clienteid" readonly
+                                   title="ID do cadastro em Base > Formulários > Clientes. É de lá que vêm os dados do cliente.">
+                        </div>
                         <div class="col-md-3"><label class="fw small mb-1">Cliente</label><input type="text" class="form-control" name="cliente" id="edit_cliente"></div>
                         <div class="col-md-3"><label class="fw small mb-1">Nome Social</label><input type="text" class="form-control" name="nome_social" id="edit_nomesocial"></div>
                         <div class="col-md-3"><label class="fw small mb-1">Celular</label><input type="text" class="form-control" name="celular" id="edit_celular"></div>
@@ -652,6 +658,7 @@
         document.getElementById('edit_id').value = dados.id || '';
         document.getElementById('edit_cliente').value = dados.cliente || '';
         document.getElementById('edit_cpfcnpj').value = dados.cpfcnpj || '';
+        document.getElementById('edit_clienteid').value = dados.clienteid || 'sem cadastro';
         document.getElementById('edit_documento').value = dados.documento || '';
         document.getElementById('edit_nomesocial').value = dados.nomesocial || '';
         document.getElementById('edit_email').value = dados.email || '';
