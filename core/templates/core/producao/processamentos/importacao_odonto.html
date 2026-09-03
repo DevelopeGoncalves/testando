@@ -122,7 +122,7 @@
                 <input type="file" id="arquivo-ler-colunas-PF" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PF', this)">
                 <input type="file" id="arquivo-ler-colunas-PJ" class="d-none" accept=".xls,.xlsx" onchange="lerColunas('PJ', this)">
                 <button type="button" class="btn btn-outline-success btn-sm fw-bold d-flex align-items-center" onclick="lerColunasAbaAtiva()">
-                    <i class="fas fa-file-excel me-2"></i> Ler Colunas
+                    <i class="fas fa-file-excel me-2"></i> <span id="txt-ler-colunas">Ler Colunas PF</span>
                 </button>
                 <!-- alex: Salvar segue o MESMO padrao (outline) do "Ler Colunas", so que azul. -->
                 <button type="button" class="btn btn-outline-primary btn-sm fw-bold d-flex align-items-center" onclick="salvarAbaAtiva()">
@@ -369,7 +369,11 @@
         $('#' + area + '-' + origem).show();
         $('#nav-' + area + '-PF, #nav-' + area + '-PJ').removeClass('active');
         $('#nav-' + area + '-' + origem).addClass('active');
-        if (area === 'parametrizar') origemParamAtiva = origem;
+        if (area === 'parametrizar') {
+            origemParamAtiva = origem;
+            // alex: o texto do botao acompanha a aba ativa (Ler Colunas PF / Ler Colunas PJ)
+            document.getElementById('txt-ler-colunas').textContent = 'Ler Colunas ' + origem;
+        }
     }
 
     function lerColunasAbaAtiva() {
