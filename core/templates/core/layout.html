@@ -28,6 +28,7 @@
             --text-main: #333333;          /* Texto principal escuro */
             --text-muted: #6c757d;         /* Texto secundário */
             --border-light: #e3e9ef;       /* Bordas sutis */
+
         }   
 
         html, body {
@@ -254,6 +255,23 @@
         .modal-header { border-bottom: 1px solid var(--border-light) !important; }
         .modal-footer { border-top: 1px solid var(--border-light) !important; background: #f8f9fa !important; }
         
+        /* Classe sobrescrevendo todos os botões do site  Henrique */
+        .btn:not(.ignorar-btn-global) {
+            font-weight: 400 !important;
+            color: var(--brand-blue-card) !important;
+            border: 1px solid var(--brand-blue-card) !important;
+            background-color: transparent !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+
+        .btn:not(.ignorar-btn-global):hover {
+            background-color: var(--brand-blue-card) !important;
+            color: #ffffff !important;
+        }
+
+        i:not(.ignorar-icone-global) {
+            color: var(--brand-green);
+        }
     </style>
 </head>
 <body>
@@ -271,22 +289,22 @@
             {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 or request.user.perfil.base_proc_unidade > 0 or request.user.perfil.base_proc_colaboradores > 0 or request.user.perfil.base_proc_ramos > 0 or request.user.perfil.base_rel > 0 %}
             <li class="nav-item" id="nav-base">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuBase', this)">
-                    <i class="fas fa-th-large icon-main"></i><span>Base</span>
-                    <i class="fas fa-angle-left arrow"></i>
+                    <i class="fas fa-th-large icon-main" style="color: var(--brand-green) !important;"></i><span>Base</span>
+                    <i class="fas fa-angle-left arrow" style="color: #ffffff !important;"></i>
                 </a>
 
                 <ul id="submenuBase" class="submenu">
 
                     {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 %}
-                        <li><a href="{% url 'base_formularios' %}"><i class="far fa-circle"></i>Formulários</a></li>
+                        <li><a href="{% url 'base_formularios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Formulários</a></li>
                     {% endif %}
                     
                     {% if request.user.is_superuser or request.user.perfil.base_proc_unidade > 0 or request.user.perfil.base_proc_colaboradores > 0 or request.user.perfil.base_proc_ramos > 0 %}
-                        <li><a href="{% url 'base_processamentos' %}"><i class="far fa-circle"></i>Processamentos</a></li>
+                        <li><a href="{% url 'base_processamentos' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Processamentos</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser or request.user.perfil.base_rel > 0 %}
-                        <li><a href="{% url 'base_relatorios' %}"><i class="far fa-circle"></i>Relatórios</a></li>
+                        <li><a href="{% url 'base_relatorios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Relatórios</a></li>
                     {% endif %}
                 </ul>
 
@@ -296,26 +314,26 @@
             {% if request.user.is_superuser or request.user.perfil.prod_vendas_emissao > 0 or request.user.perfil.prod_vendas_novo > 0 or request.user.perfil.prod_vendas_renovacao > 0 or request.user.perfil.prod_vendas_endosso > 0 or request.user.perfil.prod_vendas_basenovo > 0 or request.user.perfil.prod_vendas_baserenovacao > 0 or request.user.perfil.prod_vendas_baseendosso > 0 or request.user.perfil.prod_form_vida > 0 or request.user.perfil.prod_form_bap > 0 or request.user.perfil.prod_form_prestamista > 0 or request.user.perfil.prod_form_patrimonialedemais > 0 or request.user.perfil.prod_form_consorcio > 0 or request.user.perfil.prod_form_odonto > 0 or request.user.perfil.prod_form_previdencia > 0 or request.user.perfil.prod_form_banescap > 0 or request.user.perfil.prod_form_saude > 0 or request.user.perfil.prod_form_habitacional > 0 or request.user.perfil.prod_proc_vida > 0 or request.user.perfil.prod_proc_bap > 0 or request.user.perfil.prod_proc_prestamista > 0 or request.user.perfil.prod_proc_patrimonialedemais > 0 or request.user.perfil.prod_proc_consorcio > 0 or request.user.perfil.prod_proc_odonto > 0 or request.user.perfil.prod_proc_previdencia > 0 or request.user.perfil.prod_proc_banescap > 0 or request.user.perfil.prod_proc_saude > 0 or request.user.perfil.prod_proc_habitacional > 0 or request.user.perfil.prod_proc_basenovo > 0 or request.user.perfil.prod_rel > 0 %}
             <li class="nav-item" id="nav-producao">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuProducao', this)">
-                    <i class="fas fa-users-cog icon-main"></i><span>Produção</span>
-                    <i class="fas fa-angle-left arrow"></i>
+                    <i class="fas fa-users-cog icon-main" style="color: var(--brand-green) !important;"></i><span>Produção</span>
+                    <i class="fas fa-angle-left arrow" style="color: #ffffff !important;"></i>
                 </a>
 
                 <ul id="submenuProducao" class="submenu">
 
                     {% if request.user.is_superuser or request.user.perfil.prod_vendas_emissao > 0 or request.user.perfil.prod_vendas_novo > 0 or request.user.perfil.prod_vendas_renovacao > 0 or request.user.perfil.prod_vendas_endosso > 0 or request.user.perfil.prod_vendas_basenovo > 0 or request.user.perfil.prod_vendas_baserenovacao > 0 or request.user.perfil.prod_vendas_baseendosso > 0 %}
-                    <li><a href="{% url 'producao_vendas' %}"><i class="far fa-circle"></i>Vendas</a></li>
+                    <li><a href="{% url 'producao_vendas' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Vendas</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser or request.user.perfil.prod_form_vida > 0 or request.user.perfil.prod_form_bap > 0 or request.user.perfil.prod_form_prestamista > 0 or request.user.perfil.prod_form_patrimonialedemais > 0 or request.user.perfil.prod_form_consorcio > 0 or request.user.perfil.prod_form_odonto > 0 or request.user.perfil.prod_form_previdencia > 0 or request.user.perfil.prod_form_banescap > 0 or request.user.perfil.prod_form_saude > 0 or request.user.perfil.prod_form_habitacional > 0 %}
-                        <li><a href="{% url 'producao_formularios' %}"><i class="far fa-1/2x fa-circle"></i>Formulários</a></li>
+                        <li><a href="{% url 'producao_formularios' %}"><i class="far fa-1/2x fa-circle" style="color: var(--brand-green) !important;"></i>Formulários</a></li>
                     {% endif %}
                     
                     {% if request.user.is_superuser or request.user.perfil.prod_proc_vida > 0 or request.user.perfil.prod_proc_bap > 0 or request.user.perfil.prod_proc_prestamista > 0 or request.user.perfil.prod_proc_patrimonialedemais > 0 or request.user.perfil.prod_proc_consorcio > 0 or request.user.perfil.prod_proc_odonto > 0 or request.user.perfil.prod_proc_previdencia > 0 or request.user.perfil.prod_proc_banescap > 0 or request.user.perfil.prod_proc_saude > 0 or request.user.perfil.prod_proc_habitacional > 0 or request.user.perfil.prod_proc_basenovo > 0 %}
-                    <li><a href="{% url 'producao_processamentos' %}"><i class="far fa-circle"></i>Processamentos</a></li>
+                    <li><a href="{% url 'producao_processamentos' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Processamentos</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser or request.user.perfil.prod_rel > 0 %}
-                    <li><a href="{% url 'producao_relatorios' %}"><i class="far fa-circle"></i>Relatórios</a></li>
+                    <li><a href="{% url 'producao_relatorios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Relatórios</a></li>
                     {% endif %}
 
                 </ul>
@@ -327,22 +345,22 @@
             {% if request.user.is_superuser or request.user.perfil.fin_form > 0 or request.user.perfil.fin_proc_habitacional > 0 or request.user.perfil.fin_rel > 0 %}
             <li class="nav-item" id="nav-financeiro">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuFin', this)">
-                    <i class="fas fa-file-invoice-dollar icon-main"></i><span>Financeiro</span>
-                    <i class="fas fa-angle-left arrow"></i>
+                    <i class="fas fa-file-invoice-dollar icon-main" style="color: var(--brand-green) !important;"></i><span>Financeiro</span>
+                    <i class="fas fa-angle-left arrow" style="color: #ffffff !important;"></i>
                 </a>
 
                 <ul id="submenuFin" class="submenu">
 
                     {% if request.user.is_superuser or request.user.perfil.fin_form > 0 %}
-                    <li><a href="{% url 'financeiro_formularios' %}"><i class="far fa-circle"></i>Formulários</a></li>
+                    <li><a href="{% url 'financeiro_formularios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Formulários</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser or request.user.perfil.fin_proc_habitacional > 0 %}
-                    <li><a href="{% url 'financeiro_processamentos' %}"><i class="far fa-circle"></i>Processamentos</a></li>
+                    <li><a href="{% url 'financeiro_processamentos' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Processamentos</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser or request.user.perfil.fin_rel > 0 %}
-                    <li><a href="{% url 'financeiro_relatorios' %}"><i class="far fa-circle"></i>Relatórios</a></li>
+                    <li><a href="{% url 'financeiro_relatorios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Relatórios</a></li>
                     {% endif %}
 
                 </ul>
@@ -354,21 +372,21 @@
             {% if request.user.is_superuser or request.user.perfil.admin_usuario > 0 or request.user.perfil.admin_listaestagiarios > 0 or request.user.perfil.admin_feriasestagiarios > 0 %}
             <li class="nav-item" id="nav-admin">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuAdmin', this)">
-                    <i class="fas fa-cogs icon-main"></i><span>Administração</span>
-                    <i class="fas fa-angle-left arrow"></i>
+                    <i class="fas fa-cogs icon-main" style="color: var(--brand-green) !important;"></i><span>Administração</span>
+                    <i class="fas fa-angle-left arrow" style="color: #ffffff !important;"></i>
                 </a>
                 <ul id="submenuAdmin" class="submenu">
 
                     {% if request.user.is_superuser or request.user.perfil.admin_usuario > 0 %}
-                    <li><a href="{% url 'listar_usuarios' %}"><i class="far fa-circle"></i>Usuários</a></li>
+                    <li><a href="{% url 'listar_usuarios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Usuários</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser or request.user.perfil.admin_listaestagiarios > 0 or request.user.perfil.admin_feriasestagiarios > 0 %}
-                    <li><a href="{% url 'estagiarios' %}"><i class="far fa-circle"></i>Estagiários</a></li>
+                    <li><a href="{% url 'estagiarios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Estagiários</a></li>
                     {% endif %}
 
                     {% if request.user.is_superuser %}
-                    <li><a href="/admin/"><i class="far fa-circle"></i>Painel Django</a></li>
+                    <li><a href="/admin/"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Painel Django</a></li>
                     {% endif %}
 
                 </ul>
@@ -380,7 +398,7 @@
             <li class="nav-item" id="nav-auditoria">
 
                 <a class="nav-link-custom" href="{% url 'auditoria' %}">
-                    <i class="fas fa-history icon-main"></i><span>Auditoria</span>
+                    <i class="fas fa-history icon-main" style="color: var(--brand-green) !important;"></i><span>Auditoria</span>
                 </a>
 
             </li>
@@ -388,7 +406,7 @@
 
             <li class="nav-item" id="nav-exportar">
                 <a class="nav-link-custom" href="{% url 'logout' %}" onclick="limparCacheMenu()">
-                    <i class="fas fa-sign-out-alt icon-main"></i><span class="">Sair</span>
+                    <i class="fas fa-sign-out-alt icon-main" style="color: var(--brand-green) !important;"></i><span class="">Sair</span>
                 </a>
             </li>
 
@@ -398,22 +416,22 @@
     <div id="page-content-wrapper">
         <nav class="top-navbar">
             <div class="d-flex align-items-center">
-                <button class="btn-menu me-3" id="menu-toggle"><i class="fas fa-bars"></i></button>
+                <button class="btn-menu me-3" id="menu-toggle"><i class="fas fa-bars" style="color: #919191 !important;"></i></button>
                 
                 <!-- BREADCRUMB AGORA FICA AQUI DENTRO DA NAVBAR -->
                 <div class="breadcrumb-text m-0">
                     <a href="{% url 'home' %}" class="text-secondary text-decoration-none" title="Ir para o Início">
-                        <i class="fas fa-home me-2"></i>
+                        <i class="fas fa-home me-2" style="color: #919191 !important;"></i>
                     </a>
                     {% block breadcrumb %}
-                        <span style="font-size: 1rem; font-weight: normal;">
+                        <span style="font-size: 1rem; font-weight: 200;">
                             <span class="text-primary text-decoration-none">Home</span>
                         </span>
                     {% endblock %}
                 </div>
             </div>
             
-            <div><span class="me-3 small">{{ user.username }}</span><i class="fas fa-user-circle fa-lg"></i></div>
+            <div><span class="me-3 small">{{ user.username }}</span><i class="fas fa-user-circle fa-lg" style="color: #919191 !important;"></i></div>
         </nav>
         
         <div class="container-fluid px-4">
@@ -456,7 +474,7 @@
         </div>
     </div>
 </div>
-
+    
 <!-- MODAL GLOBAL: Confirmação (substitui confirm()) -->
 <div class="modal fade" id="modalConfirmarGlobal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -466,7 +484,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center py-4">
-                <i class="fas fa-exclamation-circle fa-4x mb-3 text-warning"></i>
+                <i class="fas fa-exclamation-triangle fa-4x mb-3 text-warning"></i>
                 <p class="text-muted px-3 mb-0" id="modalConfirmarGlobalMensagem"></p>
             </div>
             <div class="modal-footer bg-light border-top-0 d-flex justify-content-between">
