@@ -67,11 +67,11 @@
                 </button>
 
                 {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 2 %}
-                <button class="btn btn-success me-1" onclick="exportarCSV('unidades.csv')"><i class="fas fa-file-csv"></i> Exportar</button> 
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-unidades')"><i class="fas fa-trash-alt"></i> Excluir</button>
                 {% endif %}
-
+                
                 {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 2 %}
-                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-unidades')"><i class="fas fa-trash-alt"></i></button>
+                <button class="btn btn-success me-1" onclick="exportarCSV('unidades.csv')"><i class="fas fa-file-csv"></i> Exportar</button> 
                 {% endif %}
 
                 {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 1 %}

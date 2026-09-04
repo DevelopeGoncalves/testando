@@ -21,12 +21,13 @@
                 <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
+                
+                {% if request.user.is_superuser or request.user.perfil.base_form_contratados > 2 %}
+                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-contratados')"><i class="fas fa-trash-alt"></i> Excluir</button>
+                {% endif %}
+                
                 {% if request.user.is_superuser or request.user.perfil.base_form_contratados > 2 %}
                 <button class="btn btn-success me-1" onclick="exportarCSV('contratados.csv')"><i class="fas fa-file-csv"></i> Exportar</button> 
-                {% endif %}
-
-                {% if request.user.is_superuser or request.user.perfil.base_form_contratados > 2 %}
-                <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-contratados')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
                 
                 {% if request.user.is_superuser or request.user.perfil.base_form_contratados > 1 %}
