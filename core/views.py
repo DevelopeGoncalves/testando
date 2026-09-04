@@ -2367,8 +2367,7 @@ CAMPOS_OBRIGATORIOS_EMISSAO = [
     'seguradora',      # Seguradora
     'grupo_ramo',      # Grupo/Ramo
     'tipo_documento',  # Tipo Documento
-    'documento',       # Documento
-    'colaborador',     # Matrícula do Colaborador
+    'documento',       # Documento     # Matrícula do Colaborador
 ]
 
 
