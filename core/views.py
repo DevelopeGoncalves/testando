@@ -829,15 +829,6 @@ def producao_anbima_import(request):
 
 
 # Campos do sistema que a parametrização Odonto liga a uma coluna do Excel
-# (ou a um valor fixo). Ambas as origens (PF/PJ) usam a mesma lista — são
-# exatamente as colunas que aparecem depois em Produção > Formulários > Odonto.
-# tipo_documento tem "Proposta" como padrão (aplicado em odonto.py
-# quando nada é mapeado), mas continua editável aqui como Seguradora/Grupo-Ramo.
-# Ficam de fora (automáticos, não entram na tela de parametrização):
-# - filtro de status e casamento do vendedor com Colaboradores (nomes de
-#   coluna fixos do export da Odontoprev, ver odonto.COLUNA_*);
-# - tipo_pessoa (PF/PJ conforme a planilha importada), fixo em odonto.py;
-# - mes_producao (puxado do "Mês Prod." do cadastro de Produtos).
 CAMPOS_ODONTO = [
     {'nome': 'seguradora', 'label': 'Seguradora'},
     {'nome': 'grupo_ramo', 'label': 'Grupo/Ramo (Plano)'},
@@ -929,7 +920,6 @@ def producao_odonto_import(request):
             return redirect('producao_odonto_import')
 
         # Mês da produção vem do "Mês Prod." do cadastro de Produtos (Base >
-        # Formulários > Produtos) — não é digitado na importação.
         produto_odonto = Produto.objects.filter(agrupamento=agrupamento).first()
         if not produto_odonto or not produto_odonto.mes_producao_em_aberto:
             messages.error(request, 'Defina o "Mês Prod." do Produto Odonto (Base > Formulários > Produtos) antes de importar.')
@@ -950,9 +940,6 @@ def producao_odonto_import(request):
         colaboradores = Colaborador.objects.select_related('unidade').all()
 
         # De-para "Relacionar Ramos": o texto que vem da coluna da planilha
-        # mapeada em Grupo/Ramo (Plano) aponta para um Ramo já cadastrado em
-        # Base > Formulários > Ramos. A chave ignora acento, caixa e espaço a
-        # mais, porque o nome do plano na planilha nunca vem igualzinho.
         depara_ramos = {
             _texto_comparavel(regra.nome_planilha): regra.ramo_base
             for regra in CompatibilidadeRamoOdonto.objects.select_related('ramo_base').all()
@@ -2354,15 +2341,7 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
     # return set()
 
 
-# ============================================================
 # CAMPOS OBRIGATÓRIOS PARA EMITIR (Pendentes -> Emitidos)
-# ------------------------------------------------------------
-# Um registro só vai para EMITIDOS se TODOS estes campos estiverem preenchidos.
-# Os que faltarem algum ficam em Pendentes (destacados em amarelo).
-#
-# >>> Para tornar OUTRO campo obrigatório, é só adicionar o nome dele nesta lista. <<<
-#     (use o nome do campo no modelo RegistroProducao; FK ou texto, tanto faz)
-# ============================================================
 CAMPOS_OBRIGATORIOS_EMISSAO = [
     'seguradora',      # Seguradora
     'grupo_ramo',      # Grupo/Ramo
