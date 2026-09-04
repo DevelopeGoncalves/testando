@@ -18,7 +18,7 @@
         <h4 class="m-0"><i class="fas fa-id-card text-info"></i> Gerenciar Tipos de Pessoa</h4>
         <div>
             {% if request.user.is_superuser or request.user.perfil.base_form_tipopessoa > 2 %}
-            <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-tipo')"><i class="fas fa-trash-alt"></i></button>
+            <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-tipo')"><i class="fas fa-trash-alt"></i> Excluir</button>
             {% endif %}
 
             {% if request.user.is_superuser or request.user.perfil.base_form_tipopessoa > 1 %}
