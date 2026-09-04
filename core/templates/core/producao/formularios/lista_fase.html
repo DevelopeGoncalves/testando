@@ -74,6 +74,25 @@
         resize: none; /* Impede que o textarea seja redimensionado */
     }
 
+    /* ==========================================================
+       CORES DOS CAMPOS DO CLIENTE (Bloco Apolice)
+       ==========================================================
+       Estes campos vem do cadastro em Base > Formularios > Clientes.
+       Para trocar a cor de fundo, mude o "background-color" abaixo.
+       Para trocar a cor da borda, mude o "border-color".
+       Sugestoes de verde claro: #eaf7ec (bem claro) | #d9f2e0 | #c9edd5
+    */
+    .campo-cliente {
+        background-color: #e8f7ec !important;   /* verde claro do fundo */
+        border-color: #b7dfc3 !important;       /* borda verde suave */
+    }
+
+    .campo-cliente:focus {
+        background-color: #f3fbf5 !important;   /* verde ainda mais claro ao clicar */
+        border-color: #6ab97f !important;
+        box-shadow: 0 0 0 0.2rem rgba(106, 185, 127, 0.25) !important;
+    }
+
 </style>
 
 <div id="tela-fase" style="min-width: 0; width: 100%; overflow: hidden;">
@@ -280,25 +299,22 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ</label><input type="text" class="form-control" name="cpf_cnpj" id="edit_cpfcnpj"></div>
-                        <div class="col-md-3">
+                        <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ</label><input type="text" class="form-control campo-cliente" name="cpf_cnpj" id="edit_cpfcnpj"></div>
+                        <!-- ID do Cliente (cadastro): OCULTO para o usuario.
+                             O campo continua existindo para o sistema/JS, so nao aparece na tela.
+                             Para voltar a mostrar, basta apagar a classe "d-none" da linha abaixo. -->
+                        <div class="col-md-3 d-none">
                             <label class="fw small mb-1">ID do Cliente (cadastro)</label>
                             <input type="text" class="form-control bg-light" id="edit_clienteid" readonly
                                    title="ID do cadastro em Base > Formulários > Clientes. É de lá que vêm os dados do cliente.">
                         </div>
-                        <div class="col-md-3"><label class="fw small mb-1">Cliente</label><input type="text" class="form-control" name="cliente" id="edit_cliente"></div>
-                        <div class="col-md-3"><label class="fw small mb-1">Nome Social</label><input type="text" class="form-control" name="nome_social" id="edit_nomesocial"></div>
-                        <div class="col-md-3"><label class="fw small mb-1">Celular</label><input type="text" class="form-control" name="celular" id="edit_celular"></div>
-                        <div class="col-md-3"><label class="fw small mb-1">Telefone</label><input type="text" class="form-control" name="telefone" id="edit_telefone"></div>
-                        <div class="col-md-3"><label class="fw small mb-1">E-mail</label><input type="email" class="form-control" name="email" id="edit_email"></div>
-                        <div class="col-md-3">
-                            <label class="fw small mb-1">Matrícula do Colaborador</label>
-                            <div class="input-container"> 
-                                <input type="hidden" name="colaborador" id="edit_colaborador_val">
-                                <input type="text" id="edit_colaborador_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
-                                <div id="dropdown_colaborador" class="lista-suspensa d-none"></div>
-                            </div>
-                        </div>                                                                         
+                        <div class="col-md-3"><label class="fw small mb-1">Cliente</label><input type="text" class="form-control campo-cliente" name="cliente" id="edit_cliente"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">Nome Social</label><input type="text" class="form-control campo-cliente" name="nome_social" id="edit_nomesocial"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">Celular</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">Telefone</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">E-mail</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email"></div>
+                        <!-- Matricula do Colaborador foi removida daqui: ela ja existe
+                             no bloco de Vidas/Endosso, que e o campo que o sistema grava. -->
                     </div>
 
                     <div id="container-endossos">
@@ -607,7 +623,6 @@
         inicializarDropdownPesquisa('edit_gruporamo_texto', 'edit_gruporamo_val', 'dropdown_gruporamo', listaGrupoRamo);
         inicializarDropdownPesquisa('edit_tipodoc_texto', 'edit_tipodoc_val', 'dropdown_tipodoc', listaTipoDoc);
         inicializarDropdownPesquisa('edit_tipopessoa_texto', 'edit_tipopessoa_val', 'dropdown_tipopessoa', listaTipoPessoa);
-        inicializarDropdownPesquisa('edit_colaborador_texto', 'edit_colaborador_val', 'dropdown_colaborador', listaColaboradores);
 
         inicializarDropdownPesquisa('edit_unidade_texto', 'edit_unidade_val', 'dropdown_unidade', listaUnidades, function(item) { autoPreencherUnidadeDrop(item, ''); });
         inicializarDropdownPesquisa('edit_colaborador_endosso_texto', 'edit_colaborador_endosso_val', 'dropdown_colaborador_endosso', listaColaboradores);
@@ -686,7 +701,6 @@
         setCustomDropdownValue('edit_gruporamo_val', 'edit_gruporamo_texto', dados.gruporamo, listaGrupoRamo);
         setCustomDropdownValue('edit_tipodoc_val', 'edit_tipodoc_texto', dados.tipodoc, listaTipoDoc);
         setCustomDropdownValue('edit_tipopessoa_val', 'edit_tipopessoa_texto', dados.tipopessoa, listaTipoPessoa);
-        setCustomDropdownValue('edit_colaborador_val', 'edit_colaborador_texto', dados.colaborador, listaColaboradores);
         
         setCustomDropdownValue('edit_unidade_val', 'edit_unidade_texto', dados.unidade, listaUnidades);
         setCustomDropdownValue('edit_colaborador_endosso_val', 'edit_colaborador_endosso_texto', dados.colaborador, listaColaboradores);
