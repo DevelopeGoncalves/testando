@@ -290,14 +290,7 @@
                         
                         <div class="col-md-3"><label class="fw small mb-1">Documento</label><input type="text" class="form-control" name="documento" id="edit_documento"></div>
                         
-                        <div class="col-md-3">
-                            <label class="fw small mb-1">Tipo de Pessoa</label>
-                            <div class="input-container"> 
-                                <input type="hidden" name="tipo_pessoa" id="edit_tipopessoa_val">
-                                <input type="text" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off">
-                                <div id="dropdown_tipopessoa" class="lista-suspensa d-none"></div>
-                            </div>
-                        </div>
+                        
                         
                         <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ</label><input type="text" class="form-control campo-cliente" name="cpf_cnpj" id="edit_cpfcnpj"></div>
                         <!-- ID do Cliente (cadastro): OCULTO para o usuario.
@@ -309,10 +302,18 @@
                                    title="ID do cadastro em Base > Formulários > Clientes. É de lá que vêm os dados do cliente.">
                         </div>
                         <div class="col-md-3"><label class="fw small mb-1">Cliente</label><input type="text" class="form-control campo-cliente" name="cliente" id="edit_cliente"></div>
+                        <div class="col-md-2">
+                            <label class="fw small mb-1">Tipo de Pessoa</label>
+                            <div class="input-container"> 
+                                <input type="hidden" name="tipo_pessoa" id="edit_tipopessoa_val">
+                                <input type="text"  class="form-control campo-cliente" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off">
+                                <div id="dropdown_tipopessoa" class="lista-suspensa d-none"></div>
+                            </div>
+                        </div>
                         <div class="col-md-3"><label class="fw small mb-1">Nome Social</label><input type="text" class="form-control campo-cliente" name="nome_social" id="edit_nomesocial"></div>
-                        <div class="col-md-4"><label class="fw small mb-1">Celular</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular"></div>
-                        <div class="col-md-4"><label class="fw small mb-1">Telefone</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone"></div>
-                        <div class="col-md-4"><label class="fw small mb-1">E-mail</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email"></div>
+                        <div class="col-md-2"><label class="fw small mb-1">Celular</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular"></div>
+                        <div class="col-md-2"><label class="fw small mb-1">Telefone</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">E-mail</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email"></div>
                         <!-- Matricula do Colaborador foi removida daqui: ela ja existe
                              no bloco de Vidas/Endosso, que e o campo que o sistema grava. -->
                     </div>
