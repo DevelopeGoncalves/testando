@@ -582,6 +582,50 @@ def lista_clientes(request):
 
 # 4. MÓDULO DE PRODUÇÃO
 
+# Cada agrupamento (produto) tem o seu proprio campo de permissao no perfil do
+# usuario. A ordem importa: usa o primeiro trecho que casar com o nome do
+# agrupamento (por isso 'banescap' vem antes de 'bap', 'previd' antes de 'vida').
+_TRECHOS_AGRUPAMENTO_PERFIL = [
+    ('HABITACIONAL', 'habitacional'),
+    ('PATRIMONIAL', 'patrimonialedemais'),
+    ('PRESTAMISTA', 'prestamista'),
+    ('PREVID', 'previdencia'),
+    ('BANESCAP', 'banescap'),
+    ('ODONTO', 'odonto'),
+    ('CONS', 'consorcio'),
+    ('SAUD', 'saude'),
+    ('BAP', 'bap'),
+    ('VIDA', 'vida'),
+]
+
+
+def _sufixo_perfil_agrupamento(agrupamento):
+    """Sufixo do campo de permissao (ex.: 'odonto') a partir do nome do agrupamento."""
+    nome = _texto_comparavel(getattr(agrupamento, 'agrupamento', agrupamento))
+    for trecho, sufixo in _TRECHOS_AGRUPAMENTO_PERFIL:
+        if trecho in nome:
+            return sufixo
+    return None
+
+
+def _nivel_formulario(user, agrupamento):
+    """Nivel (0-3) do usuario no card de Formularios do agrupamento indicado.
+
+    0 = sem acesso | 1 = leitor (so consulta) | 2 = editor (tudo menos apagar)
+    | 3 = gestor (tudo, inclusive apagar).
+    """
+    if user.is_superuser:
+        return 3
+    perfil = getattr(user, 'perfil', None)
+    sufixo = _sufixo_perfil_agrupamento(agrupamento)
+    if not perfil or not sufixo:
+        return 0
+    try:
+        return int(getattr(perfil, 'prod_form_' + sufixo, 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 @login_required
 def producao_formularios(request):
 
@@ -609,25 +653,15 @@ def producao_formularios(request):
 def producao_formularios_painel(request, agrupamento_id):
     
         
-    # negar acesso ao usuario
-    user = request.user
-    tem_permissao_base = False
+    # Pega o agrupamento exato que o usuário clicou na tela
+    agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
 
-    if not user.is_superuser and hasattr(user, 'perfil'):
-        tem_permissao_base = any(
-            valor > 0 
-            for campo, valor in user.perfil.__dict__.items() 
-            if campo.startswith('prod_form_') and isinstance(valor, int)
-        )
-
-    if not (user.is_superuser or tem_permissao_base):
+    # negar acesso ao usuario: precisa de permissao NESTE produto (nivel 1 ja ve o painel)
+    if _nivel_formulario(request.user, agrupamento) < 1:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
     # ----
 
-
-    # Pega o agrupamento exato que o usuário clicou na tela
-    agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
     
     # Prepara as consultas (QuerySets) por fase
     qs_importados = RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact='IMPORTADOS')
@@ -2372,22 +2406,41 @@ def _faltam_campos_emissao(reg):
 @login_required
 def producao_lista_fase(request, agrupamento_id, fase):
 
-
-    # negar acesso ao usuario
     user = request.user
+    agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
 
-    if not (user.is_superuser or (hasattr(user, 'perfil') and user.perfil.prod_form_habitacional > 0)):
+    # negar acesso ao usuario: o nivel vem do campo do PROPRIO produto (ex.: Odonto usa
+    # prod_form_odonto). Nivel 1 = leitor (so consulta), 2 = editor (tudo menos apagar),
+    # 3 = gestor (tudo).
+    nivel = _nivel_formulario(user, agrupamento)
+    if nivel < 1:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
+    pode_editar = nivel >= 2
+    pode_excluir = nivel >= 3
     #-----
 
-    agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
     fase_banco = fase.upper()
 
     if request.method == 'POST':
         acao = request.POST.get('acao')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+        # Barreira de nivel: leitor nao altera nada e so o gestor apaga.
+        if acao in ('editar', 'validar', 'emitir'):
+            permitido = pode_editar
+            erro_nivel = 'O seu nível de acesso permite apenas consultar os registos.'
+        else:
+            permitido = pode_excluir
+            erro_nivel = 'Apenas usuários Gestor podem apagar registos.'
+
+        if not permitido:
+            if is_ajax:
+                return JsonResponse({'sucesso': False, 'erro': erro_nivel}, status=403)
+            messages.error(request, erro_nivel)
+            return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
         if acao == 'editar':
-            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             registro_id = request.POST.get('registro_id')
             if registro_id:
                 reg = get_object_or_404(RegistroProducao, id=registro_id)
@@ -2730,6 +2783,8 @@ def producao_lista_fase(request, agrupamento_id, fase):
         'ramos_hab': ramos_hab,
         'ids_duplicados': ids_duplicados,
         'ids_sem_seguradora': ids_sem_seguradora,
+        'pode_editar': pode_editar,
+        'pode_excluir': pode_excluir,
     }
 
     return render(request, 'core/producao/formularios/lista_fase.html', context)
