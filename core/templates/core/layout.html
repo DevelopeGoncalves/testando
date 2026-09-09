@@ -57,8 +57,8 @@
             font-size: 22px; font-weight: bold; letter-spacing: -0.03em;
         }
         .sidebar-brand a { text-decoration: none; display: block; }
-        .brand-light { color: #ffffff; font-weight: 400; }
-        .brand-bold { color: var(--brand-green); font-weight: 500; }
+        .brand-light { color: #ffffff; font-weight: 400;}
+        .brand-bold { color: var(--brand-green); font-weight: 600; font-size: 1.2rem}
 
         .sidebar-nav { padding: 0; list-style: none; margin-top: 10px; flex-grow: 1; }
         .nav-item { border-left: 3px solid transparent; cursor: pointer; margin-bottom: 2px; }
@@ -117,9 +117,16 @@
         
         /* Breadcrumb integrado na barra superior */
         .breadcrumb-text { font-size: 1.05rem; color: var(--text-main); display: inline-flex; align-items: center; }
-        .breadcrumb-text a { color: var(--text-muted) !important; transition: color 0.2s; }
+        .breadcrumb-text a { 
+            color: var(--text-muted) !important;
+            transition: color 0.2s;
+            font-weight: 200 !important;
+        }
         .breadcrumb-text a:hover { color: var(--brand-blue-card) !important; }
         .breadcrumb-text .text-primary { color: var(--brand-blue-card) !important; font-weight: 600; margin-left: 4px; }
+        .breadcrumb-text span {
+            font-weight: 200 !important;
+        }
 
         /* --- CARDS --- */
         .card-menu {
@@ -270,7 +277,7 @@
         }
 
         i:not(.ignorar-icone-global) {
-            color: var(--brand-green);
+            color: var(--brand-green);  
         }
     </style>
 </head>
@@ -280,7 +287,7 @@
     <nav id="sidebar-wrapper">
         <div class="sidebar-brand">
             <a href="{% url 'home' %}" style="text-decoration:none;">
-                <span class="brand-bold">Integra</span><span class="brand-light">Banescor</span>
+                <span class="brand-bold">i</span><span class="brand-light">Banescor</span>
             </a>
         </div>
         <ul class="sidebar-nav">
@@ -421,7 +428,7 @@
                 <!-- BREADCRUMB AGORA FICA AQUI DENTRO DA NAVBAR -->
                 <div class="breadcrumb-text m-0">
                     <a href="{% url 'home' %}" class="text-secondary text-decoration-none" title="Ir para o Início">
-                        <i class="fas fa-home me-2" style="color: #919191 !important;"></i>
+                        <i class="fas fa-home me-2"></i>
                     </a>
                     {% block breadcrumb %}
                         <span style="font-size: 1rem; font-weight: 200;">
