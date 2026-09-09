@@ -92,7 +92,7 @@
         var form = document.getElementById('formUpload');
         var overlay = document.getElementById('loadingOverlay');
 
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', async function(e) {
             // 1. Impede o envio padrão do formulário que causa o loop do spinner
             e.preventDefault();
 
@@ -102,18 +102,34 @@
             // 3. Empacota os dados (incluindo o arquivo e o token CSRF)
             var formData = new FormData(form);
 
-            // 4. Envia a requisição via AJAX
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao processar o arquivo.');
+            try {
+                // 4. Envia a requisição via AJAX
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const contentType = response.headers.get('Content-Type') || '';
+                const ehPlanilha = contentType.indexOf('spreadsheetml') !== -1;
+
+                // BUG CORRIGIDO: quando o Django não consegue gerar a planilha
+                // (ex.: fundo não cadastrado, erro na leitura, cadastro faltando),
+                // ele devolve a página de erro em HTML, e não o arquivo .xlsx.
+                // Antes, esse HTML era baixado do mesmo jeito, virando um
+                // "ANBIMA_Processado.xlsx" corrompido que o Excel não conseguia abrir.
+                // Agora, sempre que a resposta não for de fato a planilha, mostramos
+                // a própria página de erro devolvida pelo Django (com a mensagem ou
+                // a lista de fundos não cadastrados) em vez de tentar baixar algo.
+                if (!response.ok || !ehPlanilha) {
+                    const html = await response.text();
+                    document.open();
+                    document.write(html);
+                    document.close();
+                    return;
                 }
-                
+
                 // Tenta capturar o nome do arquivo original vindo do Django
-                let filename = "ANBIMA_Processado.xlsx"; 
+                let filename = "ANBIMA_Processado.xlsx";
                 let disposition = response.headers.get('Content-Disposition');
                 if (disposition && disposition.indexOf('attachment') !== -1) {
                     let matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
@@ -121,32 +137,29 @@
                         filename = matches[1].replace(/['"]/g, '');
                     }
                 }
-                
+
                 // Transforma a resposta em um "Blob" (dados binários do arquivo)
-                return response.blob().then(blob => ({ blob, filename }));
-            })
-            .then(data => {
+                const blob = await response.blob();
+
                 // 5. Cria um link invisível na tela para forçar o download do arquivo
-                let url = window.URL.createObjectURL(data.blob);
+                let url = window.URL.createObjectURL(blob);
                 let a = document.createElement('a');
                 a.href = url;
-                a.download = data.filename;
+                a.download = filename;
                 document.body.appendChild(a);
                 a.click(); // Clica automaticamente
-                
+
                 // Limpa a memória e remove o link invisível
                 a.remove();
-                window.URL.revokeObjectURL(url); 
-            })
-            .catch(error => {
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
                 console.error(error);
                 alert("Ocorreu um erro durante o processamento. Verifique se a planilha está no formato correto.");
-            })
-            .finally(() => {
+            } finally {
                 // 6. Esconde o spinner no final, dando sucesso ou erro!
                 overlay.style.display = 'none';
                 form.reset(); // Opcional: limpa o formulário para o próximo envio
-            });
+            }
         });
     });
 </script>
