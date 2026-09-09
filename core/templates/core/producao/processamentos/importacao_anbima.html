@@ -64,7 +64,9 @@
                             <label class="form-label fw-bold">Data de corte (opcional)</label>
                             
                             <div class="col-12 col-sm-6 col-md-5">
-                                <input class="form-control" type="date" name="data_corte">
+                                {# Vem preenchido com o dia 1 do mês atual (ex.: processar em outubro/2026 já #}
+                                {# abre 01/10/2026). A pessoa pode apagar ou trocar a data normalmente. #}
+                                <input class="form-control" type="date" name="data_corte" value="{% now 'Y-m-01' %}">
                             </div>
                             
                             <div class="form-text mt-2">
