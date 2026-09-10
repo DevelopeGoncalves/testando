@@ -75,6 +75,22 @@
     }
 
     /* ==========================================================
+       CLIQUE PARA COPIAR (ficha travada: Emitidos ou perfil Leitor)
+       ==========================================================
+       Igual ao card Novo/Base Novo do Vendas: com a ficha travada, o campo
+       fica "sem interacao" (pointer-events: none) para o clique passar direto
+       para a coluna, que copia o valor e mostra o aviso "Copiado!".
+    */
+    #form-fase form.form-dados-travados input,
+    #form-fase form.form-dados-travados select,
+    #form-fase form.form-dados-travados textarea {
+        pointer-events: none;
+    }
+    #form-fase form.form-dados-travados [class*="col-"] {
+        cursor: copy;
+    }
+
+    /* ==========================================================
        CORES DOS CAMPOS DO CLIENTE (Bloco Apolice)
        ==========================================================
        Estes campos vem do cadastro em Base > Formularios > Clientes.
@@ -135,7 +151,8 @@
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-fase')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
 
-                {% if pode_editar %}
+                {# Em Emitidos ninguém cria registo novo por aqui: só chega em Emitidos vindo de Pendentes. #}
+                {% if pode_editar and fase_nome != 'Emitidos' %}
                 <button class="btn btn-primary" onclick="avisoElegante('Novo cadastro em construção!')"><i class="fas fa-plus"></i> Novo</button>
                 {% endif %}
 
@@ -204,7 +221,12 @@
                             >
                                 {% if pode_excluir %}
                                 <td class="text-center" onclick="event.stopPropagation()">
+                                    {# Em Emitidos, o Gestor so apaga registos do MES ATUAL; os outros meses ficam sem caixinha. #}
+                                    {% if fase_nome == 'Emitidos' and reg.mes_producao != mes_atual %}
+                                    <span class="text-muted" title="Em Emitidos só é possível apagar registos do mês atual ({{ mes_atual }})">—</span>
+                                    {% else %}
                                     <input type="checkbox" name="ids_selecionados" value="{{ reg.id }}" class="chk-row" {% if reg.id in ids_duplicados %}checked{% endif %}>
+                                    {% endif %}
                                 </td>
                                 {% endif %}
                                 
@@ -874,6 +896,9 @@
 
         if (!form) return;
 
+        // Com a ficha travada, clicar num campo copia o valor (ver IIFE mais abaixo).
+        form.classList.toggle('form-dados-travados', somenteLeitura);
+
         form.querySelectorAll('input, textarea, select').forEach(campo => {
             campo.disabled = somenteLeitura;
             
@@ -1033,6 +1058,49 @@ function configurarSubmissaoEdicao() {
 
     function validarSelecionados() { processarAcaoTodos('validar', 'Validar todos os registos e enviá-los para Pendentes?'); }
     function enviarParaEmitidos() { processarAcaoTodos('emitir', 'Enviar todos os registos para Emitidos? Depois de emitidos não será mais possível editá-los.'); }
+
+    // alex: clicar num campo travado da ficha (Emitidos, ou perfil Leitor) COPIA o valor
+    // e mostra "Copiado!", igual ao card Novo/Base Novo do Vendas. Não edita nada, só
+    // facilita copiar o dado pra pesquisar em outro lugar.
+    (function () {
+        function valorParaCopiar(campo) {
+            if (!campo) return '';
+            if (campo.tagName === 'SELECT') {
+                var op = campo.options[campo.selectedIndex];
+                return op ? (op.text || '').trim() : '';
+            }
+            return (campo.value || '').trim();
+        }
+        function mostrarToastCopiado(temValor) {
+            var t = document.createElement('div');
+            t.textContent = temValor ? 'Copiado!' : 'Nada para copiar';
+            t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+                'background:' + (temValor ? '#198754' : '#6c757d') + ';color:#fff;padding:8px 16px;' +
+                'border-radius:8px;z-index:99999;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.2);' +
+                'opacity:0;transition:opacity .15s;';
+            document.body.appendChild(t);
+            requestAnimationFrame(function () { t.style.opacity = '1'; });
+            setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 200); }, 1100);
+        }
+        document.addEventListener('click', function (e) {
+            var form = document.querySelector('#form-fase form.form-dados-travados');
+            if (!form || !form.contains(e.target)) return;
+            var col = e.target.closest('[class*="col-"]');
+            if (!col || !form.contains(col)) return;
+            var campo = col.querySelector('input:not([type=hidden]), select, textarea');
+            var val = valorParaCopiar(campo);
+            if (!val) { mostrarToastCopiado(false); return; }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(val).then(function () { mostrarToastCopiado(true); })
+                                                  .catch(function () { mostrarToastCopiado(true); });
+            } else {
+                var tmp = document.createElement('textarea');
+                tmp.value = val; document.body.appendChild(tmp); tmp.select();
+                try { document.execCommand('copy'); } catch (err) {}
+                tmp.remove(); mostrarToastCopiado(true);
+            }
+        });
+    })();
 
 </script>
 {% endblock %}

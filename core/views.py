@@ -2410,17 +2410,25 @@ def producao_lista_fase(request, agrupamento_id, fase):
     agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
 
     # negar acesso ao usuario: o nivel vem do campo do PROPRIO produto (ex.: Odonto usa
-    # prod_form_odonto). Nivel 1 = leitor (so consulta), 2 = editor (tudo menos apagar),
-    # 3 = gestor (tudo).
+    # prod_form_odonto). Nivel 1 = leitor (so consulta), 2 = editor, 3 = gestor.
     nivel = _nivel_formulario(user, agrupamento)
     if nivel < 1:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    pode_editar = nivel >= 2
-    pode_excluir = nivel >= 3
-    #-----
 
     fase_banco = fase.upper()
+    mes_atual = timezone.localtime(timezone.now()).strftime('%m/%Y')
+
+    pode_editar = nivel >= 2
+    # Regra de apagar por fase:
+    # - Importados e Pendentes: Editor ja apaga (igual Gestor).
+    # - Emitidos: ninguem edita (ja bloqueado abaixo) e so Gestor apaga, e so os
+    #   registos do MES ATUAL (validado de novo la na hora de apagar).
+    if fase_banco == 'EMITIDOS':
+        pode_excluir = nivel >= 3
+    else:
+        pode_excluir = nivel >= 2
+    #-----
 
     if request.method == 'POST':
         acao = request.POST.get('acao')
@@ -2432,7 +2440,10 @@ def producao_lista_fase(request, agrupamento_id, fase):
             erro_nivel = 'O seu nível de acesso permite apenas consultar os registos.'
         else:
             permitido = pode_excluir
-            erro_nivel = 'Apenas usuários Gestor podem apagar registos.'
+            if fase_banco == 'EMITIDOS':
+                erro_nivel = 'Em Emitidos, apenas usuários Gestor podem apagar registos (e só do mês atual).'
+            else:
+                erro_nivel = 'Seu nível de acesso não permite apagar registos.'
 
         if not permitido:
             if is_ajax:
@@ -2741,8 +2752,25 @@ def producao_lista_fase(request, agrupamento_id, fase):
         else:
             ids_para_excluir = request.POST.getlist('ids_selecionados')
             if ids_para_excluir:
-                RegistroProducao.objects.filter(id__in=ids_para_excluir).delete()
-                messages.success(request, f'{len(ids_para_excluir)} registo(s) apagado(s) com sucesso!')
+                if fase_banco == 'EMITIDOS':
+                    # Gestor em Emitidos so pode apagar registos do MES ATUAL.
+                    qs_apagar = RegistroProducao.objects.filter(
+                        id__in=ids_para_excluir, agrupamento=agrupamento, mes_producao=mes_atual
+                    )
+                    qtd_apagados = qs_apagar.count()
+                    qtd_ignorados = len(ids_para_excluir) - qtd_apagados
+                    qs_apagar.delete()
+                    if qtd_apagados:
+                        messages.success(request, f'{qtd_apagados} registo(s) apagado(s) com sucesso!')
+                    if qtd_ignorados:
+                        messages.warning(
+                            request,
+                            f'{qtd_ignorados} registo(s) fora do mês atual ({mes_atual}) não foram apagados. '
+                            'Em Emitidos só é possível apagar registos do mês atual.'
+                        )
+                else:
+                    RegistroProducao.objects.filter(id__in=ids_para_excluir).delete()
+                    messages.success(request, f'{len(ids_para_excluir)} registo(s) apagado(s) com sucesso!')
         return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
     registros = RegistroProducao.objects.filter(agrupamento=agrupamento, fase__iexact=fase_banco).order_by('-id')
@@ -2785,6 +2813,7 @@ def producao_lista_fase(request, agrupamento_id, fase):
         'ids_sem_seguradora': ids_sem_seguradora,
         'pode_editar': pode_editar,
         'pode_excluir': pode_excluir,
+        'mes_atual': mes_atual,
     }
 
     return render(request, 'core/producao/formularios/lista_fase.html', context)
