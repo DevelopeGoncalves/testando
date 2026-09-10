@@ -73,7 +73,8 @@ urlpatterns = [
     # 9. ROTA DO PAINEL DE PRODUÇÃO
     path('producao/formularios/', views.producao_formularios, name='producao_formularios'),
     path('producao/formularios/painel/<int:agrupamento_id>/', views.producao_formularios_painel, name='producao_formularios_painel'),
-    
+    path('producao/formularios/painel/<int:agrupamento_id>/fechar-mes/', views.producao_fechar_mes, name='producao_fechar_mes'),
+
     # 9.1 Esta rota abre a tela com os Cards (index)
     path('producao/vendas/', views.producao_vendas, name='producao_vendas'),
     

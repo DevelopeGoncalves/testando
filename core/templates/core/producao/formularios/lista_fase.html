@@ -171,8 +171,9 @@
                                 {% if pode_excluir %}
                                 <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
                                 {% endif %}
-                                <th style="display:none;"></th> 
+                                <th style="display:none;"></th>
                                 <th>Seguradora</th>
+                                {% if fase_nome == 'Emitidos' %}<th>Mês Produção</th>{% endif %}
                                 <th>Grupo/Ramo</th>
                                 <th>Tipo documento</th>
                                 <th>Documento</th>
@@ -256,6 +257,7 @@
                                 </td>
 
                                 <td>{{ reg.seguradora.seguradora|default:"-" }}</td>
+                                {% if fase_nome == 'Emitidos' %}<td>{{ reg.mes_producao|default:"-" }}</td>{% endif %}
                                 <td>{{ reg.grupo_ramo|default:"-" }}</td>
                                 <td>{{ reg.tipo_documento.tipo_documento|default:"-" }}</td>
                                 <td>{{ reg.documento|default:"-" }}</td>
@@ -354,7 +356,10 @@
                                     <div class="row g-3 mb-2">
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
                                             <label class="fw small mb-1">Mês da Produção</label>
-                                            <input type="text" class="form-control" name="mes_producao" id="edit_mes">
+                                            {# Bloqueado: vem do "Mês Prod." cadastrado em Base > Formulários > Produtos.
+                                               Só muda quando fecha o mês (card "Fechamento do Mês"). #}
+                                            <input type="text" class="form-control bg-light" name="mes_producao" id="edit_mes" readonly tabindex="-1"
+                                                   title="Vem do 'Mês Prod.' cadastrado em Base > Formulários > Produtos. Só muda ao fechar o mês.">
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
                                             <label class="fw small mb-1">{% if 'odonto' in agrupamento.agrupamento|lower %}Quantidade de vidas{% else %}Endosso{% endif %}</label>

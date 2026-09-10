@@ -691,8 +691,57 @@ def producao_formularios_painel(request, agrupamento_id):
         'qtd_emitidos': qtd_emitidos,
         'valor_importados': valor_importados,
         'valor_pendentes': valor_pendentes,
-        'valor_emitidos': valor_emitidos
+        'valor_emitidos': valor_emitidos,
+        # Card "FECHAMENTO DO MES": so Gestor fecha (afeta a producao toda do produto).
+        'pode_fechar_mes': _nivel_formulario(request.user, agrupamento) >= 3,
     })
+
+
+def _mes_seguinte(data):
+    """Primeiro dia do mes seguinte ao informado (ex.: 01/08/2026 -> 01/09/2026)."""
+    if data.month == 12:
+        return date(data.year + 1, 1, 1)
+    return date(data.year, data.month + 1, 1)
+
+
+@login_required
+def producao_fechar_mes(request, agrupamento_id):
+    """Card "FECHAMENTO DO MÊS": avança o "Mês Prod." (Base > Formulários > Produtos)
+    para o mês seguinte. Os registos já Emitidos ficam com o mês que já tinham (isso é
+    o "fechamento" deles); dali em diante, novas importações e a Ficha do Registo passam
+    a puxar o mês novo. Só Gestor fecha, porque afeta a produção inteira do produto."""
+    agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
+
+    if _nivel_formulario(request.user, agrupamento) < 3:
+        messages.error(request, 'Apenas usuários Gestor podem fechar o mês.')
+        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+
+    if request.method != 'POST':
+        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+
+    produto = Produto.objects.filter(agrupamento=agrupamento).first()
+    if not produto or not produto.mes_producao_em_aberto:
+        messages.error(
+            request,
+            'Cadastre o "Mês Prod." em Base > Formulários > Produtos antes de fechar o mês.'
+        )
+        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+
+    mes_fechado = produto.mes_producao_em_aberto
+    produto.mes_producao_em_aberto = _mes_seguinte(mes_fechado)
+    produto.save()
+
+    qtd_emitidos_mes = RegistroProducao.objects.filter(
+        agrupamento=agrupamento, fase__iexact='EMITIDOS', mes_producao=mes_fechado.strftime('%m/%Y')
+    ).count()
+
+    messages.success(
+        request,
+        f'Mês {mes_fechado.strftime("%m/%Y")} fechado! {qtd_emitidos_mes} registo(s) de Emitidos ficam '
+        f'com esse mês. A produção agora abre em {produto.mes_producao_em_aberto.strftime("%m/%Y")}.'
+    )
+    return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+
 
 @login_required
 def producao_processamentos(request):
@@ -2510,7 +2559,8 @@ def producao_lista_fase(request, agrupamento_id, fase):
                         messages.error(request, erro)
                         return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
-                reg.mes_producao = request.POST.get('mes_producao')
+                # Mes da Producao NAO se edita aqui: ele vem do "Mês Prod." cadastrado em
+                # Base > Formulários > Produtos (puxado na importação/no fechamento do mês).
                 reg.nome_social = request.POST.get('nome_social')
                 reg.celular = request.POST.get('celular')
                 reg.telefone = request.POST.get('telefone')
