@@ -551,6 +551,9 @@
     const EH_ODONTO = "{{ agrupamento.agrupamento|lower|escapejs }}".indexOf('odonto') !== -1;
     // Nivel do usuario neste produto: o leitor nao edita e so o gestor apaga.
     const PODE_EDITAR = {% if pode_editar %}true{% else %}false{% endif %};
+    // Mes em aberto (vem do "Mês Prod." de Base > Formulários > Produtos). Um registo de
+    // Emitidos so continua editavel enquanto tiver esse mesmo mes; depois que fecha, trava.
+    const MES_ABERTO = "{{ mes_atual|default:'' }}";
 
     const listaSeguradoras = [
         {% for s in seguradoras_base %} { id: "{{ s.id }}", texto: "{{ s.seguradora|escapejs }}" }{% if not forloop.last %},{% endif %} {% endfor %}
@@ -694,8 +697,11 @@
         });
     }
 
+    let registoAtualMes = '';
+
     function abrirDetalhes(row) {
         const dados = row.dataset;
+        registoAtualMes = dados.mes || '';
 
         limparMarcacaoDuplicados();
         contadorEndossos = 1;
@@ -895,8 +901,11 @@
     }
 
     function aplicarModoSomenteLeitura() {
-        // Emitidos ja e travado para todos; o leitor (nivel 1) tambem so consulta.
-        const somenteLeitura = (FASE_ATUAL === 'Emitidos' || !PODE_EDITAR);
+        // Em Emitidos, so trava quem ja fechou o mes (mes do registo != mes em aberto).
+        // Enquanto o registo ainda for do mes em aberto, continua editavel normalmente
+        // (respeitando o nivel do usuario). O leitor (nivel 1) sempre so consulta.
+        const registoFechado = (FASE_ATUAL === 'Emitidos' && registoAtualMes !== MES_ABERTO);
+        const somenteLeitura = (registoFechado || !PODE_EDITAR);
         const form = document.querySelector('#form-fase form');
 
         if (!form) return;

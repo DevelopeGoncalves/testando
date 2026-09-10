@@ -2466,13 +2466,24 @@ def producao_lista_fase(request, agrupamento_id, fase):
         return redirect('home')
 
     fase_banco = fase.upper()
-    mes_atual = timezone.localtime(timezone.now()).strftime('%m/%Y')
+
+    # O "mes atual" da producao NAO e o mes do calendario: e o "Mês Prod." cadastrado
+    # em Base > Formulários > Produtos (mes_producao_em_aberto), que so muda quando o
+    # Gestor aperta o card "Fechamento do Mês". Enquanto o registo de Emitidos tiver
+    # esse mesmo mes, ele ainda faz parte do mes em aberto (edita e apaga); depois que
+    # o mes fecha, ele fica congelado pra sempre.
+    produto_do_agrupamento = Produto.objects.filter(agrupamento=agrupamento).first()
+    mes_atual = (
+        produto_do_agrupamento.mes_producao_em_aberto.strftime('%m/%Y')
+        if produto_do_agrupamento and produto_do_agrupamento.mes_producao_em_aberto
+        else None
+    )
 
     pode_editar = nivel >= 2
     # Regra de apagar por fase:
     # - Importados e Pendentes: Editor ja apaga (igual Gestor).
-    # - Emitidos: ninguem edita (ja bloqueado abaixo) e so Gestor apaga, e so os
-    #   registos do MES ATUAL (validado de novo la na hora de apagar).
+    # - Emitidos: so Gestor apaga, e so os registos do MES EM ABERTO (validado de
+    #   novo la na hora de apagar). Os de mes ja fechado nunca mais saem.
     if fase_banco == 'EMITIDOS':
         pode_excluir = nivel >= 3
     else:
@@ -2490,7 +2501,7 @@ def producao_lista_fase(request, agrupamento_id, fase):
         else:
             permitido = pode_excluir
             if fase_banco == 'EMITIDOS':
-                erro_nivel = 'Em Emitidos, apenas usuários Gestor podem apagar registos (e só do mês atual).'
+                erro_nivel = 'Em Emitidos, apenas usuários Gestor podem apagar registos (e só do mês em aberto).'
             else:
                 erro_nivel = 'Seu nível de acesso não permite apagar registos.'
 
@@ -2505,8 +2516,10 @@ def producao_lista_fase(request, agrupamento_id, fase):
             if registro_id:
                 reg = get_object_or_404(RegistroProducao, id=registro_id)
 
-                if reg.fase.upper() == 'EMITIDOS':
-                    erro = 'Registos na fase Emitidos não podem mais ser editados.'
+                # Em Emitidos, so edita quem ainda esta no MES EM ABERTO. Assim que o
+                # mes fecha (card "Fechamento do Mês"), o registo congela pra sempre.
+                if reg.fase.upper() == 'EMITIDOS' and reg.mes_producao != mes_atual:
+                    erro = 'Este registo já foi fechado (mês encerrado) e não pode mais ser editado.'
                     if is_ajax:
                         return JsonResponse({'sucesso': False, 'erro': erro}, status=400)
                     messages.error(request, erro)
@@ -2803,10 +2816,10 @@ def producao_lista_fase(request, agrupamento_id, fase):
             ids_para_excluir = request.POST.getlist('ids_selecionados')
             if ids_para_excluir:
                 if fase_banco == 'EMITIDOS':
-                    # Gestor em Emitidos so pode apagar registos do MES ATUAL.
+                    # Gestor em Emitidos so pode apagar registos do MES EM ABERTO.
                     qs_apagar = RegistroProducao.objects.filter(
                         id__in=ids_para_excluir, agrupamento=agrupamento, mes_producao=mes_atual
-                    )
+                    ) if mes_atual else RegistroProducao.objects.none()
                     qtd_apagados = qs_apagar.count()
                     qtd_ignorados = len(ids_para_excluir) - qtd_apagados
                     qs_apagar.delete()
@@ -2815,8 +2828,9 @@ def producao_lista_fase(request, agrupamento_id, fase):
                     if qtd_ignorados:
                         messages.warning(
                             request,
-                            f'{qtd_ignorados} registo(s) fora do mês atual ({mes_atual}) não foram apagados. '
-                            'Em Emitidos só é possível apagar registos do mês atual.'
+                            f'{qtd_ignorados} registo(s) fora do mês em aberto'
+                            f'{" (" + mes_atual + ")" if mes_atual else ""} não foram apagados. '
+                            'Em Emitidos só é possível apagar registos do mês em aberto.'
                         )
                 else:
                     RegistroProducao.objects.filter(id__in=ids_para_excluir).delete()
