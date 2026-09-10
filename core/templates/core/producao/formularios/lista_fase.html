@@ -222,9 +222,9 @@
                             >
                                 {% if pode_excluir %}
                                 <td class="text-center" onclick="event.stopPropagation()">
-                                    {# Em Emitidos, o Gestor so apaga registos do MES ATUAL; os outros meses ficam sem caixinha. #}
-                                    {% if fase_nome == 'Emitidos' and reg.mes_producao != mes_atual %}
-                                    <span class="text-muted" title="Em Emitidos só é possível apagar registos do mês atual ({{ mes_atual }})">—</span>
+                                    {# Em Emitidos, o Gestor (perfil) so apaga o mes em aberto; o superusuario apaga qualquer mes. #}
+                                    {% if fase_nome == 'Emitidos' and reg.mes_producao != mes_atual and not exclusao_emitidos_sem_restricao_mes %}
+                                    <span class="text-muted" title="Em Emitidos só é possível apagar registos do mês em aberto ({{ mes_atual }})">—</span>
                                     {% else %}
                                     <input type="checkbox" name="ids_selecionados" value="{{ reg.id }}" class="chk-row" {% if reg.id in ids_duplicados %}checked{% endif %}>
                                     {% endif %}
@@ -356,8 +356,10 @@
                                     <div class="row g-3 mb-2">
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
                                             <label class="fw small mb-1">Mês da Produção</label>
-                                            {# Bloqueado: vem do "Mês Prod." cadastrado em Base > Formulários > Produtos.
-                                               Só muda quando fecha o mês (card "Fechamento do Mês"). #}
+                                            {% comment %}
+                                                Bloqueado: vem do "Mês Prod." cadastrado em Base > Formulários > Produtos.
+                                                Só muda quando fecha o mês (card "Fechamento do Mês").
+                                            {% endcomment %}
                                             <input type="text" class="form-control bg-light" name="mes_producao" id="edit_mes" readonly tabindex="-1"
                                                    title="Vem do 'Mês Prod.' cadastrado em Base > Formulários > Produtos. Só muda ao fechar o mês.">
                                         </div>

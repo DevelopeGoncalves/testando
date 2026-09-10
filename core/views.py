@@ -2482,12 +2482,14 @@ def producao_lista_fase(request, agrupamento_id, fase):
     pode_editar = nivel >= 2
     # Regra de apagar por fase:
     # - Importados e Pendentes: Editor ja apaga (igual Gestor).
-    # - Emitidos: so Gestor apaga, e so os registos do MES EM ABERTO (validado de
-    #   novo la na hora de apagar). Os de mes ja fechado nunca mais saem.
+    # - Emitidos: Editor e Leitor NUNCA apagam. Gestor (perfil) so apaga os registos
+    #   do MES EM ABERTO. Superusuario apaga qualquer mes, sem essa restricao.
     if fase_banco == 'EMITIDOS':
         pode_excluir = nivel >= 3
     else:
         pode_excluir = nivel >= 2
+    # So vale para Emitidos: superusuario nao tem a trava de mes, Gestor comum tem.
+    exclusao_emitidos_sem_restricao_mes = user.is_superuser
     #-----
 
     if request.method == 'POST':
@@ -2815,8 +2817,8 @@ def producao_lista_fase(request, agrupamento_id, fase):
         else:
             ids_para_excluir = request.POST.getlist('ids_selecionados')
             if ids_para_excluir:
-                if fase_banco == 'EMITIDOS':
-                    # Gestor em Emitidos so pode apagar registos do MES EM ABERTO.
+                if fase_banco == 'EMITIDOS' and not exclusao_emitidos_sem_restricao_mes:
+                    # Gestor (perfil, nao superusuario) em Emitidos so apaga o MES EM ABERTO.
                     qs_apagar = RegistroProducao.objects.filter(
                         id__in=ids_para_excluir, agrupamento=agrupamento, mes_producao=mes_atual
                     ) if mes_atual else RegistroProducao.objects.none()
@@ -2878,6 +2880,7 @@ def producao_lista_fase(request, agrupamento_id, fase):
         'pode_editar': pode_editar,
         'pode_excluir': pode_excluir,
         'mes_atual': mes_atual,
+        'exclusao_emitidos_sem_restricao_mes': exclusao_emitidos_sem_restricao_mes,
     }
 
     return render(request, 'core/producao/formularios/lista_fase.html', context)
