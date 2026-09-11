@@ -319,33 +319,47 @@
                         </div>
 
                         <div class="col-md-3"><label class="fw small mb-1">Documento{% if eh_odonto_pendentes and 'documento' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control" name="documento" id="edit_documento" {% if eh_odonto_pendentes and 'documento' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                    </div>
 
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-8">
+                            <div class="row g-3">
 
+                                <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ{% if eh_odonto_pendentes and 'cpf_cnpj' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="cpf_cnpj" id="edit_cpfcnpj" {% if eh_odonto_pendentes and 'cpf_cnpj' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                                <!-- ID do Cliente (cadastro): OCULTO para o usuario.
+                                     O campo continua existindo para o sistema/JS, so nao aparece na tela.
+                                     Para voltar a mostrar, basta apagar a classe "d-none" da linha abaixo. -->
+                                <div class="col-md-3 d-none">
+                                    <label class="fw small mb-1">ID do Cliente (cadastro)</label>
+                                    <input type="text" class="form-control bg-light" id="edit_clienteid" readonly
+                                           title="ID do cadastro em Base > Formulários > Clientes. É de lá que vêm os dados do cliente.">
+                                </div>
+                                <div class="col-md-3"><label class="fw small mb-1">Cliente{% if eh_odonto_pendentes and 'cliente' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="cliente" id="edit_cliente" {% if eh_odonto_pendentes and 'cliente' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                                <div class="col-md-2">
+                                    <label class="fw small mb-1">Tipo de Pessoa{% if eh_odonto_pendentes and 'tipo_pessoa' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                    <div class="input-container">
+                                        <input type="hidden" name="tipo_pessoa" id="edit_tipopessoa_val">
+                                        <input type="text"  class="form-control campo-cliente" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off" {% if eh_odonto_pendentes and 'tipo_pessoa' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
+                                        <div id="dropdown_tipopessoa" class="lista-suspensa d-none"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4"><label class="fw small mb-1">Nome Social{% if eh_odonto_pendentes and 'nome_social' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="nome_social" id="edit_nomesocial" {% if eh_odonto_pendentes and 'nome_social' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                                <div class="col-md-4"><label class="fw small mb-1">Celular{% if eh_odonto_pendentes and 'celular' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular" {% if eh_odonto_pendentes and 'celular' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                                <div class="col-md-4"><label class="fw small mb-1">Telefone{% if eh_odonto_pendentes and 'telefone' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone" {% if eh_odonto_pendentes and 'telefone' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                                <div class="col-md-4"><label class="fw small mb-1">E-mail{% if eh_odonto_pendentes and 'email' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email" {% if eh_odonto_pendentes and 'email' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                                <!-- Matricula do Colaborador foi removida daqui: ela ja existe
+                                     no bloco de Vidas/Endosso, que e o campo que o sistema grava. -->
 
-                        <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ{% if eh_odonto_pendentes and 'cpf_cnpj' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="cpf_cnpj" id="edit_cpfcnpj" {% if eh_odonto_pendentes and 'cpf_cnpj' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
-                        <!-- ID do Cliente (cadastro): OCULTO para o usuario.
-                             O campo continua existindo para o sistema/JS, so nao aparece na tela.
-                             Para voltar a mostrar, basta apagar a classe "d-none" da linha abaixo. -->
-                        <div class="col-md-3 d-none">
-                            <label class="fw small mb-1">ID do Cliente (cadastro)</label>
-                            <input type="text" class="form-control bg-light" id="edit_clienteid" readonly
-                                   title="ID do cadastro em Base > Formulários > Clientes. É de lá que vêm os dados do cliente.">
-                        </div>
-                        <div class="col-md-3"><label class="fw small mb-1">Cliente{% if eh_odonto_pendentes and 'cliente' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="cliente" id="edit_cliente" {% if eh_odonto_pendentes and 'cliente' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
-                        <div class="col-md-2">
-                            <label class="fw small mb-1">Tipo de Pessoa{% if eh_odonto_pendentes and 'tipo_pessoa' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
-                            <div class="input-container">
-                                <input type="hidden" name="tipo_pessoa" id="edit_tipopessoa_val">
-                                <input type="text"  class="form-control campo-cliente" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off" {% if eh_odonto_pendentes and 'tipo_pessoa' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
-                                <div id="dropdown_tipopessoa" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-3"><label class="fw small mb-1">Nome Social{% if eh_odonto_pendentes and 'nome_social' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="nome_social" id="edit_nomesocial" {% if eh_odonto_pendentes and 'nome_social' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
-                        <div class="col-md-2"><label class="fw small mb-1">Celular{% if eh_odonto_pendentes and 'celular' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular" {% if eh_odonto_pendentes and 'celular' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
-                        <div class="col-md-2"><label class="fw small mb-1">Telefone{% if eh_odonto_pendentes and 'telefone' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone" {% if eh_odonto_pendentes and 'telefone' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
-                        <div class="col-md-3"><label class="fw small mb-1">E-mail{% if eh_odonto_pendentes and 'email' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email" {% if eh_odonto_pendentes and 'email' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
-                        <!-- Matricula do Colaborador foi removida daqui: ela ja existe
-                             no bloco de Vidas/Endosso, que e o campo que o sistema grava. -->
+
+                        <!-- Observações: enquadrado igual o "Dados complementares" de Produção/Vendas/Novo -->
+                        <div class="col-md-4 d-flex flex-column">
+                            <label class="fw-bold small mb-1">Observações</label>
+                            <textarea class="form-control flex-grow-1" name="observacoes" id="edit_observacoes"
+                                      style="min-height: 160px;"
+                                      placeholder="Digite as observações com quebra de linha..."></textarea>
+                        </div>
                     </div>
 
                     <div id="container-endossos">
@@ -460,17 +474,9 @@
                             <i class="fas fa-plus"></i> {% if 'odonto' in agrupamento.agrupamento|lower %}Adicionar outra Vida{% else %}Adicionar outro Endosso{% endif %}
                         </button>
                     </div>
-
-                    <div class="row g-3 mt-2">
-                        <div class="col-md-12 d-flex flex-column">
-                            <label class="fw-bold small mb-1">Observações da Ficha</label>
-                            <textarea class="form-control" name="observacoes" id="edit_observacoes" rows="3"
-                                      style="resize: none; min-height: 120px;"
-                                      placeholder="Digite as observações com quebra de linha..."></textarea>
-                        </div>
-                    </div>
+                    <!-- Observações foi movida para o Bloco Apólice (enquadrada igual "Dados complementares" do Vendas/Novo). -->
                 </div>
-                
+
                 <div class="card-footer bg-light text-end p-3">
                     <button type="button" class="btn btn-secondary me-2" onclick="fecharDetalhes()">Cancelar</button>
                     <button type="submit" class="btn btn-success fw px-4"><i class="fas fa-save"></i> Guardar Alterações</button>
