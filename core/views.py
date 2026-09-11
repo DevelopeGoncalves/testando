@@ -2425,9 +2425,6 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
 
 
 # alex campo obrigatorio odonto pendentes
-# Campos que aparecem com "*" e ficam obrigatorios na FICHA (tela de editar/novo registo)
-# do Odonto quando a fase e Pendentes. Para tornar mais um campo obrigatorio, so tirar o
-# "#" da frente da linha dele. Para deixar de exigir, so colocar o "#" de volta.
 CAMPOS_OBRIGATORIOS_ODONTO_PENDENTES = [
     'seguradora',
     'grupo_ramo',
@@ -2436,9 +2433,9 @@ CAMPOS_OBRIGATORIOS_ODONTO_PENDENTES = [
     'endosso',
     'inicio_vigencia',
     'premio_bruto',
-    # 'cpf_cnpj',
-    # 'cliente',
-    # 'tipo_pessoa',
+     'cpf_cnpj',
+     'cliente',
+     'tipo_pessoa',
     # 'nome_social',
     # 'celular',
     # 'telefone',
@@ -2450,8 +2447,9 @@ CAMPOS_OBRIGATORIOS_ODONTO_PENDENTES = [
     # 'perc_comissao',
     # 'premio_liquido',
     # 'realizado',
-    # 'unidade',
-    # 'colaborador',
+     'unidade',
+     'colaborador',
+     'Matrícula do Colaborador',
 ]
 
 
