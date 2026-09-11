@@ -292,37 +292,37 @@
                     <div class="row g-3">
                         
                         <div class="col-md-3">
-                            <label class="fw small mb-1">Seguradora</label>
-                            <div class="input-container"> 
+                            <label class="fw small mb-1">Seguradora{% if eh_odonto_pendentes and 'seguradora' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                            <div class="input-container">
                                 <input type="hidden" name="seguradora" id="edit_seguradora_val">
-                                <input type="text" id="edit_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <input type="text" id="edit_seguradora_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off" {% if eh_odonto_pendentes and 'seguradora' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                 <div id="dropdown_seguradora" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-3">
-                            <label class="fw small mb-1">Grupo/Ramo</label>
-                            <div class="input-container"> 
+                            <label class="fw small mb-1">Grupo/Ramo{% if eh_odonto_pendentes and 'grupo_ramo' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                            <div class="input-container">
                                 <input type="hidden" name="grupo_ramo" id="edit_gruporamo_val">
-                                <input type="text" id="edit_gruporamo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <input type="text" id="edit_gruporamo_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off" {% if eh_odonto_pendentes and 'grupo_ramo' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                 <div id="dropdown_gruporamo" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-3">
-                            <label class="fw small mb-1">Tipo Documento</label>
-                            <div class="input-container"> 
+                            <label class="fw small mb-1">Tipo Documento{% if eh_odonto_pendentes and 'tipo_documento' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                            <div class="input-container">
                                 <input type="hidden" name="tipo_documento" id="edit_tipodoc_val">
-                                <input type="text" id="edit_tipodoc_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                <input type="text" id="edit_tipodoc_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off" {% if eh_odonto_pendentes and 'tipo_documento' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                 <div id="dropdown_tipodoc" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        
-                        <div class="col-md-3"><label class="fw small mb-1">Documento</label><input type="text" class="form-control" name="documento" id="edit_documento"></div>
-                        
-                        
-                        
-                        <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ</label><input type="text" class="form-control campo-cliente" name="cpf_cnpj" id="edit_cpfcnpj"></div>
+
+                        <div class="col-md-3"><label class="fw small mb-1">Documento{% if eh_odonto_pendentes and 'documento' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control" name="documento" id="edit_documento" {% if eh_odonto_pendentes and 'documento' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+
+
+
+                        <div class="col-md-3"><label class="fw small mb-1">CPF / CNPJ{% if eh_odonto_pendentes and 'cpf_cnpj' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="cpf_cnpj" id="edit_cpfcnpj" {% if eh_odonto_pendentes and 'cpf_cnpj' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
                         <!-- ID do Cliente (cadastro): OCULTO para o usuario.
                              O campo continua existindo para o sistema/JS, so nao aparece na tela.
                              Para voltar a mostrar, basta apagar a classe "d-none" da linha abaixo. -->
@@ -331,19 +331,19 @@
                             <input type="text" class="form-control bg-light" id="edit_clienteid" readonly
                                    title="ID do cadastro em Base > Formulários > Clientes. É de lá que vêm os dados do cliente.">
                         </div>
-                        <div class="col-md-3"><label class="fw small mb-1">Cliente</label><input type="text" class="form-control campo-cliente" name="cliente" id="edit_cliente"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">Cliente{% if eh_odonto_pendentes and 'cliente' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="cliente" id="edit_cliente" {% if eh_odonto_pendentes and 'cliente' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
                         <div class="col-md-2">
-                            <label class="fw small mb-1">Tipo de Pessoa</label>
-                            <div class="input-container"> 
+                            <label class="fw small mb-1">Tipo de Pessoa{% if eh_odonto_pendentes and 'tipo_pessoa' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                            <div class="input-container">
                                 <input type="hidden" name="tipo_pessoa" id="edit_tipopessoa_val">
-                                <input type="text"  class="form-control campo-cliente" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off">
+                                <input type="text"  class="form-control campo-cliente" id="edit_tipopessoa_texto" class="form-control" placeholder="Física / Jurídica" autocomplete="off" {% if eh_odonto_pendentes and 'tipo_pessoa' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                 <div id="dropdown_tipopessoa" class="lista-suspensa d-none"></div>
                             </div>
                         </div>
-                        <div class="col-md-3"><label class="fw small mb-1">Nome Social</label><input type="text" class="form-control campo-cliente" name="nome_social" id="edit_nomesocial"></div>
-                        <div class="col-md-2"><label class="fw small mb-1">Celular</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular"></div>
-                        <div class="col-md-2"><label class="fw small mb-1">Telefone</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone"></div>
-                        <div class="col-md-3"><label class="fw small mb-1">E-mail</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email"></div>
+                        <div class="col-md-3"><label class="fw small mb-1">Nome Social{% if eh_odonto_pendentes and 'nome_social' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="nome_social" id="edit_nomesocial" {% if eh_odonto_pendentes and 'nome_social' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                        <div class="col-md-2"><label class="fw small mb-1">Celular{% if eh_odonto_pendentes and 'celular' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="celular" id="edit_celular" {% if eh_odonto_pendentes and 'celular' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                        <div class="col-md-2"><label class="fw small mb-1">Telefone{% if eh_odonto_pendentes and 'telefone' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="text" class="form-control campo-cliente" name="telefone" id="edit_telefone" {% if eh_odonto_pendentes and 'telefone' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
+                        <div class="col-md-3"><label class="fw small mb-1">E-mail{% if eh_odonto_pendentes and 'email' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label><input type="email" class="form-control campo-cliente" name="email" id="edit_email" {% if eh_odonto_pendentes and 'email' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></div>
                         <!-- Matricula do Colaborador foi removida daqui: ela ja existe
                              no bloco de Vidas/Endosso, que e o campo que o sistema grava. -->
                     </div>
@@ -366,56 +366,56 @@
                                                    title="Vem do 'Mês Prod.' cadastrado em Base > Formulários > Produtos. Só muda ao fechar o mês.">
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">{% if 'odonto' in agrupamento.agrupamento|lower %}Quantidade de vidas{% else %}Endosso{% endif %}</label>
-                                            <input type="text" min="1" maxlength="8" class="form-control fw" name="endosso" id="edit_endosso">
+                                            <label class="fw small mb-1">{% if 'odonto' in agrupamento.agrupamento|lower %}Quantidade de vidas{% else %}Endosso{% endif %}{% if eh_odonto_pendentes and 'endosso' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="text" min="1" maxlength="8" class="form-control fw" name="endosso" id="edit_endosso" {% if eh_odonto_pendentes and 'endosso' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Renovação Própria</label>
-                                            <select class="form-control" name="renovacao_propria" id="edit_renovacao_propria">
+                                            <label class="fw small mb-1">Renovação Própria{% if eh_odonto_pendentes and 'renovacao_propria' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <select class="form-control" name="renovacao_propria" id="edit_renovacao_propria" {% if eh_odonto_pendentes and 'renovacao_propria' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                                 <option value="True">Sim</option>
                                                 <option value="False">Não</option>
                                             </select>
                                         </div>
                                         <div class="col-md-3 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Início de Vigência</label>
-                                            <input type="date" class="form-control" name="inicio_vigencia" id="edit_iniciovig">
+                                            <label class="fw small mb-1">Início de Vigência{% if eh_odonto_pendentes and 'inicio_vigencia' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="date" class="form-control" name="inicio_vigencia" id="edit_iniciovig" {% if eh_odonto_pendentes and 'inicio_vigencia' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-3 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Fim de Vigência</label>
-                                            <input type="date" class="form-control" name="fim_vigencia" id="edit_fimvig">
+                                            <label class="fw small mb-1">Fim de Vigência{% if eh_odonto_pendentes and 'fim_vigencia' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="date" class="form-control" name="fim_vigencia" id="edit_fimvig" {% if eh_odonto_pendentes and 'fim_vigencia' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                     </div>
 
 
                                     <div class="row g-3 mb-2">
                                         <div class="col-md-1 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Qtd. Parcelas</label>
-                                            <input type="number" class="form-control" name="qtd_parcelas" id="edit_qtdparcelas">
+                                            <label class="fw small mb-1">Qtd. Parcelas{% if eh_odonto_pendentes and 'qtd_parcelas' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="number" class="form-control" name="qtd_parcelas" id="edit_qtdparcelas" {% if eh_odonto_pendentes and 'qtd_parcelas' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">% Comissão</label>
-                                            <input type="number" step="0.01" class="form-control" name="perc_comissao" id="edit_comissao">
+                                            <label class="fw small mb-1">% Comissão{% if eh_odonto_pendentes and 'perc_comissao' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="number" step="0.01" class="form-control" name="perc_comissao" id="edit_comissao" {% if eh_odonto_pendentes and 'perc_comissao' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Prêmio Líq (R$)</label>
-                                            <input type="number" step="0.01" class="form-control" name="premio_liquido" id="edit_premio_liquido">
+                                            <label class="fw small mb-1">Prêmio Líq (R$){% if eh_odonto_pendentes and 'premio_liquido' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="number" step="0.01" class="form-control" name="premio_liquido" id="edit_premio_liquido" {% if eh_odonto_pendentes and 'premio_liquido' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Prêmio Bruto (R$)</label>
-                                            <input type="number" step="0.01" class="form-control text-success fw" name="premio_bruto" id="edit_premio">
+                                            <label class="fw small mb-1">Prêmio Bruto (R$){% if eh_odonto_pendentes and 'premio_bruto' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="number" step="0.01" class="form-control text-success fw" name="premio_bruto" id="edit_premio" {% if eh_odonto_pendentes and 'premio_bruto' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-2 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Realizado</label>
-                                            <input type="text" class="form-control" name="realizado" id="edit_realizado">
+                                            <label class="fw small mb-1">Realizado{% if eh_odonto_pendentes and 'realizado' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <input type="text" class="form-control" name="realizado" id="edit_realizado" {% if eh_odonto_pendentes and 'realizado' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                         </div>
                                         <div class="col-md-3 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1">Unidade</label>
-                                            <div class="input-container"> 
+                                            <label class="fw small mb-1">Unidade{% if eh_odonto_pendentes and 'unidade' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <div class="input-container">
                                                 <input type="hidden" name="unidade" id="edit_unidade_val">
-                                                <input type="text" id="edit_unidade_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                                <input type="text" id="edit_unidade_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off" {% if eh_odonto_pendentes and 'unidade' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                                 <div id="dropdown_unidade" class="lista-suspensa d-none"></div>
                                             </div>
-                                        </div> 
+                                        </div>
                                     </div>
 
                                     <div class="row g-3">
@@ -436,10 +436,10 @@
                                             <input type="text" class="form-control bg-light" name="gerente_agencia" id="edit_gerente" readonly tabindex="-1">
                                         </div>
                                         <div class="col-md-3 d-flex flex-column justify-content-end">
-                                            <label class="fw small mb-1 text-truncate" title="Matrícula do Colaborador">Matrícula Colaborador</label>
-                                            <div class="input-container"> 
+                                            <label class="fw small mb-1 text-truncate" title="Matrícula do Colaborador">Matrícula Colaborador{% if eh_odonto_pendentes and 'colaborador' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                            <div class="input-container">
                                                 <input type="hidden" name="colaborador" id="edit_colaborador_endosso_val">
-                                                <input type="text" id="edit_colaborador_endosso_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off">
+                                                <input type="text" id="edit_colaborador_endosso_texto" class="form-control" placeholder="Pesquisar..." autocomplete="off" {% if eh_odonto_pendentes and 'colaborador' in campos_obrigatorios_odonto_pendentes %}required{% endif %}>
                                                 <div id="dropdown_colaborador_endosso" class="lista-suspensa d-none"></div>
                                             </div>
                                         </div>
@@ -447,8 +447,8 @@
                                 </div>
 
                                 <div class="col-md-3 d-flex flex-column">
-                                    <label class="fw small mb-1">Motivo do Endosso</label>
-                                    <textarea class="form-control flex-grow-1" name="motivo_endosso" id="edit_motivo_endosso" placeholder="Digite o motivo..." style="resize: none; min-height: 120px;"></textarea>
+                                    <label class="fw small mb-1">Motivo do Endosso{% if eh_odonto_pendentes and 'motivo_endosso' in campos_obrigatorios_odonto_pendentes %} <span class="text-danger">*</span>{% endif %}</label>
+                                    <textarea class="form-control flex-grow-1" name="motivo_endosso" id="edit_motivo_endosso" placeholder="Digite o motivo..." style="resize: none; min-height: 120px;" {% if eh_odonto_pendentes and 'motivo_endosso' in campos_obrigatorios_odonto_pendentes %}required{% endif %}></textarea>
                                 </div>
 
                             </div>
@@ -991,6 +991,15 @@ function configurarSubmissaoEdicao() {
 
         formEditar.addEventListener('submit', function(event) {
             event.preventDefault();
+
+            // alex campo obrigatorio odonto pendentes: os campos marcados com "required"
+            // (ver CAMPOS_OBRIGATORIOS_ODONTO_PENDENTES em views.py) bloqueiam o guardar
+            // se estiverem vazios.
+            if (!formEditar.checkValidity()) {
+                formEditar.reportValidity();
+                return;
+            }
+
             limparMarcacaoDuplicados();
 
             let formData = new FormData(formEditar);

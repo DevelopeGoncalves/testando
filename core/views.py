@@ -2424,6 +2424,37 @@ def _ids_duplicados_no_lote(fase_origem, agrupamento):
     # return set()
 
 
+# alex campo obrigatorio odonto pendentes
+# Campos que aparecem com "*" e ficam obrigatorios na FICHA (tela de editar/novo registo)
+# do Odonto quando a fase e Pendentes. Para tornar mais um campo obrigatorio, so tirar o
+# "#" da frente da linha dele. Para deixar de exigir, so colocar o "#" de volta.
+CAMPOS_OBRIGATORIOS_ODONTO_PENDENTES = [
+    'seguradora',
+    'grupo_ramo',
+    'tipo_documento',
+    'documento',
+    'endosso',
+    'inicio_vigencia',
+    'premio_bruto',
+    # 'cpf_cnpj',
+    # 'cliente',
+    # 'tipo_pessoa',
+    # 'nome_social',
+    # 'celular',
+    # 'telefone',
+    # 'email',
+    # 'renovacao_propria',
+    # 'fim_vigencia',
+    # 'motivo_endosso',
+    # 'qtd_parcelas',
+    # 'perc_comissao',
+    # 'premio_liquido',
+    # 'realizado',
+    # 'unidade',
+    # 'colaborador',
+]
+
+
 # CAMPOS OBRIGATÓRIOS PARA EMITIR (Pendentes -> Emitidos)
 CAMPOS_OBRIGATORIOS_EMISSAO = [
     'seguradora',      # Seguradora
@@ -2478,6 +2509,9 @@ def producao_lista_fase(request, agrupamento_id, fase):
         if produto_do_agrupamento and produto_do_agrupamento.mes_producao_em_aberto
         else None
     )
+
+    # alex campo obrigatorio odonto pendentes: so vale para Odonto e so na fase Pendentes.
+    eh_odonto_pendentes = ('odonto' in agrupamento.agrupamento.lower()) and (fase_banco == 'PENDENTES')
 
     pode_editar = nivel >= 2
     # Regra de apagar por fase:
@@ -2904,6 +2938,9 @@ def producao_lista_fase(request, agrupamento_id, fase):
         'pode_excluir': pode_excluir,
         'mes_atual': mes_atual,
         'exclusao_emitidos_sem_restricao_mes': exclusao_emitidos_sem_restricao_mes,
+        # alex campo obrigatorio odonto pendentes
+        'eh_odonto_pendentes': eh_odonto_pendentes,
+        'campos_obrigatorios_odonto_pendentes': CAMPOS_OBRIGATORIOS_ODONTO_PENDENTES,
     }
 
     return render(request, 'core/producao/formularios/lista_fase.html', context)
