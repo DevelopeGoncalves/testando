@@ -109,6 +109,14 @@
         box-shadow: 0 0 0 0.2rem rgba(106, 185, 127, 0.25) !important;
     }
 
+    /* Garante o alinhamento perfeito e preenchimento vertical do campo de
+       observações (mesma solução usada em Vendas/Novo, campo #id_observacoes). */
+    #edit_observacoes {
+        height: 100% !important;
+        min-height: 100px;
+        resize: none;
+    }
+
 </style>
 
 <div id="tela-fase" style="min-width: 0; width: 100%; overflow: hidden;">
@@ -357,7 +365,6 @@
                         <div class="col-md-4 d-flex flex-column">
                             <label class="fw-bold small mb-1">Observações</label>
                             <textarea class="form-control flex-grow-1" name="observacoes" id="edit_observacoes"
-                                      style="min-height: 160px;"
                                       placeholder="Digite as observações com quebra de linha..."></textarea>
                         </div>
                     </div>
