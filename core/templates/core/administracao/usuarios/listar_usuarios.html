@@ -54,7 +54,7 @@
 
 <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
     
-    <h4 class="m-0 text-dark"><i class="fas fa-users me-2 text-primary"></i> Usuários Cadastrados</h4>
+    <h4 class="m-0 text-dark"><i class="fas fa-users me-2"></i> Usuários Cadastrados</h4>
 
     <div>
         <button type="button" id="btn-limpar-filtros" class="btn btn-outline-primary me-1" style="display: none;" onclick="limparFiltros()">
@@ -104,9 +104,9 @@
                     
                     <td class="text-center">
                         {% if u.is_superuser %}
-                            <span class="badge bg-danger">Superuser</span>
+                            <span style="font-weight: 800; text-align: center; color: #fc3939">Superuser</span>
                         {% else %}
-                            <span class="badge bg-secondary">Comum</span>
+                            <span style="text-align: center; color: grey">Comum</span>
                         {% endif %}
                     </td>
                     <td class="text-center">
