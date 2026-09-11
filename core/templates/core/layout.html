@@ -45,7 +45,7 @@
             min-width: 230px; max-width: 230px;
             background-color: var(--brand-blue-card); /* Cor chapada #0814DD */
             color: #B3C5FF; /* Texto muted do login */
-            display: flex; flex-direction: column; min-height: 100vh; transition: margin 0.25s ease-out;
+            display: flex; flex-direction: column; min-height: 100vh; transition: margin 0.1s ease-out;
             box-shadow: 4px 0 15px rgba(0,0,0,0.05);
             z-index: 10;
         }
@@ -536,25 +536,33 @@
 
 
     function toggleSubmenu(id, link) {
-        var menu = document.getElementById(id);
+        var $menu = $('#' + id);
         var arrow = link.querySelector('.arrow');
         
-        var isOpen = menu.classList.toggle('show');
+        var isOpen = $menu.hasClass('show') || $menu.is(':visible');
         
-        if(arrow) {
-            if (isOpen) {
+        if ($menu.hasClass('show')) {
+            $menu.removeClass('show');
+            $menu.show(); 
+        }
+
+        $menu.slideToggle(100, function() {
+            if ($menu.is(':visible')) {
+                $menu.addClass('show');
+                localStorage.setItem('menu_' + id, 'aberto');
+            } else {
+                localStorage.removeItem('menu_' + id);
+            }
+        });
+        
+        if (arrow) {
+            if (!isOpen) {
                 arrow.classList.remove('fa-angle-left');
                 arrow.classList.add('fa-angle-down');
             } else {
                 arrow.classList.remove('fa-angle-down');
                 arrow.classList.add('fa-angle-left');
             }
-        }
-
-        if (isOpen) {
-            localStorage.setItem('menu_' + id, 'aberto');
-        } else {
-            localStorage.removeItem('menu_' + id);
         }
     }
 
