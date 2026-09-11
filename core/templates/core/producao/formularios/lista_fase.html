@@ -151,8 +151,10 @@
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-fase')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
 
-                {# Em Emitidos ninguém cria registo novo por aqui: só chega em Emitidos vindo de Pendentes. #}
-                {% if pode_editar and fase_nome != 'Emitidos' %}
+                {# So em Pendentes cria registo manual (Importados vem so de planilha; Emitidos so chega vindo de Pendentes). #}
+                {% if pode_editar and fase_nome == 'Pendentes' %}
+                <button class="btn btn-primary" onclick="abrirNovoRegisto()"><i class="fas fa-plus"></i> Novo</button>
+                {% elif pode_editar and fase_nome == 'Importados' %}
                 <button class="btn btn-primary" onclick="avisoElegante('Novo cadastro em construção!')"><i class="fas fa-plus"></i> Novo</button>
                 {% endif %}
 
@@ -273,7 +275,7 @@
 
     <div id="form-fase" style="display:none;">
         <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
-            <h4 class="m-0 text-primary"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+            <h4 class="m-0 text-primary"><i class="fas fa-edit"></i> <span id="ficha-titulo-texto">Editar Ficha do Registo</span></h4>
             <button type="button" class="btn btn-outline-secondary" onclick="fecharDetalhes()">
                 <i class="fas fa-arrow-left"></i> Voltar para a Lista
             </button>
@@ -701,9 +703,20 @@
 
     let registoAtualMes = '';
 
+    // Botão "Novo" (só em Pendentes): abre a mesma ficha, mas em branco - reaproveita
+    // abrirDetalhes() com uma <tr> sem nenhum "data-*", o que já limpa todos os campos.
+    // Como "edit_id" fica vazio, o backend entende que é para CRIAR um registo novo
+    // (em vez de editar), com o "Mês da Produção" travado no mês em aberto do Produto.
+    function abrirNovoRegisto() {
+        const linhaEmBranco = document.createElement('tr');
+        abrirDetalhes(linhaEmBranco);
+        document.getElementById('ficha-titulo-texto').textContent = 'Novo Registo';
+    }
+
     function abrirDetalhes(row) {
         const dados = row.dataset;
         registoAtualMes = dados.mes || '';
+        document.getElementById('ficha-titulo-texto').textContent = 'Editar Ficha do Registo';
 
         limparMarcacaoDuplicados();
         contadorEndossos = 1;
@@ -722,7 +735,10 @@
         document.getElementById('edit_celular').value = dados.celular || '';
         document.getElementById('edit_telefone').value = dados.telefone || '';
         
-        document.getElementById('edit_mes').value = dados.mes || '';
+        // Importados/Pendentes: o mes segue AO VIVO o "Mês Prod." do Produto (Base >
+        // Formulários > Produtos) - se mudar la, muda aqui tambem. So em Emitidos o
+        // relacionamento quebra e fica congelado com o mes gravado no registo.
+        document.getElementById('edit_mes').value = (FASE_ATUAL !== 'Emitidos' && MES_ABERTO) ? MES_ABERTO : (dados.mes || '');
         document.getElementById('edit_endosso').value = dados.endosso || '';
         document.getElementById('edit_motivo_endosso').value = dados.motivo_endosso || '';
         document.getElementById('edit_iniciovig').value = dados.iniciovig || '';

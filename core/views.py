@@ -2517,6 +2517,7 @@ def producao_lista_fase(request, agrupamento_id, fase):
             registro_id = request.POST.get('registro_id')
             if registro_id:
                 reg = get_object_or_404(RegistroProducao, id=registro_id)
+                criando = False
 
                 # Em Emitidos, so edita quem ainda esta no MES EM ABERTO. Assim que o
                 # mes fecha (card "Fechamento do Mês"), o registo congela pra sempre.
@@ -2526,198 +2527,215 @@ def producao_lista_fase(request, agrupamento_id, fase):
                         return JsonResponse({'sucesso': False, 'erro': erro}, status=400)
                     messages.error(request, erro)
                     return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+            else:
+                # Botão "Novo": so cria registo manual em Pendentes (Importados so vem de
+                # planilha; Emitidos so chega vindo de Pendentes).
+                if fase_banco != 'PENDENTES':
+                    erro = 'Só é possível criar um novo registo manualmente em Pendentes.'
+                    if is_ajax:
+                        return JsonResponse({'sucesso': False, 'erro': erro}, status=400)
+                    messages.error(request, erro)
+                    return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
-                reg.cliente = request.POST.get('cliente')
-                reg.cpf_cnpj = request.POST.get('cpf_cnpj')
+                if not mes_atual:
+                    erro = 'Defina o "Mês Prod." em Base > Formulários > Produtos antes de criar um registo.'
+                    if is_ajax:
+                        return JsonResponse({'sucesso': False, 'erro': erro}, status=400)
+                    messages.error(request, erro)
+                    return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
+                # O mes segue o mesmo "Mês Prod." do Produto que a ficha já mostra (ver
+                # MES_ABERTO no template); so trava quando o registo vira Emitidos.
+                reg = RegistroProducao(agrupamento=agrupamento, fase='PENDENTES', usuario_cadastro=user.username, mes_producao=mes_atual)
+                criando = True
+
+            reg.cliente = request.POST.get('cliente')
+            reg.cpf_cnpj = request.POST.get('cpf_cnpj')
+            
+            seg_input = request.POST.get('seguradora')
+            reg.seguradora = Seguradora.objects.filter(id=seg_input).first() if seg_input else None
+
+            unidade_input = request.POST.get('unidade')
+            reg.unidade = Unidade.objects.filter(id=unidade_input).first() if unidade_input else None
+
+            tipodoc_input = request.POST.get('tipo_documento')
+            reg.tipo_documento = TipoDocumento.objects.filter(id=tipodoc_input).first() if tipodoc_input else None
+
+            ramo_input = request.POST.get('grupo_ramo')
+            reg.grupo_ramo = Ramo.objects.filter(id=ramo_input).first() if ramo_input else None
+
+            reg.tipo_pessoa = request.POST.get('tipo_pessoa') 
+            reg.documento = request.POST.get('documento')
+            
+            endosso_principal_input = request.POST.get('endosso')
+            if not endosso_principal_input or not endosso_principal_input.strip():
+                msg_erro = "O número do endosso principal não pode ficar vazio."
+                if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                messages.error(request, msg_erro)
+                return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+            
+            reg.endosso = endosso_principal_input.strip()
+
+            # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
+            if reg.fase.upper() == 'PENDENTES':
+                nova_chave = RegistroProducao.montar_chave_unica(
+                    reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
+                )
+                ja_existe = RegistroProducao.objects.filter(
+                    agrupamento=agrupamento, fase__iexact='PENDENTES', chave_unica=nova_chave
+                ).exclude(id=reg.id).exists()
+                if ja_existe:
+                    erro = ('Já existe um registo em Pendentes com a mesma Seguradora, Grupo/Ramo, '
+                            'Tipo de Documento, Documento e Endosso. Altere um desses campos antes de guardar.')
+                    if is_ajax:
+                        return JsonResponse({
+                            'sucesso': False,
+                            'erro': erro,
+                            'campos_duplicados': ['seguradora', 'grupo_ramo', 'tipo_documento', 'documento', 'endosso'],
+                        }, status=409)
+                    messages.error(request, erro)
+                    return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
+            # Mes da Producao NAO se edita aqui: ele vem do "Mês Prod." cadastrado em
+            # Base > Formulários > Produtos (puxado na importação/no fechamento do mês).
+            reg.nome_social = request.POST.get('nome_social')
+            reg.celular = request.POST.get('celular')
+            reg.telefone = request.POST.get('telefone')
+            reg.email = request.POST.get('email')
+            reg.superintendencia = request.POST.get('superintendencia')
+            reg.nome_unidade = request.POST.get('nome_unidade')
+            reg.colaborador = request.POST.get('colaborador')
+            reg.nome_colaborador = request.POST.get('nome_colaborador')
+            reg.gerente_agencia = request.POST.get('gerente_agencia')
+            reg.superintendente = request.POST.get('superintendente')
+            reg.realizado = request.POST.get('realizado')
+            reg.observacoes = request.POST.get('observacoes')
+            reg.motivo_endosso = request.POST.get('motivo_endosso')
+            reg.renovacao_propria = request.POST.get('renovacao_propria')
+            reg.grupo = request.POST.get('grupo')   
+
+            def valida_limites(p_com, p_bruto, p_liq):
+                if p_com and (p_com > 999.99 or p_com < -999.99): 
+                    return "O campo '% de comissão' não pode exceder 999,99%."
+                if p_bruto and (p_bruto > 9999999999999.99 or p_bruto < -9999999999999.99): 
+                    return "O valor do 'Prêmio Bruto' excedeu o limite permitido."
+                if p_liq and (p_liq > 9999999999999.99 or p_liq < -9999999999999.99): 
+                    return "O valor do 'Prêmio Líquido' excedeu o limite permitido."
+                return None
+
+            p_bruto_val = _parse_float(request.POST.get('premio_bruto'))
+            p_liq_val = _parse_float(request.POST.get('premio_liquido'))
+            p_com_val = _parse_float(request.POST.get('perc_comissao'))
+            
+            erro_limite = valida_limites(p_com_val, p_bruto_val, p_liq_val)
+            if erro_limite:
+                if is_ajax: return JsonResponse({'sucesso': False, 'erro': erro_limite}, status=400)
+                messages.error(request, erro_limite)
+                return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
+            endossos_enviados = [reg.endosso] # Já inicia com o endosso principal para checar conflitos
+            
+            contador_check = 2
+            while True:
+                mes_check = request.POST.get(f'mes_producao_{contador_check}')
+                endosso_ext = request.POST.get(f'endosso_{contador_check}')
                 
-                seg_input = request.POST.get('seguradora')
-                reg.seguradora = Seguradora.objects.filter(id=seg_input).first() if seg_input else None
-
-                unidade_input = request.POST.get('unidade')
-                reg.unidade = Unidade.objects.filter(id=unidade_input).first() if unidade_input else None
-
-                tipodoc_input = request.POST.get('tipo_documento')
-                reg.tipo_documento = TipoDocumento.objects.filter(id=tipodoc_input).first() if tipodoc_input else None
-
-                ramo_input = request.POST.get('grupo_ramo')
-                reg.grupo_ramo = Ramo.objects.filter(id=ramo_input).first() if ramo_input else None
-
-                reg.tipo_pessoa = request.POST.get('tipo_pessoa') 
-                reg.documento = request.POST.get('documento')
+                # Se o formulário não enviou essas chaves no POST, acabou a lista
+                if mes_check is None and endosso_ext is None: 
+                    break
                 
-                endosso_principal_input = request.POST.get('endosso')
-                if not endosso_principal_input or not endosso_principal_input.strip():
-                    msg_erro = "O número do endosso principal não pode ficar vazio."
+                # Se o card foi adicionado no HTML, mas deixaram o número do endosso em branco
+                if not endosso_ext or not endosso_ext.strip():
+                    msg_erro = f"O número do {contador_check}º endosso está vazio. Preencha-o ou clique em 'Remover'."
+                    if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                    messages.error(request, msg_erro)
+                    return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+
+                endosso_ext = endosso_ext.strip()
+                
+                # Checagem de Endossos Repetidos
+                if endosso_ext in endossos_enviados:
+                    msg_erro = f"O endosso '{endosso_ext}' foi preenchido repetidamente no formulário. Corrija para salvar."
                     if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
                     messages.error(request, msg_erro)
                     return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
                 
-                reg.endosso = endosso_principal_input.strip()
+                endossos_enviados.append(endosso_ext)
 
-                # COMENTADO POR HENRIQUE A PEDIDO DE ADRIEL
-                if reg.fase.upper() == 'PENDENTES':
-                    nova_chave = RegistroProducao.montar_chave_unica(
-                        reg.seguradora_id, reg.grupo_ramo_id, reg.tipo_documento_id, reg.documento, reg.endosso
-                    )
-                    ja_existe = RegistroProducao.objects.filter(
-                        agrupamento=agrupamento, fase__iexact='PENDENTES', chave_unica=nova_chave
-                    ).exclude(id=reg.id).exists()
-                    if ja_existe:
-                        erro = ('Já existe um registo em Pendentes com a mesma Seguradora, Grupo/Ramo, '
-                                'Tipo de Documento, Documento e Endosso. Altere um desses campos antes de guardar.')
-                        if is_ajax:
-                            return JsonResponse({
-                                'sucesso': False,
-                                'erro': erro,
-                                'campos_duplicados': ['seguradora', 'grupo_ramo', 'tipo_documento', 'documento', 'endosso'],
-                            }, status=409)
-                        messages.error(request, erro)
-                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
-
-                # Mes da Producao NAO se edita aqui: ele vem do "Mês Prod." cadastrado em
-                # Base > Formulários > Produtos (puxado na importação/no fechamento do mês).
-                reg.nome_social = request.POST.get('nome_social')
-                reg.celular = request.POST.get('celular')
-                reg.telefone = request.POST.get('telefone')
-                reg.email = request.POST.get('email')
-                reg.superintendencia = request.POST.get('superintendencia')
-                reg.nome_unidade = request.POST.get('nome_unidade')
-                reg.colaborador = request.POST.get('colaborador')
-                reg.nome_colaborador = request.POST.get('nome_colaborador')
-                reg.gerente_agencia = request.POST.get('gerente_agencia')
-                reg.superintendente = request.POST.get('superintendente')
-                reg.realizado = request.POST.get('realizado')
-                reg.observacoes = request.POST.get('observacoes')
-                reg.motivo_endosso = request.POST.get('motivo_endosso')
-                reg.renovacao_propria = request.POST.get('renovacao_propria')
-                reg.grupo = request.POST.get('grupo')   
-
-                def valida_limites(p_com, p_bruto, p_liq):
-                    if p_com and (p_com > 999.99 or p_com < -999.99): 
-                        return "O campo '% de comissão' não pode exceder 999,99%."
-                    if p_bruto and (p_bruto > 9999999999999.99 or p_bruto < -9999999999999.99): 
-                        return "O valor do 'Prêmio Bruto' excedeu o limite permitido."
-                    if p_liq and (p_liq > 9999999999999.99 or p_liq < -9999999999999.99): 
-                        return "O valor do 'Prêmio Líquido' excedeu o limite permitido."
-                    return None
-
-                p_bruto_val = _parse_float(request.POST.get('premio_bruto'))
-                p_liq_val = _parse_float(request.POST.get('premio_liquido'))
-                p_com_val = _parse_float(request.POST.get('perc_comissao'))
+                p_bruto_ext = _parse_float(request.POST.get(f'premio_bruto_{contador_check}'))
+                p_liq_ext = _parse_float(request.POST.get(f'premio_liquido_{contador_check}'))
+                p_com_ext = _parse_float(request.POST.get(f'perc_comissao_{contador_check}'))
                 
-                erro_limite = valida_limites(p_com_val, p_bruto_val, p_liq_val)
-                if erro_limite:
-                    if is_ajax: return JsonResponse({'sucesso': False, 'erro': erro_limite}, status=400)
-                    messages.error(request, erro_limite)
+                erro_limite_ext = valida_limites(p_com_ext, p_bruto_ext, p_liq_ext)
+                if erro_limite_ext:
+                    msg_erro = f"Endosso {contador_check - 1}: {erro_limite_ext}"
+                    if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
+                    messages.error(request, msg_erro)
                     return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
-
-                endossos_enviados = [reg.endosso] # Já inicia com o endosso principal para checar conflitos
                 
-                contador_check = 2
-                while True:
-                    mes_check = request.POST.get(f'mes_producao_{contador_check}')
-                    endosso_ext = request.POST.get(f'endosso_{contador_check}')
-                    
-                    # Se o formulário não enviou essas chaves no POST, acabou a lista
-                    if mes_check is None and endosso_ext is None: 
-                        break
-                    
-                    # Se o card foi adicionado no HTML, mas deixaram o número do endosso em branco
-                    if not endosso_ext or not endosso_ext.strip():
-                        msg_erro = f"O número do {contador_check}º endosso está vazio. Preencha-o ou clique em 'Remover'."
-                        if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
-                        messages.error(request, msg_erro)
-                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                contador_check += 1
 
-                    endosso_ext = endosso_ext.strip()
-                    
-                    # Checagem de Endossos Repetidos
-                    if endosso_ext in endossos_enviados:
-                        msg_erro = f"O endosso '{endosso_ext}' foi preenchido repetidamente no formulário. Corrija para salvar."
-                        if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
-                        messages.error(request, msg_erro)
-                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
-                    
-                    endossos_enviados.append(endosso_ext)
+            reg.premio_bruto = p_bruto_val
+            reg.premio_liquido = p_liq_val
+            reg.perc_comissao = p_com_val
+            reg.qtd_parcelas = _parse_int(request.POST.get('qtd_parcelas'))
 
-                    p_bruto_ext = _parse_float(request.POST.get(f'premio_bruto_{contador_check}'))
-                    p_liq_ext = _parse_float(request.POST.get(f'premio_liquido_{contador_check}'))
-                    p_com_ext = _parse_float(request.POST.get(f'perc_comissao_{contador_check}'))
-                    
-                    erro_limite_ext = valida_limites(p_com_ext, p_bruto_ext, p_liq_ext)
-                    if erro_limite_ext:
-                        msg_erro = f"Endosso {contador_check - 1}: {erro_limite_ext}"
-                        if is_ajax: return JsonResponse({'sucesso': False, 'erro': msg_erro}, status=400)
-                        messages.error(request, msg_erro)
-                        return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
-                    
-                    contador_check += 1
+            reg.inicio_vigencia = _parse_date(request.POST.get('inicio_vigencia'))
+            reg.fim_vigencia = _parse_date(request.POST.get('fim_vigencia'))
 
-                reg.premio_bruto = p_bruto_val
-                reg.premio_liquido = p_liq_val
-                reg.perc_comissao = p_com_val
-                reg.qtd_parcelas = _parse_int(request.POST.get('qtd_parcelas'))
+            # O card Clientes e a base: o que foi digitado na ficha atualiza
+            # o cadastro do cliente (achado pelo CPF/CNPJ) e volta espelhado
+            # para o registo, deixando os dois lados sempre iguais.
+            cliente_obj = sincronizar_cliente(
+                cpf_cnpj=reg.cpf_cnpj,
+                nome=reg.cliente,
+                nome_social=reg.nome_social,
+                celular=reg.celular,
+                telefone=reg.telefone,
+                email=reg.email,
+                tipo_pessoa=reg.tipo_pessoa,
+            )
+            reg.cliente_cadastro = cliente_obj
+            if cliente_obj:
+                for campo, valor in dados_do_cliente(cliente_obj).items():
+                    setattr(reg, campo, valor)
 
-                reg.inicio_vigencia = _parse_date(request.POST.get('inicio_vigencia'))
-                reg.fim_vigencia = _parse_date(request.POST.get('fim_vigencia'))
+            reg.save()
+            
+            reg.endossos_extras.all().delete()
+            contador = 2
+            while True:
+                mes_extra = request.POST.get(f'mes_producao_{contador}')
+                endosso_extra = request.POST.get(f'endosso_{contador}')
+                if mes_extra is None and endosso_extra is None: break
+                
+                unidade_extra_input = request.POST.get(f'unidade_{contador}')
+                unidade_extra_inst = Unidade.objects.filter(id=unidade_extra_input).first() if unidade_extra_input else None
 
-                # O card Clientes e a base: o que foi digitado na ficha atualiza
-                # o cadastro do cliente (achado pelo CPF/CNPJ) e volta espelhado
-                # para o registo, deixando os dois lados sempre iguais.
-                cliente_obj = sincronizar_cliente(
-                    cpf_cnpj=reg.cpf_cnpj,
-                    nome=reg.cliente,
-                    nome_social=reg.nome_social,
-                    celular=reg.celular,
-                    telefone=reg.telefone,
-                    email=reg.email,
-                    tipo_pessoa=reg.tipo_pessoa,
+                EndossoAdicional.objects.create(
+                    registro_pai=reg, mes_producao=mes_extra, endosso=endosso_extra.strip(),
+                    motivo_endosso=request.POST.get(f'motivo_endosso_{contador}'),
+                    inicio_vigencia=_parse_date(request.POST.get(f'inicio_vigencia_{contador}')),
+                    fim_vigencia=_parse_date(request.POST.get(f'fim_vigencia_{contador}')),
+                    qtd_parcelas=_parse_int(request.POST.get(f'qtd_parcelas_{contador}')),
+                    renovacao_propria=request.POST.get(f'renovacao_propria_{contador}'),
+                    premio_bruto=_parse_float(request.POST.get(f'premio_bruto_{contador}')),
+                    premio_liquido=_parse_float(request.POST.get(f'premio_liquido_{contador}')),
+                    perc_comissao=_parse_float(request.POST.get(f'perc_comissao_{contador}')),
+                    realizado=request.POST.get(f'realizado_{contador}'),
+                    unidade=unidade_extra_inst.cid_unidade if unidade_extra_inst else None,
+                    nome_unidade=request.POST.get(f'nome_unidade_{contador}') or (unidade_extra_inst.unidade if unidade_extra_inst else None),
+                    superintendencia=request.POST.get(f'superintendencia_{contador}'), grupo=request.POST.get(f'grupo_{contador}'),
+                    colaborador=request.POST.get(f'colaborador_{contador}'), nome_colaborador=request.POST.get(f'nome_colaborador_{contador}'),
+                    gerente_agencia=request.POST.get(f'gerente_agencia_{contador}'),
+                    superintendente=request.POST.get(f'superintendente_{contador}')
                 )
-                reg.cliente_cadastro = cliente_obj
-                if cliente_obj:
-                    for campo, valor in dados_do_cliente(cliente_obj).items():
-                        setattr(reg, campo, valor)
-
-                reg.save()
-                
-                reg.endossos_extras.all().delete()
-                contador = 2
-                while True:
-                    mes_extra = request.POST.get(f'mes_producao_{contador}')
-                    endosso_extra = request.POST.get(f'endosso_{contador}')
-                    if mes_extra is None and endosso_extra is None: break
-                    
-                    unidade_extra_input = request.POST.get(f'unidade_{contador}')
-                    unidade_extra_inst = Unidade.objects.filter(id=unidade_extra_input).first() if unidade_extra_input else None
-
-                    EndossoAdicional.objects.create(
-                        registro_pai=reg, mes_producao=mes_extra, endosso=endosso_extra.strip(),
-                        motivo_endosso=request.POST.get(f'motivo_endosso_{contador}'),
-                        inicio_vigencia=_parse_date(request.POST.get(f'inicio_vigencia_{contador}')),
-                        fim_vigencia=_parse_date(request.POST.get(f'fim_vigencia_{contador}')),
-                        qtd_parcelas=_parse_int(request.POST.get(f'qtd_parcelas_{contador}')),
-                        renovacao_propria=request.POST.get(f'renovacao_propria_{contador}'),
-                        premio_bruto=_parse_float(request.POST.get(f'premio_bruto_{contador}')),
-                        premio_liquido=_parse_float(request.POST.get(f'premio_liquido_{contador}')),
-                        perc_comissao=_parse_float(request.POST.get(f'perc_comissao_{contador}')),
-                        realizado=request.POST.get(f'realizado_{contador}'),
-                        unidade=unidade_extra_inst.cid_unidade if unidade_extra_inst else None,
-                        nome_unidade=request.POST.get(f'nome_unidade_{contador}') or (unidade_extra_inst.unidade if unidade_extra_inst else None),
-                        superintendencia=request.POST.get(f'superintendencia_{contador}'), grupo=request.POST.get(f'grupo_{contador}'),
-                        colaborador=request.POST.get(f'colaborador_{contador}'), nome_colaborador=request.POST.get(f'nome_colaborador_{contador}'),
-                        gerente_agencia=request.POST.get(f'gerente_agencia_{contador}'),
-                        superintendente=request.POST.get(f'superintendente_{contador}')
-                    )
-                    contador += 1
-                messages.success(request, 'Registo atualizado com sucesso!')
-                if is_ajax:
-                    return JsonResponse({'sucesso': True, 'mensagem': 'Registo atualizado com sucesso!'})
-                return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
-            else:
-                if is_ajax:
-                    return JsonResponse({'sucesso': False, 'erro': 'Registo não encontrado.'}, status=400)
-                messages.error(request, 'Registo não encontrado.')
-                return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
+                contador += 1
+            msg_sucesso = 'Registo criado com sucesso!' if criando else 'Registo atualizado com sucesso!'
+            messages.success(request, msg_sucesso)
+            if is_ajax:
+                return JsonResponse({'sucesso': True, 'mensagem': msg_sucesso})
+            return redirect('producao_lista_fase', agrupamento_id=agrupamento.id, fase=fase)
 
         elif acao == 'validar':
             ids_duplicados = _ids_duplicados_no_lote('IMPORTADOS', agrupamento)
@@ -2794,6 +2812,11 @@ def producao_lista_fase(request, agrupamento_id, fase):
 
                     reg.endossos_extras.all().delete()
                     reg.fase = 'EMITIDOS'
+                    # O mes principal (endosso 1) e so-leitura na Ficha e segue o "Mês
+                    # Prod." do Produto ate aqui; e agora, virando Emitidos, que o
+                    # relacionamento quebra e o mes fica congelado pra sempre.
+                    if mes_atual:
+                        reg.mes_producao = mes_atual
                     reg.save()
                     total_emitidos += 1
 
