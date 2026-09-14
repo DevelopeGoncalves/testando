@@ -692,8 +692,6 @@ def producao_formularios_painel(request, agrupamento_id):
         'valor_importados': valor_importados,
         'valor_pendentes': valor_pendentes,
         'valor_emitidos': valor_emitidos,
-        # Card "FECHAMENTO DO MES": so Gestor fecha (afeta a producao toda do produto).
-        'pode_fechar_mes': _nivel_formulario(request.user, agrupamento) >= 3,
     })
 
 
@@ -704,20 +702,33 @@ def _mes_seguinte(data):
     return date(data.year, data.month + 1, 1)
 
 
+def _redirect_pos_fechamento(agrupamento):
+    """O card de fechar o mês agora mora na tela de Processamentos, não mais no
+    painel de Formulários. Odonto e Habitacional têm tela de Processamentos própria;
+    os demais produtos caem na tela genérica de Processamentos."""
+    nome = (agrupamento.agrupamento or '').lower()
+    if 'odonto' in nome:
+        return redirect('producao_odonto_import')
+    if 'habitacional' in nome:
+        return redirect('producao_habitacional_import')
+    return redirect('producao_processamentos')
+
+
 @login_required
 def producao_fechar_mes(request, agrupamento_id):
-    """Card "FECHAMENTO DO MÊS": avança o "Mês Prod." (Base > Formulários > Produtos)
-    para o mês seguinte. Os registos já Emitidos ficam com o mês que já tinham (isso é
-    o "fechamento" deles); dali em diante, novas importações e a Ficha do Registo passam
-    a puxar o mês novo. Só Gestor fecha, porque afeta a produção inteira do produto."""
+    """Card "Fechamento do Mês" (tela de Processamentos): avança o "Mês Prod."
+    (Base > Formulários > Produtos) para o mês seguinte. Os registos já Emitidos ficam
+    com o mês que já tinham (isso é o "fechamento" deles); dali em diante, novas
+    importações e a Ficha do Registo passam a puxar o mês novo. Só Gestor fecha,
+    porque afeta a produção inteira do produto."""
     agrupamento = get_object_or_404(Agrupamento, id=agrupamento_id)
 
     if _nivel_formulario(request.user, agrupamento) < 3:
         messages.error(request, 'Apenas usuários Gestor podem fechar o mês.')
-        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+        return _redirect_pos_fechamento(agrupamento)
 
     if request.method != 'POST':
-        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+        return _redirect_pos_fechamento(agrupamento)
 
     produto = Produto.objects.filter(agrupamento=agrupamento).first()
     if not produto or not produto.mes_producao_em_aberto:
@@ -725,7 +736,7 @@ def producao_fechar_mes(request, agrupamento_id):
             request,
             'Cadastre o "Mês Prod." em Base > Formulários > Produtos antes de fechar o mês.'
         )
-        return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+        return _redirect_pos_fechamento(agrupamento)
 
     mes_fechado = produto.mes_producao_em_aberto
     produto.mes_producao_em_aberto = _mes_seguinte(mes_fechado)
@@ -740,7 +751,7 @@ def producao_fechar_mes(request, agrupamento_id):
         f'Mês {mes_fechado.strftime("%m/%Y")} fechado! {qtd_emitidos_mes} registo(s) de Emitidos ficam '
         f'com esse mês. A produção agora abre em {produto.mes_producao_em_aberto.strftime("%m/%Y")}.'
     )
-    return redirect('producao_formularios_painel', agrupamento_id=agrupamento.id)
+    return _redirect_pos_fechamento(agrupamento)
 
 
 @login_required
@@ -834,9 +845,12 @@ def producao_processamentos(request):
                 return redirect('producao_processamentos')
 
     agrupamentos = Agrupamento.objects.filter(inativo=False).order_by('ordem_apresentacao')
+    # Card "Fechamento do Mês" de cada agrupamento: so Gestor fecha (afeta a producao toda do produto).
+    ids_pode_fechar_mes = [a.id for a in agrupamentos if _nivel_formulario(user, a) >= 3]
     return render(request, 'core/producao/processamentos/importacao.html', {
         'agrupamentos': agrupamentos,
         'base_novo_parametrizacao_visivel': globals().get('BASE_NOVO_PARAMETRIZACAO_VISIVEL', False),
+        'ids_pode_fechar_mes': ids_pode_fechar_mes,
     })
 
 
@@ -1156,6 +1170,8 @@ def producao_odonto_import(request):
 
     return render(request, 'core/producao/processamentos/importacao_odonto.html', {
         'agrupamento': agrupamento,
+        # Card "Fechamento do Mês": so Gestor fecha (afeta a producao toda do produto).
+        'pode_fechar_mes': _nivel_formulario(request.user, agrupamento) >= 3 if agrupamento else False,
         'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         'ramos': Ramo.objects.all().order_by('grupo_e_ramo'),
         'tipos_doc': TipoDocumento.objects.all().order_by('tipo_documento'),
@@ -1446,6 +1462,8 @@ def producao_habitacional_import(request):
 
     return render(request, 'core/producao/processamentos/importacao_habitacional.html', {
         'agrupamento': agrupamento,
+        # Card "Fechamento do Mês": so Gestor fecha (afeta a producao toda do produto).
+        'pode_fechar_mes': _nivel_formulario(request.user, agrupamento) >= 3 if agrupamento else False,
         'mes_padrao': mes_padrao or '',
         'ramos_hab': ramos_hab,
         'tipos_doc': tipos_doc,

@@ -66,8 +66,25 @@
                 </div>
             </div>
 
+            {% if pode_fechar_mes %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100" style="cursor: pointer; border: none; border-radius: 6px; border-top: 4px solid #212529; transition: 0.3s;" onclick="confirmarFecharMes()" onmouseover="this.classList.remove('shadow-sm'); this.classList.add('shadow');" onmouseout="this.classList.remove('shadow'); this.classList.add('shadow-sm');">
+                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 140px;">
+                        <i class="fas fa-calendar-check fa-3x mb-3 text-dark"></i>
+                        <h6 class="fw-bold text-dark m-0" style="font-size: 1.1rem;">Fechamento do Mês</h6>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
+
+    {% if pode_fechar_mes %}
+    <form id="form-fechar-mes" method="post" action="{% url 'producao_fechar_mes' agrupamento_id=agrupamento.id %}" class="d-none">
+        {% csrf_token %}
+    </form>
+    {% endif %}
 
     <form id="form-importacao" method="post" enctype="multipart/form-data">
         {% csrf_token %}
@@ -668,10 +685,20 @@
         sessionStorage.setItem('tela_ativa_habitacional', 'parametrizar');
         atualizarBreadcrumb('parametrizar');
     }
-    function mostrarTelaMapearSeg() { 
-        $('#menu-acoes').hide(); $('#area-mapear-seguradoras').fadeIn(300); 
+    function mostrarTelaMapearSeg() {
+        $('#menu-acoes').hide(); $('#area-mapear-seguradoras').fadeIn(300);
         sessionStorage.setItem('tela_ativa_habitacional', 'mapear');
         atualizarBreadcrumb('mapear');
+    }
+
+    // --- FECHAMENTO DO MÊS ---
+    function confirmarFecharMes() {
+        confirmarElegante(
+            'Tem certeza que deseja fechar o mês? Todos os registos de Emitidos do mês atual ficam ' +
+            'fechados e a produção passa a abrir no mês seguinte.',
+            function() { document.getElementById('form-fechar-mes').submit(); },
+            { titulo: 'Fechamento do Mês', textoConfirmar: 'Sim, fechar o mês', corBotao: 'dark' }
+        );
     }
 
     // --- LOGICA MAPEAMENTO SEGURADORA ---

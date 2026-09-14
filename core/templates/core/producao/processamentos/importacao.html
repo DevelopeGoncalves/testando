@@ -17,11 +17,11 @@
         </div>
     </div>
     
-    <div class="row">
+    <div class="row" id="grid-processamentos">
         {% for agrupamento in agrupamentos %}
-        
+
             {% if request.user.is_superuser or 'vida' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_vida > 0 or 'bap' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_bap > 0 or 'prestamista' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_prestamista > 0 or 'patrimonial' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_patrimonialedemais > 0 or 'cons' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_consorcio > 0 or 'odonto' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_odonto > 0 or 'previd' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_previdencia > 0 or 'banescap' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_banescap > 0 or 'saúd' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_saude > 0 or 'saud' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_saude > 0 or 'habitacional' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_habitacional > 0 or 'base' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_basenovo > 0 %}
-            
+
             <div class="col-lg-3 col-6">
 
                 {% if 'habitacional' in agrupamento.agrupamento|lower %}
@@ -50,12 +50,11 @@
 
                 {% else %}
 
-                    <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImport-{{ agrupamento.id }}">
+                    <a href="javascript:void(0);" class="link-card" onclick="mostrarAcoesProcessamento({{ agrupamento.id }})">
                         <div class="card card-menu mb-4">
                             <div class="card-body text-center p-4">
                                 <i class="fas fa-cog fa-3x mb-3"></i>
                                 <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
-                                <p class="card-text text-muted small">Enviar planilha de dados</p>
                             </div>
                         </div>
                     </a>
@@ -175,5 +174,73 @@
         </div>
         {% endif %}
     </div>
+
+    {% for agrupamento in agrupamentos %}
+        {% if request.user.is_superuser or 'vida' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_vida > 0 or 'bap' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_bap > 0 or 'prestamista' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_prestamista > 0 or 'patrimonial' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_patrimonialedemais > 0 or 'cons' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_consorcio > 0 or 'previd' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_previdencia > 0 or 'banescap' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_banescap > 0 or 'saúd' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_saude > 0 or 'saud' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_saude > 0 or 'base' in agrupamento.agrupamento|lower and request.user.perfil.prod_proc_basenovo > 0 %}
+        {% if 'habitacional' not in agrupamento.agrupamento|lower and 'odonto' not in agrupamento.agrupamento|lower %}
+
+            <div class="row acoes-processamento" id="acoes-produto-{{ agrupamento.id }}" style="display: none;">
+                <div class="col-12 mb-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="voltarGridProcessamentos()"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <span class="fw-bold text-dark ms-2">{{ agrupamento.agrupamento }}</span>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImport-{{ agrupamento.id }}">
+                        <div class="card card-menu mb-4" style="border-top: 4px solid #0d6efd;">
+                            <div class="card-body text-center p-4">
+                                <i class="fas fa-file-excel fa-3x mb-3" style="color: #0d6efd;"></i>
+                                <h5 class="card-title text-dark fw-bold">Importar</h5>
+                                <p class="card-text text-muted small">Enviar planilha de dados</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                {% if agrupamento.id in ids_pode_fechar_mes %}
+                <div class="col-lg-3 col-6">
+                    <a href="javascript:void(0);" class="link-card" onclick="confirmarFecharMes({{ agrupamento.id }})">
+                        <div class="card card-menu mb-4" style="border-top: 4px solid #212529;">
+                            <div class="card-body text-center p-4">
+                                <i class="fas fa-calendar-check fa-3x mb-3"></i>
+                                <h5 class="card-title text-dark fw-bold">Fechamento do Mês</h5>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <form id="form-fechar-mes-{{ agrupamento.id }}" method="post" action="{% url 'producao_fechar_mes' agrupamento_id=agrupamento.id %}" class="d-none">
+                    {% csrf_token %}
+                </form>
+                {% endif %}
+            </div>
+
+        {% endif %}
+        {% endif %}
+    {% endfor %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function mostrarAcoesProcessamento(agrupamentoId) {
+        document.getElementById('grid-processamentos').style.display = 'none';
+        document.querySelectorAll('.acoes-processamento').forEach(function(el) { el.style.display = 'none'; });
+        var painel = document.getElementById('acoes-produto-' + agrupamentoId);
+        if (painel) painel.style.display = '';
+    }
+
+    function voltarGridProcessamentos() {
+        document.querySelectorAll('.acoes-processamento').forEach(function(el) { el.style.display = 'none'; });
+        document.getElementById('grid-processamentos').style.display = '';
+    }
+
+    function confirmarFecharMes(agrupamentoId) {
+        confirmarElegante(
+            'Tem certeza que deseja fechar o mês? Todos os registos de Emitidos do mês atual ficam ' +
+            'fechados e a produção passa a abrir no mês seguinte.',
+            function() { document.getElementById('form-fechar-mes-' + agrupamentoId).submit(); },
+            { titulo: 'Fechamento do Mês', textoConfirmar: 'Sim, fechar o mês', corBotao: 'dark' }
+        );
+    }
+</script>
 {% endblock %}
