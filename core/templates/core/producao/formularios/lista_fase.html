@@ -182,8 +182,8 @@
                                 <th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>
                                 {% endif %}
                                 <th style="display:none;"></th>
-                                <th>Seguradora</th>
                                 {% if fase_nome == 'Emitidos' %}<th>Mês Produção</th>{% endif %}
+                                <th>Seguradora</th>
                                 <th>Grupo/Ramo</th>
                                 <th>Tipo documento</th>
                                 <th>Documento</th>
@@ -266,8 +266,8 @@
                                     {% endfor %}
                                 </td>
 
-                                <td>{{ reg.seguradora.seguradora|default:"-" }}</td>
                                 {% if fase_nome == 'Emitidos' %}<td>{{ reg.mes_producao|default:"-" }}</td>{% endif %}
+                                <td>{{ reg.seguradora.seguradora|default:"-" }}</td>
                                 <td>{{ reg.grupo_ramo|default:"-" }}</td>
                                 <td>{{ reg.tipo_documento.tipo_documento|default:"-" }}</td>
                                 <td>{{ reg.documento|default:"-" }}</td>
