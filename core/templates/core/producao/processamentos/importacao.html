@@ -10,6 +10,28 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* Todos os cards desta tela ficam com a MESMA altura, tenha ou nao subtitulo
+       (card com so 2 linhas de texto ficava mais baixo que o com 3, desalinhando
+       as fileiras). O card_body vira flex e centraliza o conteudo verticalmente. */
+    #grid-processamentos .card-menu .card-body {
+        min-height: 168px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* Cards "Em construção": mesmo tamanho dos demais, so que visualmente
+       apagados (cinza, sem levantar ao passar o mouse, cursor de bloqueado). */
+    #grid-processamentos .card-em-construcao {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+    #grid-processamentos .card-em-construcao:hover {
+        transform: none !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+    }
+</style>
 <div class="container-fluid pt-3">
     <div class="row mb-4">
         <div class="col-12">
@@ -50,11 +72,13 @@
 
                 {% else %}
 
-                    <a href="javascript:void(0);" class="link-card" onclick="mostrarAcoesProcessamento({{ agrupamento.id }})">
-                        <div class="card card-menu mb-4">
+                    <!-- Ainda nao entrou em producao: mostra "Em construção" em vez de abrir a importação. -->
+                    <a href="javascript:void(0);" class="link-card" onclick="avisoElegante('Este processamento ainda está em construção. Em breve estará disponível.', 'Em construção')">
+                        <div class="card card-menu mb-4 card-em-construcao">
                             <div class="card-body text-center p-4">
-                                <i class="fas fa-cog fa-3x mb-3"></i>
-                                <h5 class="card-title text-dark fw-bold">{{ agrupamento.agrupamento }}</h5>
+                                <i class="fas fa-tools fa-3x mb-3 text-muted"></i>
+                                <h5 class="card-title text-muted fw-bold">{{ agrupamento.agrupamento }}</h5>
+                                <p class="card-text text-muted small mb-0">Em construção</p>
                             </div>
                         </div>
                     </a>
