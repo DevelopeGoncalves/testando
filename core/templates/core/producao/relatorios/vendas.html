@@ -1,0 +1,474 @@
+{% extends 'core/layout.html' %}
+{% load formatos %}
+
+{% block title %}Relatórios - Vendas{% endblock %}
+
+{% block breadcrumb %}
+    <span style="font-size: 1rem; font-weight: normal;">
+        <a href="{% url 'home' %}" class="text-primary text-decoration-none">Produção</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <a href="{% url 'producao_relatorios' %}" class="text-primary text-decoration-none">Relatórios</a>
+        <span class="text-primary text-decoration-none">/</span>
+        <span class="text-primary text-decoration-none">Vendas</span>
+    </span>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h4 class="m-0 text-primary fw-bold"><i class="fas fa-chart-pie"></i> Dashboard de Vendas</h4>
+        <p class="text-muted mb-0">Indicações e ligações do card Vendas (Novo / Base Novo).</p>
+    </div>
+</div>
+
+<!-- Filtro por período (data do cadastro da indicação) -->
+<form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label small fw-bold text-muted mb-1">De</label>
+        <input type="date" name="data_de" value="{{ data_de }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+        <label class="form-label small fw-bold text-muted mb-1">Até</label>
+        <input type="date" name="data_ate" value="{{ data_ate }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="fas fa-filter me-1"></i> Filtrar</button>
+        {% if data_de or data_ate %}
+        <a href="{% url 'producao_relatorios_vendas' %}" class="btn btn-outline-secondary btn-sm fw-bold">Limpar</a>
+        {% endif %}
+    </div>
+</form>
+
+<!-- KPIs -->
+<div class="row">
+    <div class="col-md-2 mb-4">
+        <div class="card shadow-sm border-0 border-start border-primary border-4 h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted fw-bold small">ITENS</h6>
+                <h3 class="fw-bold mb-0">{{ total_itens }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-4">
+        <div class="card shadow-sm border-0 border-start border-dark border-4 h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted fw-bold small">VALOR (PRÊMIO)</h6>
+                <h5 class="fw-bold mb-0">R$ {{ total_valor|moeda_br }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-4">
+        <div class="card shadow-sm border-0 border-start border-success border-4 h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted fw-bold small">VENDAS</h6>
+                <h3 class="fw-bold mb-0">{{ total_vendas }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-4">
+        <div class="card shadow-sm border-0 border-start border-danger border-4 h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted fw-bold small">NÃO VENDAS</h6>
+                <h3 class="fw-bold mb-0">{{ total_nao_vendas }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-4">
+        <div class="card shadow-sm border-0 border-start border-warning border-4 h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted fw-bold small">EM ABERTO</h6>
+                <h3 class="fw-bold mb-0">{{ total_em_aberto }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-4">
+        <div class="card shadow-sm border-0 border-start border-info border-4 h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted fw-bold small">CONVERSÃO</h6>
+                <h3 class="fw-bold mb-0">{% if taxa_conversao_geral is not None %}{{ taxa_conversao_geral|floatformat:1 }}%{% else %}—{% endif %}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-chart-pie text-primary me-1"></i> Status (geral)</div>
+            <div class="card-body"><canvas id="graficoStatus" height="220"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-chart-bar text-primary me-1"></i> Prêmio Total por Seguradora</div>
+            <div class="card-body"><canvas id="graficoSeguradora" height="220"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Último Responsável -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-user-check text-primary me-1"></i> Último Responsável — Valor e Itens</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Atendente</th>
+                        <th class="text-end">Itens</th>
+                        <th class="text-end pe-3">Valor (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in atendentes_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.atendente }}</td>
+                        <td class="text-end">{{ l.itens }}</td>
+                        <td class="text-end pe-3">{{ l.valor|moeda_br }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td class="ps-3">Geral (todos os atendentes)</td>
+                        <td class="text-end">{{ total_itens }}</td>
+                        <td class="text-end pe-3">{{ total_valor|moeda_br }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Grupo/Ramo -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-layer-group text-primary me-1"></i> Grupo/Ramo</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Grupo/Ramo</th>
+                        <th class="text-end">Itens</th>
+                        <th class="text-end pe-3">Valor (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in ramos_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.ramo }}</td>
+                        <td class="text-end">{{ l.itens }}</td>
+                        <td class="text-end pe-3">{{ l.valor|moeda_br }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 4. Status -->
+<h5 class="fw-bold text-secondary mt-4 mb-3"><i class="fas fa-tasks me-1"></i> Status de Negociação</h5>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold text-dark">Status (geral)</div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr class="small text-muted"><th class="ps-3">Status</th><th class="text-end pe-3">Quantidade</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for l in status_stats %}
+                        <tr><td class="ps-3">{{ l.status }}</td><td class="text-end pe-3">{{ l.qtd }}</td></tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">Sem dados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold text-dark">Motivo (Não Venda) — geral</div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr class="small text-muted"><th class="ps-3">Motivo</th><th class="text-end pe-3">Quantidade</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for l in motivo_stats %}
+                        <tr><td class="ps-3">{{ l.motivo }}</td><td class="text-end pe-3">{{ l.qtd }}</td></tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">Sem dados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark">Status por Último Atendente</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Atendente</th>
+                        <th class="text-end">Em Aberto</th>
+                        <th class="text-end">Venda Central</th>
+                        <th class="text-end">Venda Agência</th>
+                        <th class="text-end pe-3">Não Venda</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in atendentes_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.atendente }}</td>
+                        <td class="text-end">{{ l.em_aberto }}</td>
+                        <td class="text-end">{{ l.venda_central }}</td>
+                        <td class="text-end">{{ l.venda_agencia }}</td>
+                        <td class="text-end pe-3">{{ l.nao_venda }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark">Motivo (Não Venda) por Último Atendente</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Atendente</th>
+                        {% for m in motivo_choices %}<th class="text-end" style="white-space: nowrap;">{{ m }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in atendentes_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.atendente }}</td>
+                        {% for qtd in l.motivos %}<td class="text-end">{{ qtd }}</td>{% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="{{ motivo_choices|length|add:1 }}" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark">Em Aberto — Próximo Contato</div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-4 mb-2">
+                <div class="border rounded p-3 text-center border-danger">
+                    <div class="small text-muted fw-bold">ATRASADOS</div>
+                    <div class="fs-4 fw-bold text-danger">{{ total_atrasados }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="border rounded p-3 text-center border-warning">
+                    <div class="small text-muted fw-bold">A VENCER</div>
+                    <div class="fs-4 fw-bold text-warning">{{ total_a_vencer }}</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="border rounded p-3 text-center border-secondary">
+                    <div class="small text-muted fw-bold">SEM DATA DEFINIDA</div>
+                    <div class="fs-4 fw-bold text-secondary">{{ total_sem_data }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Atendente</th>
+                        <th class="text-end">Atrasados</th>
+                        <th class="text-end">A Vencer</th>
+                        <th class="text-end pe-3">Sem Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in atendentes_stats %}
+                        {% if l.em_aberto > 0 %}
+                        <tr>
+                            <td class="ps-3">{{ l.atendente }}</td>
+                            <td class="text-end">{{ l.atrasados }}</td>
+                            <td class="text-end">{{ l.a_vencer }}</td>
+                            <td class="text-end pe-3">{{ l.sem_data }}</td>
+                        </tr>
+                        {% endif %}
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Seguradora -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-shield-alt text-primary me-1"></i> Seguradora</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Seguradora</th>
+                        <th class="text-end">Prêmio Total (R$)</th>
+                        <th class="text-end pe-3">Venda em Item</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in seguradoras_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.seguradora }}</td>
+                        <td class="text-end">{{ l.premio|moeda_br }}</td>
+                        <td class="text-end pe-3">{{ l.vendas }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Agência -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-building text-primary me-1"></i> Venda e Não Venda por Agência</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Agência</th>
+                        <th class="text-end">Vendas</th>
+                        <th class="text-end">Não Vendas</th>
+                        <th class="text-end">Em Aberto</th>
+                        <th class="text-end pe-3">Conversão</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in agencias_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.nome }}</td>
+                        <td class="text-end">{{ l.vendas }}</td>
+                        <td class="text-end">{{ l.nao_vendas }}</td>
+                        <td class="text-end">{{ l.em_aberto }}</td>
+                        <td class="text-end pe-3">{% if l.conversao is not None %}{{ l.conversao|floatformat:1 }}%{% else %}—{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 7. Indicador -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold text-dark"><i class="fas fa-user-friends text-primary me-1"></i> Venda e Não Venda por Indicador</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted">
+                        <th class="ps-3">Indicador</th>
+                        <th class="text-end">Vendas</th>
+                        <th class="text-end">Não Vendas</th>
+                        <th class="text-end">Em Aberto</th>
+                        <th class="text-end pe-3">Conversão</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in indicadores_stats %}
+                    <tr>
+                        <td class="ps-3">{{ l.nome }}</td>
+                        <td class="text-end">{{ l.vendas }}</td>
+                        <td class="text-end">{{ l.nao_vendas }}</td>
+                        <td class="text-end">{{ l.em_aberto }}</td>
+                        <td class="text-end pe-3">{% if l.conversao is not None %}{{ l.conversao|floatformat:1 }}%{% else %}—{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">Sem dados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{ status_stats|json_script:"dados-status" }}
+{{ seguradoras_stats|json_script:"dados-seguradoras" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    (function () {
+        var dadosStatus = JSON.parse(document.getElementById('dados-status').textContent);
+        var dadosSeguradoras = JSON.parse(document.getElementById('dados-seguradoras').textContent);
+
+        var corPorStatus = {
+            'Em aberto': '#ffc107',
+            'Venda Central': '#198754',
+            'Venda Agência': '#0d6efd',
+            'Não Venda': '#dc3545'
+        };
+
+        var ctxStatus = document.getElementById('graficoStatus');
+        if (ctxStatus && dadosStatus.length) {
+            new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: dadosStatus.map(function (d) { return d.status; }),
+                    datasets: [{
+                        data: dadosStatus.map(function (d) { return d.qtd; }),
+                        backgroundColor: dadosStatus.map(function (d) { return corPorStatus[d.status] || '#6c757d'; })
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        var ctxSeguradora = document.getElementById('graficoSeguradora');
+        if (ctxSeguradora && dadosSeguradoras.length) {
+            new Chart(ctxSeguradora, {
+                type: 'bar',
+                data: {
+                    labels: dadosSeguradoras.map(function (d) { return d.seguradora; }),
+                    datasets: [{
+                        label: 'Prêmio Total (R$)',
+                        data: dadosSeguradoras.map(function (d) { return parseFloat(d.premio); }),
+                        backgroundColor: '#0d6efd'
+                    }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+    })();
+</script>
+{% endblock %}

@@ -107,6 +107,7 @@ urlpatterns = [
     
     path('producao/processamentos/', views.producao_processamentos, name='producao_processamentos'),
     path('producao/relatorios/', views.producao_relatorios, name='producao_relatorios'),
+    path('producao/relatorios/vendas/', views.producao_relatorios_vendas, name='producao_relatorios_vendas'),
 
 #                                               Henrique
     path('administracao/estagiarios/estagiarios', views.estagiarios, name='estagiarios'),

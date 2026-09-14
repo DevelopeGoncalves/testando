@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 import csv
 import openpyxl
+from collections import defaultdict
 from .models import (
     Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado,
     Seguradora, TipoDocumento, Cliente, Apolice, PerfilUsuario,
@@ -21,7 +22,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.db import transaction, IntegrityError, connection
-from django.db.models import Q, Sum, OuterRef, Subquery
+from django.db.models import Q, Sum, OuterRef, Subquery, Prefetch
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -3186,27 +3187,236 @@ def registrar_auditoria_backend(usuario, acao, detalhe):
         logger.error(f"Falha ao registrar auditoria no backend: {e}")
 
 
-@login_required
-def producao_relatorios(request):
-
-        
-    # ---- Parte de negar acesso quem não pode ----
-    user = request.user
-    tem_permissao_base = False
-
-    if not user.is_superuser and hasattr(user, 'perfil'):
-        tem_permissao_base = any(
-            valor > 0 
-            for campo, valor in user.perfil.__dict__.items() 
+def _tem_permissao_relatorios(user):
+    if user.is_superuser:
+        return True
+    if hasattr(user, 'perfil'):
+        return any(
+            valor > 0
+            for campo, valor in user.perfil.__dict__.items()
             if campo.startswith('prod_rel') and isinstance(valor, int)
         )
+    return False
 
-    if not (user.is_superuser or tem_permissao_base):
+
+@login_required
+def producao_relatorios(request):
+    # Tela de Cards: cada card leva a um dashboard específico (por enquanto só "Vendas",
+    # mas a ideia é ir crescendo com mais relatórios aqui dentro).
+    if not _tem_permissao_relatorios(request.user):
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
-    #----
 
     return render(request, 'core/producao/relatorios/index.html')
+
+
+@login_required
+def producao_relatorios_vendas(request):
+    if not _tem_permissao_relatorios(request.user):
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+
+    # Dashboard com os dados de Vendas (Indicação + Ligações, mesma "ficha" do card
+    # Vendas > Novo / Base Novo). Filtro opcional por período (data do cadastro).
+    data_de = (request.GET.get('data_de') or '').strip()
+    data_ate = (request.GET.get('data_ate') or '').strip()
+
+    ligacoes_qs = LigacaoIndicacao.objects.select_related('seguradora').order_by('-id')
+    indicacoes_qs = Indicacao.objects.select_related('ramo').prefetch_related(
+        Prefetch('ligacoes', queryset=ligacoes_qs)
+    )
+
+    if data_de:
+        try:
+            indicacoes_qs = indicacoes_qs.filter(carimbo_data_hora__date__gte=datetime.strptime(data_de, '%Y-%m-%d').date())
+        except ValueError:
+            data_de = ''
+    if data_ate:
+        try:
+            indicacoes_qs = indicacoes_qs.filter(carimbo_data_hora__date__lte=datetime.strptime(data_ate, '%Y-%m-%d').date())
+        except ValueError:
+            data_ate = ''
+
+    indicacoes = list(indicacoes_qs)
+
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+
+    motivo_choices = [m[0] for m in LigacaoIndicacao.MOTIVO_NAO_VENDA]
+    agora = timezone.now()
+
+    atendentes = defaultdict(lambda: {
+        'itens': 0, 'valor': Decimal('0'),
+        'em_aberto': 0, 'venda_central': 0, 'venda_agencia': 0, 'nao_venda': 0,
+        'atrasados': 0, 'a_vencer': 0, 'sem_data': 0,
+        'motivos': defaultdict(int),
+    })
+    ramos = defaultdict(lambda: {'itens': 0, 'valor': Decimal('0')})
+    status_geral = defaultdict(int)
+    motivo_geral = defaultdict(int)
+    seguradoras = defaultdict(lambda: {'premio': Decimal('0'), 'vendas': 0})
+    agencias = defaultdict(lambda: {'vendas': 0, 'nao_vendas': 0, 'em_aberto': 0})
+    indicadores = defaultdict(lambda: {'vendas': 0, 'nao_vendas': 0, 'em_aberto': 0})
+
+    total_itens = 0
+    total_valor = Decimal('0')
+    total_vendas = 0
+    total_nao_vendas = 0
+    total_em_aberto = 0
+    total_atrasados = 0
+    total_a_vencer = 0
+    total_sem_data = 0
+
+    for ind in indicacoes:
+        ligs = list(ind.ligacoes.all())
+        ultima = max(ligs, key=lambda l: l.id or 0) if ligs else None
+
+        atendente = ((ultima.cadastrado_por or '').strip() if ultima else '') or 'Sem atendente'
+        ramo_nome = ind.ramo.grupo_e_ramo if ind.ramo_id and ind.ramo and ind.ramo.grupo_e_ramo else 'Sem Ramo'
+        agencia_nome = mapa_agencia.get((ind.cid_agencia or '').strip()) or (ind.cid_agencia or '').strip() or 'Sem Agência'
+        indicador_nome = (ind.nome_indicador or '').strip() or 'Sem Indicador'
+        valor = (ultima.premio_total if ultima and ultima.premio_total else None) or Decimal('0')
+        vendeu = bool(ultima and (ultima.venda_central or ultima.agn))
+
+        if vendeu:
+            cat = 'Venda Central' if ultima.venda_central else 'Venda Agência'
+        elif ultima and ultima.motivo_nao_venda:
+            cat = 'Não Venda'
+        else:
+            cat = 'Em aberto'
+
+        total_itens += 1
+        total_valor += valor
+
+        a = atendentes[atendente]
+        a['itens'] += 1
+        a['valor'] += valor
+
+        ramos[ramo_nome]['itens'] += 1
+        ramos[ramo_nome]['valor'] += valor
+
+        status_geral[cat] += 1
+
+        if cat == 'Em aberto':
+            total_em_aberto += 1
+            a['em_aberto'] += 1
+            prox = ultima.proximo_contato if ultima else None
+            if not prox:
+                total_sem_data += 1
+                a['sem_data'] += 1
+            elif prox < agora:
+                total_atrasados += 1
+                a['atrasados'] += 1
+            else:
+                total_a_vencer += 1
+                a['a_vencer'] += 1
+        elif cat == 'Venda Central':
+            total_vendas += 1
+            a['venda_central'] += 1
+        elif cat == 'Venda Agência':
+            total_vendas += 1
+            a['venda_agencia'] += 1
+        else:
+            total_nao_vendas += 1
+            a['nao_venda'] += 1
+            motivo_geral[ultima.motivo_nao_venda] += 1
+            a['motivos'][ultima.motivo_nao_venda] += 1
+
+        if ultima and ultima.seguradora_id:
+            nome_seg = ultima.seguradora.seguradora or 'Sem Seguradora'
+            seguradoras[nome_seg]['premio'] += valor
+            if vendeu:
+                seguradoras[nome_seg]['vendas'] += 1
+
+        if vendeu:
+            agencias[agencia_nome]['vendas'] += 1
+            indicadores[indicador_nome]['vendas'] += 1
+        elif cat == 'Em aberto':
+            agencias[agencia_nome]['em_aberto'] += 1
+            indicadores[indicador_nome]['em_aberto'] += 1
+        else:
+            agencias[agencia_nome]['nao_vendas'] += 1
+            indicadores[indicador_nome]['nao_vendas'] += 1
+
+    def _linhas_atendentes():
+        linhas = []
+        for nome, d in atendentes.items():
+            linhas.append({
+                'atendente': nome,
+                'itens': d['itens'],
+                'valor': d['valor'],
+                'em_aberto': d['em_aberto'],
+                'venda_central': d['venda_central'],
+                'venda_agencia': d['venda_agencia'],
+                'nao_venda': d['nao_venda'],
+                'atrasados': d['atrasados'],
+                'a_vencer': d['a_vencer'],
+                'sem_data': d['sem_data'],
+                'motivos': [d['motivos'].get(m, 0) for m in motivo_choices],
+            })
+        linhas.sort(key=lambda x: x['valor'], reverse=True)
+        return linhas
+
+    def _linhas_vendas_nao_vendas(dados):
+        linhas = []
+        for nome, d in dados.items():
+            base_conversao = d['vendas'] + d['nao_vendas']
+            linhas.append({
+                'nome': nome,
+                'vendas': d['vendas'],
+                'nao_vendas': d['nao_vendas'],
+                'em_aberto': d['em_aberto'],
+                'total': d['vendas'] + d['nao_vendas'] + d['em_aberto'],
+                'conversao': (d['vendas'] / base_conversao * 100) if base_conversao else None,
+            })
+        linhas.sort(key=lambda x: x['total'], reverse=True)
+        return linhas
+
+    base_conversao_geral = total_vendas + total_nao_vendas
+
+    contexto = {
+        'data_de': data_de,
+        'data_ate': data_ate,
+
+        'total_itens': total_itens,
+        'total_valor': total_valor,
+        'total_vendas': total_vendas,
+        'total_nao_vendas': total_nao_vendas,
+        'total_em_aberto': total_em_aberto,
+        'taxa_conversao_geral': (total_vendas / base_conversao_geral * 100) if base_conversao_geral else None,
+
+        'atendentes_stats': _linhas_atendentes(),
+        'motivo_choices': motivo_choices,
+
+        'ramos_stats': sorted(
+            [{'ramo': k, 'itens': v['itens'], 'valor': v['valor']} for k, v in ramos.items()],
+            key=lambda x: x['valor'], reverse=True
+        ),
+
+        'status_stats': sorted(
+            [{'status': k, 'qtd': v} for k, v in status_geral.items()],
+            key=lambda x: x['qtd'], reverse=True
+        ),
+
+        'motivo_stats': sorted(
+            [{'motivo': k, 'qtd': v} for k, v in motivo_geral.items()],
+            key=lambda x: x['qtd'], reverse=True
+        ),
+
+        'total_atrasados': total_atrasados,
+        'total_a_vencer': total_a_vencer,
+        'total_sem_data': total_sem_data,
+
+        'seguradoras_stats': sorted(
+            [{'seguradora': k, 'premio': v['premio'], 'vendas': v['vendas']} for k, v in seguradoras.items()],
+            key=lambda x: x['premio'], reverse=True
+        ),
+
+        'agencias_stats': _linhas_vendas_nao_vendas(agencias),
+        'indicadores_stats': _linhas_vendas_nao_vendas(indicadores),
+    }
+
+    return render(request, 'core/producao/relatorios/vendas.html', contexto)
 
 @login_required
 def financeiro_processamentos(request):
