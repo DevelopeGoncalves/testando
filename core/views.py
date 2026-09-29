@@ -10,9 +10,9 @@ from .models import (
     CompatibilidadeSeguradora, TipoPessoa, RegistroProducao, EndossoAdicional,
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
     IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
-    CompatibilidadeRamoOdonto,
+    CompatibilidadeRamoOdonto, IndicacaoRenovacao, LigacaoRenovacao,
 )
-from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, EstadoAnbimaForm, FundoAnbimaForm
+from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, IndicacaoRenovacaoForm, EstadoAnbimaForm, FundoAnbimaForm
 from .anbima import processar_planilha_anbima
 from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
 # Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
@@ -280,6 +280,10 @@ def excluir_em_massa(request):
         if not (_usuario_pode_excluir(user, 'prod_vendas_basenovo') or _usuario_pode_excluir(user, 'prod_vendas_emissao')):
             messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
             return redirect('lista_base_novo')
+    elif tipo == 'indicacao_renovacao':
+        if not _usuario_pode_excluir(user, 'prod_vendas_baserenovacao'):
+            messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
+            return redirect('vendas_renovacao')
     elif not user.is_superuser:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
@@ -339,6 +343,9 @@ def excluir_em_massa(request):
                     )
                 Indicacao.objects.filter(id__in=ids).delete()
                 rota_destino = 'lista_base_novo'
+            elif tipo == 'indicacao_renovacao':
+                IndicacaoRenovacao.objects.filter(id__in=ids).delete()
+                rota_destino = 'vendas_renovacao'
 
         return redirect(rota_destino)
     return redirect('base_formularios')
@@ -1561,8 +1568,57 @@ def vendas_novo_negocio(request):
 
 @login_required
 def vendas_nova_renovacao(request):
+    """Card 'Renovação' (Ligação). Mesma lógica do card 'Novo', mas grava na tabela
+    própria IndicacaoRenovacao/LigacaoRenovacao (não mistura os dados com o Novo)."""
+    if request.method == 'POST':
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
+            request, campo_permissao='prod_vendas_renovacao',
+            model_indicacao=IndicacaoRenovacao, model_ligacao=LigacaoRenovacao,
+            form_class=IndicacaoRenovacaoForm,
+        )
+        if form is None:
+            return redirect('vendas_nova_renovacao')
+    else:
+        form = IndicacaoRenovacaoForm()
+        erro_formulario_msg = ''
 
-    return render(request, 'core/producao/vendas/renovacao.html')
+    ultima_ligacao = LigacaoRenovacao.objects.filter(indicacao=OuterRef('pk')).order_by('-id')
+    indicacoes = IndicacaoRenovacao.objects.annotate(
+        ultima_central=Subquery(ultima_ligacao.values('venda_central')[:1]),
+        ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
+        ultima_motivo=Subquery(ultima_ligacao.values('motivo_nao_venda')[:1]),
+    ).filter(
+        Q(ultima_central__isnull=True)
+        | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
+    ).order_by('-id').select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+
+    indicacoes = list(indicacoes)
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
+    for ind in indicacoes:
+        ligacoes = list(ind.ligacoes.all())
+        ultima = ligacoes[0] if ligacoes else None
+        ind.responsavel = ultima.cadastrado_por if ultima else ''
+        ind.proxima_ligacao = ultima.proximo_contato if ultima else None
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+
+    return render(request, 'core/producao/vendas/renovacao.html', {
+        'indicacoes': indicacoes,
+        'form_indicacao': form,
+        'erro_formulario_msg': erro_formulario_msg,
+        'motivos_nao_venda': LigacaoRenovacao.MOTIVO_NAO_VENDA,
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
+        'apenas_pendentes': True,
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_renovacao'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_renovacao'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_renovacao'),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
+    })
 
 @login_required
 def vendas_novo_endosso(request):
@@ -1572,6 +1628,10 @@ def vendas_novo_endosso(request):
 @login_required
 def gerar_protocolo_ligacao(request):
     return JsonResponse({'protocolo': LigacaoIndicacao.gerar_proximo_protocolo()})
+
+@login_required
+def gerar_protocolo_ligacao_renovacao(request):
+    return JsonResponse({'protocolo': LigacaoRenovacao.gerar_proximo_protocolo()})
 
 @login_required
 def agora_servidor_ligacao(request):
@@ -1590,35 +1650,56 @@ def _nome_usuario_atendimento(user):
         return col.nome_social or col.colaborador
     return user.get_full_name() or user.username
 
-@login_required
-def marcar_atendimento(request, id):
+def _marcar_atendimento(request, id, model_indicacao):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
-    ind = get_object_or_404(Indicacao, id=id)
+    ind = get_object_or_404(model_indicacao, id=id)
     ind.atendimento_por = _nome_usuario_atendimento(request.user)
     ind.atendimento_em = timezone.now()
     ind.save(update_fields=['atendimento_por', 'atendimento_em'])
     return JsonResponse({'ok': True})
 
-@login_required
-def encerrar_atendimento(request, id):
+def _encerrar_atendimento(request, id, model_indicacao):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
-    ind = get_object_or_404(Indicacao, id=id)
+    ind = get_object_or_404(model_indicacao, id=id)
     ind.atendimento_por = None
     ind.atendimento_em = None
     ind.save(update_fields=['atendimento_por', 'atendimento_em'])
     return JsonResponse({'ok': True})
 
-@login_required
-def atendimentos_ativos(request):
+def _atendimentos_ativos(model_indicacao):
     limite = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
-    qs = (Indicacao.objects
+    qs = (model_indicacao.objects
           .filter(atendimento_em__gte=limite)
           .exclude(atendimento_por__isnull=True)
           .exclude(atendimento_por__exact='')
           .values('id', 'atendimento_por'))
     return JsonResponse({'atendimentos': {str(r['id']): r['atendimento_por'] for r in qs}})
+
+@login_required
+def marcar_atendimento(request, id):
+    return _marcar_atendimento(request, id, Indicacao)
+
+@login_required
+def marcar_atendimento_renovacao(request, id):
+    return _marcar_atendimento(request, id, IndicacaoRenovacao)
+
+@login_required
+def encerrar_atendimento(request, id):
+    return _encerrar_atendimento(request, id, Indicacao)
+
+@login_required
+def encerrar_atendimento_renovacao(request, id):
+    return _encerrar_atendimento(request, id, IndicacaoRenovacao)
+
+@login_required
+def atendimentos_ativos(request):
+    return _atendimentos_ativos(Indicacao)
+
+@login_required
+def atendimentos_ativos_renovacao(request):
+    return _atendimentos_ativos(IndicacaoRenovacao)
 
 # indicar o responsavel da demandar pelo ao nivei do usuario
 def _nivel_vendas(user, campo='prod_vendas_novo'):
@@ -1667,15 +1748,13 @@ def _responsavel_ultima_ligacao(ind):
     ult = max(ligs, key=lambda l: l.id or 0)
     return ult.cadastrado_por or ''
 
-@login_required
-def definir_responsavel_demanda(request, id):
+def _definir_responsavel_demanda(request, id, model_indicacao, campos_permissao):
     """somente o usuario pode tirar ou indicar o responsavel pela demanda '."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
-    # O botão aparece na ficha do Novo e do Base Novo: aceita Gestor em qualquer um dos dois.
-    if not (_usuario_e_gestor(request.user, 'prod_vendas_novo') or _usuario_e_gestor(request.user, 'prod_vendas_basenovo')):
+    if not any(_usuario_e_gestor(request.user, campo) for campo in campos_permissao):
         return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem indicar o responsável.'}, status=403)
-    ind = get_object_or_404(Indicacao, id=id)
+    ind = get_object_or_404(model_indicacao, id=id)
     col_id = request.POST.get('colaborador') or None
     ind.responsavel_demanda_id = col_id
     ind.save(update_fields=['responsavel_demanda'])
@@ -1683,24 +1762,40 @@ def definir_responsavel_demanda(request, id):
     nome = ind.responsavel_demanda.matricula_nome if ind.responsavel_demanda_id else ''
     return JsonResponse({'ok': True, 'nome': nome, 'id': ind.responsavel_demanda_id or ''})
 
-@login_required
-def definir_responsavel_massa(request):
+def _definir_responsavel_massa(request, model_indicacao, campos_permissao):
     """Indica o MESMO responsável para vários registros de uma vez (seleção por caixinha
-    no card Novo). Só Gestor. POST: ids[] + colaborador."""
+    no card Novo/Renovação). Só Gestor. POST: ids[] + colaborador."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
-    if not (_usuario_e_gestor(request.user, 'prod_vendas_novo') or _usuario_e_gestor(request.user, 'prod_vendas_basenovo')):
+    if not any(_usuario_e_gestor(request.user, campo) for campo in campos_permissao):
         return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem indicar o responsável.'}, status=403)
     ids = request.POST.getlist('ids')
     if not ids:
         return JsonResponse({'ok': False, 'erro': 'Selecione ao menos um registro.'}, status=400)
     col_id = request.POST.get('colaborador') or None
-    Indicacao.objects.filter(id__in=ids).update(responsavel_demanda_id=col_id)
+    model_indicacao.objects.filter(id__in=ids).update(responsavel_demanda_id=col_id)
     nome = ''
     if col_id:
         col = Colaborador.objects.filter(id=col_id).first()
         nome = col.matricula_nome if col else ''
     return JsonResponse({'ok': True, 'nome': nome, 'id': col_id or '', 'total': len(ids)})
+
+@login_required
+def definir_responsavel_demanda(request, id):
+    # O botão aparece na ficha do Novo e do Base Novo: aceita Gestor em qualquer um dos dois.
+    return _definir_responsavel_demanda(request, id, Indicacao, ('prod_vendas_novo', 'prod_vendas_basenovo'))
+
+@login_required
+def definir_responsavel_demanda_renovacao(request, id):
+    return _definir_responsavel_demanda(request, id, IndicacaoRenovacao, ('prod_vendas_renovacao', 'prod_vendas_baserenovacao'))
+
+@login_required
+def definir_responsavel_massa(request):
+    return _definir_responsavel_massa(request, Indicacao, ('prod_vendas_novo', 'prod_vendas_basenovo'))
+
+@login_required
+def definir_responsavel_massa_renovacao(request):
+    return _definir_responsavel_massa(request, IndicacaoRenovacao, ('prod_vendas_renovacao', 'prod_vendas_baserenovacao'))
 
 def _parse_valor_moeda_brl(valor_str):
     if not valor_str: return None
@@ -1758,10 +1853,13 @@ def _falta_premio_total_venda_central(request):
 
 
 def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=None,
-                                 campo_permissao='prod_vendas_novo'):
+                                 campo_permissao='prod_vendas_novo',
+                                 model_indicacao=Indicacao, model_ligacao=LigacaoIndicacao,
+                                 form_class=IndicacaoForm):
     """Processa o POST de cadastro/edição da ficha de Indicação (Base Novo e o card
-    'Novo', que sao a mesma fincha). campo_permissao = campo do card (Novo/Base Novo/
-    Emissão) usado para checar se o usuário pode editar."""
+    'Novo', que sao a mesma fincha; e também a Renovação/Base Renovação, na sua
+    própria tabela). campo_permissao = campo do card (Novo/Base Novo/Emissão/
+    Renovação/Base Renovação) usado para checar se o usuário pode editar."""
     if travar_dados is None:
         travar_dados = processar_ligacoes
 
@@ -1771,7 +1869,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
     if not pode_editar:
         processar_ligacoes = False
     item_id = request.POST.get('item_id')
-    instancia = get_object_or_404(Indicacao, id=item_id) if item_id else None
+    instancia = get_object_or_404(model_indicacao, id=item_id) if item_id else None
 
     # A ficha da Base Novo envia o Indicador e a Agência em campos ÚNICOS.
     dados_post = request.POST
@@ -1789,7 +1887,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
     somente_leitura = travar_dados and (
         request.POST.get('editar_dados') != '1' or not pode_editar
     )
-    form = IndicacaoForm(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
+    form = form_class(dados_post, instance=instancia, ficha_somente_leitura=somente_leitura)
 
     # os campos "Vendas Central" obriga o preenchimento do "Prêmio Total".  se nao da erro
     if _falta_premio_total_venda_central(request):
@@ -1865,8 +1963,8 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
         # o protocolo já vem gerado do html (ao criar a ligação), mas se
         protocolo_val = request.POST.get(f'ligacao_protocolo{sufixo}')
         protocolo_existente = bool(protocolo_val) and protocolo_val in cadastrado_por_original
-        if not protocolo_val or LigacaoIndicacao.objects.filter(protocolo=protocolo_val).exists():
-            protocolo_val = LigacaoIndicacao.gerar_proximo_protocolo()
+        if not protocolo_val or model_ligacao.objects.filter(protocolo=protocolo_val).exists():
+            protocolo_val = model_ligacao.gerar_proximo_protocolo()
             protocolo_existente = False
 
         # Mantém quem abriu a ligação: se o protocolo já existia, preserva o responsável
@@ -1875,7 +1973,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
             if protocolo_existente else None
         ) or (request.user.get_full_name() or request.user.username)
 
-        LigacaoIndicacao.objects.create(
+        model_ligacao.objects.create(
             indicacao=indicacao,
             protocolo=protocolo_val,
             data_ligacao=data_val or None,
@@ -2006,22 +2104,46 @@ def vendas_emissao(request):
 
 @login_required
 def vendas_renovacao(request):
+    """Card 'Base Renovação'. Mesma lógica do Base Novo, mas na tabela própria
+    IndicacaoRenovacao/LigacaoRenovacao (não mistura os dados com o Base Novo)."""
     if request.method == 'POST':
-        item_id = request.POST.get('item_id')
-        instancia = get_object_or_404(Apolice, id=item_id) if item_id else None
-        form = ApoliceForm(request.POST, instance=instancia)
-        if form.is_valid():
-            nova_apolice = form.save(commit=False)
-            nova_apolice.tipo_negocio = 'RENOVACAO' 
-            nova_apolice.save()
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
+            request, processar_ligacoes=True, travar_dados=True,
+            campo_permissao='prod_vendas_baserenovacao',
+            model_indicacao=IndicacaoRenovacao, model_ligacao=LigacaoRenovacao,
+            form_class=IndicacaoRenovacaoForm,
+        )
+        if form is None:
             return redirect('vendas_renovacao')
     else:
-        form = ApoliceForm()
+        form = IndicacaoRenovacaoForm()
+        erro_formulario_msg = ''
 
-    items = Apolice.objects.filter(tipo_negocio='RENOVACAO').order_by('-id')
+    indicacoes = list(
+        IndicacaoRenovacao.objects.all().order_by('-id')
+        .select_related('ramo', 'responsavel_demanda')
+        .prefetch_related('ligacoes')
+    )
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
+    for ind in indicacoes:
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+
     return render(request, 'core/producao/vendas/base_renovacao.html', {
-        'apolices': items, 
-        'form_apolice': form
+        'indicacoes': indicacoes,
+        'form_indicacao': form,
+        'erro_formulario_msg': erro_formulario_msg,
+        'motivos_nao_venda': LigacaoRenovacao.MOTIVO_NAO_VENDA,
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_baserenovacao'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_baserenovacao'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_baserenovacao'),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
     })
 
 @login_required

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, EstadoAnbima, FundoAnbima
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, EstadoAnbima, FundoAnbima
 
 
 class BootstrapMixin:
@@ -375,6 +375,9 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
                 if nome != 'observacoes':
                     campo.disabled = True
         else:
+            self._marcar_campos_obrigatorios_indicacao()
+
+    def _marcar_campos_obrigatorios_indicacao(self):
             # Nomes válidos (do formulário):
             #   'ramo' ,
             
@@ -408,6 +411,13 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
         # NÃO são afetados por esta mudança.
 
         return cleaned_data
+
+
+# --- BASE RENOVAÇÃO: mesma ficha do Novo/Base Novo, mas grava na tabela IndicacaoRenovacao
+# (tabela própria, sem misturar os dados com o card Novo/Base Novo). ---
+class IndicacaoRenovacaoForm(IndicacaoForm):
+    class Meta(IndicacaoForm.Meta):
+        model = IndicacaoRenovacao
 
 
 """                             HENRIQUE                                                                    """

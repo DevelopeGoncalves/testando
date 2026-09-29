@@ -95,6 +95,14 @@ urlpatterns = [
     # alex: indicar o responsável para vários registros de uma vez (card Novo)
     path('producao/vendas/responsavel-demanda-massa/', views.definir_responsavel_massa, name='definir_responsavel_massa'),
 
+    # 10.1.1 Base Renovação - mesma estrutura da Base Novo, tabela própria (IndicacaoRenovacao)
+    path('producao/vendas/base-renovacao/gerar-protocolo/', views.gerar_protocolo_ligacao_renovacao, name='gerar_protocolo_ligacao_renovacao'),
+    path('producao/vendas/atendimento-renovacao/<int:id>/iniciar/', views.marcar_atendimento_renovacao, name='marcar_atendimento_renovacao'),
+    path('producao/vendas/atendimento-renovacao/<int:id>/encerrar/', views.encerrar_atendimento_renovacao, name='encerrar_atendimento_renovacao'),
+    path('producao/vendas/atendimentos-ativos-renovacao/', views.atendimentos_ativos_renovacao, name='atendimentos_ativos_renovacao'),
+    path('producao/vendas/responsavel-demanda-renovacao/<int:id>/', views.definir_responsavel_demanda_renovacao, name='definir_responsavel_demanda_renovacao'),
+    path('producao/vendas/responsavel-demanda-massa-renovacao/', views.definir_responsavel_massa_renovacao, name='definir_responsavel_massa_renovacao'),
+
 
     # 10. Rotas para cada Card específico de vendas
     path('producao/vendas/endosso/', views.vendas_endosso, name='vendas_endosso'),
