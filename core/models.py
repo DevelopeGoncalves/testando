@@ -578,6 +578,150 @@ class LigacaoRenovacao(models.Model):
         ordering = ['-data_ligacao', '-id']
 
 
+# --- BASE ENDOSSO (mesma estrutura da Indicacao/LigacaoIndicacao do Novo/Base Novo,
+# mas em tabelas próprias - os dados NÃO são compartilhados com Novo/Renovação) ---
+class IndicacaoEndosso(models.Model):
+    ENVIAR_ORCAMENTO = [
+        ('Cliente', 'Cliente'),
+        ('Indicador', 'Indicador'),
+    ]
+
+    ORIGEM_INFORMACAO = [
+        ('WhatsApp', 'WhatsApp'),
+        ('Planilha da internet', 'Planilha da internet'),
+        ('Telefone', 'Telefone'),
+        ('E-mail', 'E-mail'),
+    ]
+
+    # alex: tipo do endosso (Bloco Apólice do card Endosso/Base Endosso - substitui o
+    # campo "Renovação" que é usado no Novo/Renovação).
+    TIPO_ENDOSSO = [
+        ('Endosso de cancelamento', 'Endosso de cancelamento'),
+        ('Endosso de substituição de item', 'Endosso de substituição de item'),
+        ('Endosso de perfil', 'Endosso de perfil'),
+        ('Endosso de inclusão de item', 'Endosso de inclusão de item'),
+        ('Endosso de alteração de dados cadastrais', 'Endosso de alteração de dados cadastrais'),
+        ('Endosso de alteração de perfil', 'Endosso de alteração de perfil'),
+        ('Outros', 'Outros'),
+    ]
+
+    carimbo_data_hora = models.DateTimeField("Carimbo de data/hora", null=True, blank=True)
+    email = models.EmailField("Endereço de e-mail", blank=True, null=True)
+    email_indicador_outro = models.EmailField("E-mail do indicador (se não for você)", blank=True, null=True)
+    matricula_indicador = models.CharField("Matrícula do indicador", max_length=20, blank=True, null=True)
+    nome_indicador = models.CharField("Nome completo do indicador", max_length=150, blank=True, null=True)
+    cid_agencia = models.CharField("CID da agência", max_length=10, blank=True, null=True)
+    telefone_indicador = models.CharField("Telefone ou celular do indicador", max_length=20, blank=True, null=True)
+    enviar_orcamento_para = models.CharField("Enviar orçamento para", max_length=15, choices=ENVIAR_ORCAMENTO, blank=True, null=True)
+    origem_informacao = models.CharField("Origem da informação", max_length=30, choices=ORIGEM_INFORMACAO, blank=True, null=True)
+
+    nome_cliente = models.CharField("Nome completo do cliente", max_length=150, blank=True, null=True)
+    telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
+    cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)
+    email_cliente = models.EmailField("E-mail do cliente", blank=True, null=True)
+    produto = models.CharField("Produto", max_length=100, blank=True, null=True)
+    dados_veiculo = models.CharField("Dados do veículo (modelo, ano e placa)", max_length=200, blank=True, null=True)
+    possui_seguro = models.CharField("Cliente já possui seguro?", max_length=10, blank=True, null=True)
+    observacoes = models.TextField("Observações", blank=True, null=True)
+
+    # --- Vínculo com a apólice (mesmos cadastros usados em Produção) ---
+    seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
+    ramo = models.ForeignKey('Ramo', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Grupo/Ramo")
+    tipo_documento = models.ForeignKey('TipoDocumento', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Tipo de Documento")
+    numero_contrato = models.CharField("Apólice", max_length=50, blank=True, null=True)
+    item = models.CharField("Item", max_length=50, blank=True, null=True)
+    tipo_endosso = models.CharField("Endosso", max_length=60, choices=TIPO_ENDOSSO, blank=True, null=True)
+    numero_endosso = models.CharField("Número do endosso", max_length=50, blank=True, null=True)
+    ## chave para nao duplicar a mesma apólice/endosso (mesmo padrão da Indicacao)
+    chave_unica = models.CharField("Chave única", max_length=255, null=True, blank=True, db_index=True)
+
+    # nao pode abrir outra ligacao enquanto estiver uma aberta
+    atendimento_por = models.CharField("Em atendimento por", max_length=150, blank=True, null=True)
+    atendimento_em = models.DateTimeField("Em atendimento desde", blank=True, null=True)
+
+    # indicacao de uma ligacao somente que e o usuario nivel permitido
+    responsavel_demanda = models.ForeignKey('Colaborador', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandas_responsavel_endosso', verbose_name="Responsável pela demanda")
+
+    @staticmethod
+    def montar_chave_unica(seguradora_id, ramo_id, tipo_documento_id, numero_contrato, numero_endosso):
+        partes = [
+            str(seguradora_id or ''),
+            str(ramo_id or ''),
+            str(tipo_documento_id or ''),
+            (numero_contrato or '').strip().upper(),
+            (numero_endosso or '').strip().upper(),
+        ]
+        return '&'.join(partes)
+
+    def save(self, *args, **kwargs):
+        self.chave_unica = IndicacaoEndosso.montar_chave_unica(
+            self.seguradora_id, self.ramo_id, self.tipo_documento_id, self.numero_contrato, self.numero_endosso
+        )
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nome_cliente} - {self.produto}"
+
+    class Meta:
+        verbose_name = "Indicação (Base Endosso)"
+        verbose_name_plural = "Indicações (Base Endosso)"
+        ordering = ['-id']
+
+
+class LigacaoEndosso(models.Model):
+    STATUS_LIGACAO = [
+        ('Atendida', 'Atendida'),
+        ('Não atendida', 'Não atendida'),
+        ('Caixa postal', 'Caixa postal'),
+        ('Reagendar', 'Reagendar'),
+    ]
+
+    MOTIVO_NAO_VENDA = [
+        ('Condições comerciais (preço)', 'Condições comerciais (preço)'),
+        ('Condições financeiras', 'Condições financeiras'),
+        ('Condições técnicas', 'Condições técnicas'),
+        ('Desistiu', 'Desistiu'),
+        ('Efetivou com o corretor atual', 'Efetivou com o corretor atual'),
+        ('Falta de retorno do cliente/indicador', 'Falta de retorno do cliente/indicador'),
+        ('Mal atendimento Seguradora', 'Mal atendimento Seguradora'),
+        ('Operação Empréstimo', 'Operação Empréstimo'),
+        ('Venda do bem', 'Venda do bem'),
+    ]
+
+    indicacao = models.ForeignKey(IndicacaoEndosso, on_delete=models.CASCADE, related_name='ligacoes')
+    protocolo = models.CharField("Protocolo", max_length=20, unique=True, blank=True, null=True)
+    data_ligacao = models.DateTimeField("Data/Hora da ligação", null=True, blank=True)
+    status = models.CharField("Status da ligação", max_length=20, choices=STATUS_LIGACAO, blank=True, null=True)
+    proximo_contato = models.DateTimeField("Próximo contato", null=True, blank=True)
+    observacoes = models.TextField("Observações da ligação", blank=True, null=True)
+
+    ramal = models.CharField("Ramal", max_length=10, blank=True, null=True)
+    venda_central = models.BooleanField("Venda Central", default=False)
+    premio_total = models.DecimalField("Prêmio Total", max_digits=15, decimal_places=2, null=True, blank=True)
+    agn = models.BooleanField("Agn", default=False)
+    motivo_nao_venda = models.CharField("Motivo Não Venda", max_length=50, choices=MOTIVO_NAO_VENDA, blank=True, null=True)
+    seguradora = models.ForeignKey('Seguradora', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Seguradora")
+    comissao = models.DecimalField("Comissão (%)", max_digits=5, decimal_places=2, null=True, blank=True)
+    cadastrado_por = models.CharField("Cadastrado/tratado por", max_length=150, blank=True, null=True)
+
+    @staticmethod
+    def gerar_proximo_protocolo():
+        prefixo = timezone.now().strftime('%Y%m')
+        with transaction.atomic():
+            SequenciaProtocolo.objects.get_or_create(prefixo=prefixo)
+            SequenciaProtocolo.objects.filter(prefixo=prefixo).update(ultimo_numero=F('ultimo_numero') + 1)
+            numero = SequenciaProtocolo.objects.values_list('ultimo_numero', flat=True).get(prefixo=prefixo)
+        return f"{prefixo}{numero}"
+
+    def __str__(self):
+        return f"Ligação #{self.id} - {self.indicacao_id}"
+
+    class Meta:
+        verbose_name = "Ligação (Base Endosso)"
+        verbose_name_plural = "Ligações (Base Endosso)"
+        ordering = ['-data_ligacao', '-id']
+
+
 class PerfilUsuario(models.Model):
 
     # Relacionamentos

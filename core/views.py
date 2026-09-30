@@ -11,8 +11,9 @@ from .models import (
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
     IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
     CompatibilidadeRamoOdonto, IndicacaoRenovacao, LigacaoRenovacao,
+    IndicacaoEndosso, LigacaoEndosso,
 )
-from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, IndicacaoRenovacaoForm, EstadoAnbimaForm, FundoAnbimaForm
+from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, IndicacaoRenovacaoForm, IndicacaoEndossoForm, EstadoAnbimaForm, FundoAnbimaForm
 from .anbima import processar_planilha_anbima
 from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
 # Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
@@ -284,6 +285,14 @@ def excluir_em_massa(request):
         if not _usuario_pode_excluir(user, 'prod_vendas_baserenovacao'):
             messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
             return redirect('vendas_renovacao')
+    elif tipo == 'indicacao_endosso':
+        if not _usuario_pode_excluir(user, 'prod_vendas_baseendosso'):
+            messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
+            return redirect('vendas_endosso')
+    elif tipo == 'indicacao_emissao':
+        if not _usuario_pode_excluir(user, 'prod_vendas_emissao'):
+            messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
+            return redirect('vendas_emissao')
     elif not user.is_superuser:
         messages.error(request, 'Acesso Negado.')
         return redirect('home')
@@ -346,6 +355,21 @@ def excluir_em_massa(request):
             elif tipo == 'indicacao_renovacao':
                 IndicacaoRenovacao.objects.filter(id__in=ids).delete()
                 rota_destino = 'vendas_renovacao'
+            elif tipo == 'indicacao_endosso':
+                IndicacaoEndosso.objects.filter(id__in=ids).delete()
+                rota_destino = 'vendas_endosso'
+            elif tipo == 'indicacao_emissao':
+                # alex: a Emissão junta as 3 origens - cada caixinha vem como "origem:id"
+                # para apagar exatamente na tabela certa (os IDs não são únicos entre as tabelas).
+                mapa_modelos_emissao = {origem: modelos[0] for origem, modelos in ORIGENS_EMISSAO.items()}
+                pks_por_origem = defaultdict(list)
+                for token in ids:
+                    origem_token, _, pk_token = token.partition(':')
+                    if origem_token in mapa_modelos_emissao and pk_token.isdigit():
+                        pks_por_origem[origem_token].append(pk_token)
+                for origem_token, pks in pks_por_origem.items():
+                    mapa_modelos_emissao[origem_token].objects.filter(id__in=pks).delete()
+                rota_destino = 'vendas_emissao'
 
         return redirect(rota_destino)
     return redirect('base_formularios')
@@ -1506,8 +1530,47 @@ def producao_vendas(request):
 
 @login_required
 def vendas_endosso(request):
+    """Card 'Base Endosso'. Mesma lógica do Base Novo/Base Renovação, mas na tabela
+    própria IndicacaoEndosso/LigacaoEndosso (não mistura os dados com os outros)."""
+    if request.method == 'POST':
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
+            request, processar_ligacoes=True, travar_dados=True,
+            campo_permissao='prod_vendas_baseendosso',
+            model_indicacao=IndicacaoEndosso, model_ligacao=LigacaoEndosso,
+            form_class=IndicacaoEndossoForm,
+        )
+        if form is None:
+            return redirect('vendas_endosso')
+    else:
+        form = IndicacaoEndossoForm()
+        erro_formulario_msg = ''
 
-    return render(request, 'core/producao/vendas/base_endosso.html')
+    indicacoes = list(
+        IndicacaoEndosso.objects.all().order_by('-id')
+        .select_related('ramo', 'responsavel_demanda')
+        .prefetch_related('ligacoes')
+    )
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
+    for ind in indicacoes:
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+
+    return render(request, 'core/producao/vendas/base_endosso.html', {
+        'indicacoes': indicacoes,
+        'form_indicacao': form,
+        'erro_formulario_msg': erro_formulario_msg,
+        'motivos_nao_venda': LigacaoEndosso.MOTIVO_NAO_VENDA,
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_baseendosso'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_baseendosso'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_baseendosso'),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
+    })
 
 @login_required
 def vendas_novo_negocio(request):
@@ -1622,8 +1685,57 @@ def vendas_nova_renovacao(request):
 
 @login_required
 def vendas_novo_endosso(request):
+    """Card 'Endosso' (Ligação). Mesma lógica do card 'Novo'/'Renovação', mas grava na
+    tabela própria IndicacaoEndosso/LigacaoEndosso (não mistura os dados com os outros)."""
+    if request.method == 'POST':
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
+            request, campo_permissao='prod_vendas_endosso',
+            model_indicacao=IndicacaoEndosso, model_ligacao=LigacaoEndosso,
+            form_class=IndicacaoEndossoForm,
+        )
+        if form is None:
+            return redirect('vendas_novo_endosso')
+    else:
+        form = IndicacaoEndossoForm()
+        erro_formulario_msg = ''
 
-    return render(request, 'core/producao/vendas/endosso.html')
+    ultima_ligacao = LigacaoEndosso.objects.filter(indicacao=OuterRef('pk')).order_by('-id')
+    indicacoes = IndicacaoEndosso.objects.annotate(
+        ultima_central=Subquery(ultima_ligacao.values('venda_central')[:1]),
+        ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
+        ultima_motivo=Subquery(ultima_ligacao.values('motivo_nao_venda')[:1]),
+    ).filter(
+        Q(ultima_central__isnull=True)
+        | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
+    ).order_by('-id').select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+
+    indicacoes = list(indicacoes)
+    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
+    for ind in indicacoes:
+        ligacoes = list(ind.ligacoes.all())
+        ultima = ligacoes[0] if ligacoes else None
+        ind.responsavel = ultima.cadastrado_por if ultima else ''
+        ind.proxima_ligacao = ultima.proximo_contato if ultima else None
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+
+    return render(request, 'core/producao/vendas/endosso.html', {
+        'indicacoes': indicacoes,
+        'form_indicacao': form,
+        'erro_formulario_msg': erro_formulario_msg,
+        'motivos_nao_venda': LigacaoEndosso.MOTIVO_NAO_VENDA,
+        'seguradoras': Seguradora.objects.all().order_by('seguradora'),
+        'apenas_pendentes': True,
+        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_endosso'),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_endosso'),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_endosso'),
+        'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
+        'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
+    })
 
 @login_required
 def gerar_protocolo_ligacao(request):
@@ -1632,6 +1744,10 @@ def gerar_protocolo_ligacao(request):
 @login_required
 def gerar_protocolo_ligacao_renovacao(request):
     return JsonResponse({'protocolo': LigacaoRenovacao.gerar_proximo_protocolo()})
+
+@login_required
+def gerar_protocolo_ligacao_endosso(request):
+    return JsonResponse({'protocolo': LigacaoEndosso.gerar_proximo_protocolo()})
 
 @login_required
 def agora_servidor_ligacao(request):
@@ -1686,6 +1802,10 @@ def marcar_atendimento_renovacao(request, id):
     return _marcar_atendimento(request, id, IndicacaoRenovacao)
 
 @login_required
+def marcar_atendimento_endosso(request, id):
+    return _marcar_atendimento(request, id, IndicacaoEndosso)
+
+@login_required
 def encerrar_atendimento(request, id):
     return _encerrar_atendimento(request, id, Indicacao)
 
@@ -1694,12 +1814,20 @@ def encerrar_atendimento_renovacao(request, id):
     return _encerrar_atendimento(request, id, IndicacaoRenovacao)
 
 @login_required
+def encerrar_atendimento_endosso(request, id):
+    return _encerrar_atendimento(request, id, IndicacaoEndosso)
+
+@login_required
 def atendimentos_ativos(request):
     return _atendimentos_ativos(Indicacao)
 
 @login_required
 def atendimentos_ativos_renovacao(request):
     return _atendimentos_ativos(IndicacaoRenovacao)
+
+@login_required
+def atendimentos_ativos_endosso(request):
+    return _atendimentos_ativos(IndicacaoEndosso)
 
 # indicar o responsavel da demandar pelo ao nivei do usuario
 def _nivel_vendas(user, campo='prod_vendas_novo'):
@@ -1790,12 +1918,20 @@ def definir_responsavel_demanda_renovacao(request, id):
     return _definir_responsavel_demanda(request, id, IndicacaoRenovacao, ('prod_vendas_renovacao', 'prod_vendas_baserenovacao'))
 
 @login_required
+def definir_responsavel_demanda_endosso(request, id):
+    return _definir_responsavel_demanda(request, id, IndicacaoEndosso, ('prod_vendas_endosso', 'prod_vendas_baseendosso'))
+
+@login_required
 def definir_responsavel_massa(request):
     return _definir_responsavel_massa(request, Indicacao, ('prod_vendas_novo', 'prod_vendas_basenovo'))
 
 @login_required
 def definir_responsavel_massa_renovacao(request):
     return _definir_responsavel_massa(request, IndicacaoRenovacao, ('prod_vendas_renovacao', 'prod_vendas_baserenovacao'))
+
+@login_required
+def definir_responsavel_massa_endosso(request):
+    return _definir_responsavel_massa(request, IndicacaoEndosso, ('prod_vendas_endosso', 'prod_vendas_baseendosso'))
 
 def _parse_valor_moeda_brl(valor_str):
     if not valor_str: return None
@@ -2050,40 +2186,63 @@ def lista_base_novo(request):
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
     })
 
+# alex: as 3 "origens" de venda que alimentam a Emissão quando a venda é fechada
+# (Central/Agência). Cada uma tem tabela própria (Indicacao/IndicacaoRenovacao/
+# IndicacaoEndosso) - a Emissão só LÊ e edita os dados de apólice, sem duplicar nada.
+ORIGENS_EMISSAO = {
+    'novo': (Indicacao, LigacaoIndicacao, IndicacaoForm),
+    'renovacao': (IndicacaoRenovacao, LigacaoRenovacao, IndicacaoRenovacaoForm),
+    'endosso': (IndicacaoEndosso, LigacaoEndosso, IndicacaoEndossoForm),
+}
+
+def _vendas_fechadas(model_indicacao, model_ligacao, origem):
+    """Registros com venda fechada (última ligação Central/Agência) de UMA origem,
+    já com os campos auxiliares (nome_agencia, status_fechamento etc.) calculados."""
+    ultima_ligacao = model_ligacao.objects.filter(indicacao=OuterRef('pk')).order_by('-id')
+    registros = list(
+        model_indicacao.objects.annotate(
+            ultima_central=Subquery(ultima_ligacao.values('venda_central')[:1]),
+            ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
+        ).filter(
+            Q(ultima_central=True) | Q(ultima_agn=True)
+        ).select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+    )
+    cids = {(i.cid_agencia or '').strip() for i in registros if i.cid_agencia}
+    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
+    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
+    for ind in registros:
+        ind.origem = origem
+        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
+        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
+        ind.status_fechamento = _status_fechamento_indicacao(ind)
+        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+    return registros
+
 @login_required
 def vendas_emissao(request):
     """Card 'Emissão': mostra SOMENTE os registros cuja venda foi fechada (a última
-    ligação está marcada como 'Vendas Central' ou 'Vendas Agência'). É uma visão
-    filtrada dos mesmos dados da Base Novo - nada é duplicado no banco. Reaproveita a
-    mesma tela (base_novo.html) no modo de consulta/edição, igual à Base Novo."""
+    ligação está marcada como 'Vendas Central' ou 'Vendas Agência'), juntando as 3
+    origens (Novo, Renovação, Endosso) - nada é duplicado no banco, cada linha mantém
+    a sua origem (atributo 'origem') para editar/excluir na tabela certa."""
     if request.method == 'POST':
-        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=False, campo_permissao='prod_vendas_emissao')
+        origem = request.POST.get('origem') or 'novo'
+        model_indicacao, model_ligacao, form_class = ORIGENS_EMISSAO.get(origem, ORIGENS_EMISSAO['novo'])
+        form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
+            request, processar_ligacoes=False, campo_permissao='prod_vendas_emissao',
+            model_indicacao=model_indicacao, model_ligacao=model_ligacao, form_class=form_class,
+        )
         if form is None:
             return redirect('vendas_emissao')
     else:
         form = IndicacaoForm()
         erro_formulario_msg = ''
 
-    ultima_ligacao = LigacaoIndicacao.objects.filter(indicacao=OuterRef('pk')).order_by('-id')
-    indicacoes = list(
-        Indicacao.objects.annotate(
-            ultima_central=Subquery(ultima_ligacao.values('venda_central')[:1]),
-            ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
-        ).filter(
-            Q(ultima_central=True) | Q(ultima_agn=True)
-        ).order_by('-id')
-        #.select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
-        .select_related('ramo', 'responsavel_demanda')
-        .prefetch_related('ligacoes')
+    indicacoes = (
+        _vendas_fechadas(Indicacao, LigacaoIndicacao, 'novo')
+        + _vendas_fechadas(IndicacaoRenovacao, LigacaoRenovacao, 'renovacao')
+        + _vendas_fechadas(IndicacaoEndosso, LigacaoEndosso, 'endosso')
     )
-    cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
-    mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
-    limite_atend = timezone.now() - timedelta(seconds=ATENDIMENTO_TIMEOUT_SEG)
-    for ind in indicacoes:
-        ind.nome_agencia = mapa_agencia.get((ind.cid_agencia or '').strip(), '')
-        ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
-        ind.status_fechamento = _status_fechamento_indicacao(ind)
-        ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+    indicacoes.sort(key=lambda i: i.carimbo_data_hora or timezone.now(), reverse=True)
 
     return render(request, 'core/producao/vendas/emissao.html', {
         'indicacoes': indicacoes,

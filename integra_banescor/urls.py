@@ -103,6 +103,14 @@ urlpatterns = [
     path('producao/vendas/responsavel-demanda-renovacao/<int:id>/', views.definir_responsavel_demanda_renovacao, name='definir_responsavel_demanda_renovacao'),
     path('producao/vendas/responsavel-demanda-massa-renovacao/', views.definir_responsavel_massa_renovacao, name='definir_responsavel_massa_renovacao'),
 
+    # 10.1.2 Base Endosso - mesma estrutura da Base Novo, tabela própria (IndicacaoEndosso)
+    path('producao/vendas/base-endosso/gerar-protocolo/', views.gerar_protocolo_ligacao_endosso, name='gerar_protocolo_ligacao_endosso'),
+    path('producao/vendas/atendimento-endosso/<int:id>/iniciar/', views.marcar_atendimento_endosso, name='marcar_atendimento_endosso'),
+    path('producao/vendas/atendimento-endosso/<int:id>/encerrar/', views.encerrar_atendimento_endosso, name='encerrar_atendimento_endosso'),
+    path('producao/vendas/atendimentos-ativos-endosso/', views.atendimentos_ativos_endosso, name='atendimentos_ativos_endosso'),
+    path('producao/vendas/responsavel-demanda-endosso/<int:id>/', views.definir_responsavel_demanda_endosso, name='definir_responsavel_demanda_endosso'),
+    path('producao/vendas/responsavel-demanda-massa-endosso/', views.definir_responsavel_massa_endosso, name='definir_responsavel_massa_endosso'),
+
 
     # 10. Rotas para cada Card específico de vendas
     path('producao/vendas/endosso/', views.vendas_endosso, name='vendas_endosso'),

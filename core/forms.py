@@ -1,5 +1,5 @@
 from django import forms
-from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, EstadoAnbima, FundoAnbima
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
 
 
 class BootstrapMixin:
@@ -418,6 +418,15 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
 class IndicacaoRenovacaoForm(IndicacaoForm):
     class Meta(IndicacaoForm.Meta):
         model = IndicacaoRenovacao
+
+
+# --- BASE ENDOSSO: mesma ficha do Novo/Base Novo, mas grava na tabela IndicacaoEndosso
+# (tabela própria, sem misturar os dados com Novo/Renovação). Tem dois campos a mais no
+# Bloco Apólice (Item e Endosso) que só existem no Endosso/Base Endosso. ---
+class IndicacaoEndossoForm(IndicacaoForm):
+    class Meta(IndicacaoForm.Meta):
+        model = IndicacaoEndosso
+        fields = IndicacaoForm.Meta.fields + ['item', 'tipo_endosso']
 
 
 """                             HENRIQUE                                                                    """

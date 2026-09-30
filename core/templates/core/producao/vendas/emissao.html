@@ -147,13 +147,14 @@
             </div>
             <form id="form-delete-base-novo" method="post" action="{% url 'excluir_em_massa' %}">
                 {% csrf_token %}
-                <input type="hidden" name="tipo_massa" value="indicacao">
+                <input type="hidden" name="tipo_massa" value="indicacao_emissao">
 
                 <table class="table table-striped table-hover mb-0" id="tabela-base-novo" style="width:100%; font-size: 0.85rem;">
                     <thead class="table-light">
                         <tr>
                             {% if usuario_pode_excluir %}<th width="2%" class="text-center"><input type="checkbox" class="chk-delete" onclick="toggleDeleteAll(this)"></th>{% endif %}
                             <th style="display:none;"></th>
+                            <th class="text-center">Origem</th>
                             <th class="text-center">Cadastrado em</th> <!-- 1 -->
                             <th class="text-center">Responsável</th> <!-- 2 -->
                             <th class="text-center">Em uso por</th> <!-- 3 -->
@@ -185,6 +186,7 @@
                         {% for i in indicacoes %}
                         <tr class="tr-clickable{% if i.atendimento_ativo %} em-atendimento{% endif %}" ondblclick="editarIndicacao(this)" style="cursor: pointer;"
                             data-id="{{ i.id }}"
+                            data-origem="{{ i.origem }}"
                             data-atendimento="{{ i.atendimento_por|default:'' }}"
                             data-responsavel-demanda="{{ i.responsavel_demanda_id|default:'' }}"
                             data-responsavel-demanda-nome="{{ i.responsavel_demanda.matricula_nome|default:'' }}"
@@ -214,7 +216,7 @@
 
                             {% if usuario_pode_excluir %}
                             <td class="text-center" onclick="event.stopPropagation()">
-                                <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
+                                <input type="checkbox" name="ids_excluir" value="{{ i.origem }}:{{ i.id }}" class="chk-delete chk-row">
                             </td>
                             {% endif %}
 
@@ -238,6 +240,11 @@
                                 {% endfor %}
                             </td>
 
+                            <td class="text-center">
+                                {% if i.origem == 'renovacao' %}<span class="badge bg-warning text-dark">Renovação</span>
+                                {% elif i.origem == 'endosso' %}<span class="badge bg-secondary">Endosso</span>
+                                {% else %}<span class="badge bg-info text-white">Novo</span>{% endif %}
+                            </td>
                             <td class="text-center">{{ i.carimbo_data_hora|date:'d/m/Y H:i'|default:'-' }}</td>
                             <td class="text-center resp-demanda-cell">{{ i.responsavel_demanda.matricula_nome|default:'-' }}</td>
                             <td class="text-center uso-por-cell">{% if i.atendimento_ativo %}{{ i.atendimento_por }}{% else %}-{% endif %}</td>
@@ -332,6 +339,8 @@
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="item_id" id="base_novo_id_hidden" value="{{ request.POST.item_id|default:'' }}">
+                <!-- alex: de qual origem (Novo/Renovação/Endosso) é este registro - a Emissão junta as 3 tabelas. -->
+                <input type="hidden" name="origem" id="origem_hidden" value="{{ request.POST.origem|default:'novo' }}">
                 <!-- Marca que o salvamento veio do pop-up "Editar dados" (só então o Novo grava os dados do registro). -->
                 <input type="hidden" name="editar_dados" id="editar_dados_flag" value="">
 
@@ -485,10 +494,25 @@
 
 {% block scripts %}
 <script>
-    const URL_ATENDIMENTOS_ATIVOS = "{% url 'atendimentos_ativos' %}";
-    const URL_ENCERRAR_ATEND = "{% url 'encerrar_atendimento' 0 %}";
+    // alex: a Emissão junta Novo + Renovação + Endosso (3 tabelas). Cada linha carrega
+    // data-origem, e essas URLs por origem garantem que atendimento/responsável sejam
+    // consultados/gravados na tabela certa.
+    const URL_ATENDIMENTOS_ATIVOS_POR_ORIGEM = {
+        novo: "{% url 'atendimentos_ativos' %}",
+        renovacao: "{% url 'atendimentos_ativos_renovacao' %}",
+        endosso: "{% url 'atendimentos_ativos_endosso' %}",
+    };
+    const URL_ENCERRAR_ATEND_POR_ORIGEM = {
+        novo: "{% url 'encerrar_atendimento' 0 %}",
+        renovacao: "{% url 'encerrar_atendimento_renovacao' 0 %}",
+        endosso: "{% url 'encerrar_atendimento_endosso' 0 %}",
+    };
     // alex: responsável pela demanda (indicado por Gestor)
-    const URL_RESP_DEMANDA = "{% url 'definir_responsavel_demanda' 0 %}";
+    const URL_RESP_DEMANDA_POR_ORIGEM = {
+        novo: "{% url 'definir_responsavel_demanda' 0 %}",
+        renovacao: "{% url 'definir_responsavel_demanda_renovacao' 0 %}",
+        endosso: "{% url 'definir_responsavel_demanda_endosso' 0 %}",
+    };
     const LISTA_COLABORADORES_DEMANDA = [
         {% for c in colaboradores_demanda %}{ id: "{{ c.id }}", texto: "{{ c.matricula_nome|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
     ];
@@ -621,6 +645,7 @@
     function salvarResponsavel() {
         var idReg = $('#base_novo_id_hidden').val();
         if (!idReg) return;
+        var origemReg = $('#origem_hidden').val() || 'novo';
         var txt = (document.getElementById('resp-demanda-input').value || '').trim();
         var colId = document.getElementById('resp-demanda-id-sel').value || '';
         if (txt && !colId) {
@@ -628,14 +653,14 @@
             return;
         }
         $.ajax({
-            url: URL_RESP_DEMANDA.replace('/0/', '/' + idReg + '/'),
+            url: URL_RESP_DEMANDA_POR_ORIGEM[origemReg].replace('/0/', '/' + idReg + '/'),
             method: 'POST',
             headers: { 'X-CSRFToken': csrfAtendimento() },
             data: { colaborador: colId }
         }).done(function(resp) {
             if (resp && resp.ok) {
                 mostrarResponsavelDemanda(resp.nome);
-                var tr = document.querySelector('#tabela-base-novo tbody tr[data-id="' + idReg + '"]');
+                var tr = document.querySelector('#tabela-base-novo tbody tr[data-id="' + idReg + '"][data-origem="' + origemReg + '"]');
                 if (tr) {
                     tr.setAttribute('data-responsavel-demanda', resp.id || '');
                     tr.setAttribute('data-responsavel-demanda-nome', resp.nome || '');
@@ -716,7 +741,7 @@
             }
         });
 
-        iniciarTabelaExcel('tabela-base-novo', [1, 25, 2, 3, 14, 5, 7, 12, 10, 22, 24]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 23, 25]);
 
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);
@@ -880,7 +905,8 @@
             {% else %}
                 // Ao voltar para a lista, libera a trava do registro que estava aberto.
                 var _idFechar = document.getElementById('base_novo_id_hidden').value;
-                if (_idFechar) encerrarAtendimento(_idFechar);
+                var _origemFechar = document.getElementById('origem_hidden').value || 'novo';
+                if (_idFechar) encerrarAtendimento(_idFechar, _origemFechar);
                 $('#form-' + tipo).hide();
                 $('#lista-' + tipo).show();
                 $('#base_novo_id_hidden').val('');
@@ -890,15 +916,17 @@
 
     function editarIndicacao(row) {
         var id = row.getAttribute('data-id');
+        var origem = row.getAttribute('data-origem') || 'novo';
 
         if (row.classList.contains('em-atendimento')) {
             // Registro em uso: ninguém mais abre até quem está mexendo Cancelar ou Salvar.
-            var atendentePor = atendimentosAtivos[String(id)] || row.getAttribute('data-atendimento') || 'outro usuário';
+            var atendentePor = atendimentosAtivos[origem + ':' + id] || row.getAttribute('data-atendimento') || 'outro usuário';
             avisoElegante('Este registro já está em atendimento por ' + atendentePor + '. Aguarde a liberação para poder abri-lo.', 'Registro em atendimento');
             return;
         }
 
         $('#base_novo_id_hidden').val(id);
+        $('#origem_hidden').val(origem);
         $('#base_novo_id_display').val(id);  // alex: mostra o ID do registro (somente leitura)
         // alex: mostra o responsável já indicado para essa demanda (ou "Em aberto").
         mostrarResponsavelDemanda(row.getAttribute('data-responsavel-demanda-nome'));
@@ -963,30 +991,34 @@
     function pararHeartbeatAtendimento() {
         if (heartbeatAtendimento) { clearInterval(heartbeatAtendimento); heartbeatAtendimento = null; }
     }
-    function encerrarAtendimento(id) {
+    function encerrarAtendimento(id, origem) {
         pararHeartbeatAtendimento();
         if (!id) return;
-        $.ajax({ url: URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), method: 'POST',
+        origem = origem || 'novo';
+        $.ajax({ url: URL_ENCERRAR_ATEND_POR_ORIGEM[origem].replace('/0/', '/' + id + '/'), method: 'POST',
                  headers: { 'X-CSRFToken': csrfAtendimento() } });
         // Libera na hora sem o tempo de segundos
-        delete atendimentosAtivos[String(id)];
+        delete atendimentosAtivos[origem + ':' + id];
         aplicarAtendimentos();
     }
-    // quando fechar a aba sem salvar ou cancelar libera na hora 
+    // quando fechar a aba sem salvar ou cancelar libera na hora
     function liberarAoFechar() {
         var id = document.getElementById('base_novo_id_hidden');
         id = id ? id.value : '';
+        var origem = document.getElementById('origem_hidden');
+        origem = (origem && origem.value) ? origem.value : 'novo';
         if (!id || !navigator.sendBeacon) return;
         var fd = new FormData();
         fd.append('csrfmiddlewaretoken', csrfAtendimento());
-        navigator.sendBeacon(URL_ENCERRAR_ATEND.replace('/0/', '/' + id + '/'), fd);
+        navigator.sendBeacon(URL_ENCERRAR_ATEND_POR_ORIGEM[origem].replace('/0/', '/' + id + '/'), fd);
     }
     window.addEventListener('pagehide', liberarAoFechar);
     window.addEventListener('beforeunload', liberarAoFechar);
     function aplicarAtendimentos() {
         $('#tabela-base-novo tbody tr').each(function() {
             var id = String($(this).data('id') || '');
-            var nome = atendimentosAtivos[id];
+            var origem = String($(this).data('origem') || 'novo');
+            var nome = atendimentosAtivos[origem + ':' + id];
             var cell = $(this).find('.uso-por-cell');
             if (nome) {
                 $(this).addClass('em-atendimento').attr('title', 'Em atendimento por ' + nome);
@@ -997,10 +1029,25 @@
             }
         });
     }
+    // alex: consulta as 3 origens (Novo/Renovação/Endosso) e junta num único mapa,
+    // com chave "origem:id" (os IDs não são únicos entre as tabelas).
     function atualizarAtendimentos() {
-        $.get(URL_ATENDIMENTOS_ATIVOS, function(resp) {
-            atendimentosAtivos = (resp && resp.atendimentos) ? resp.atendimentos : {};
-            aplicarAtendimentos();
+        var origens = Object.keys(URL_ATENDIMENTOS_ATIVOS_POR_ORIGEM);
+        var pendentes = origens.length;
+        var mapaNovo = {};
+        origens.forEach(function(origem) {
+            $.get(URL_ATENDIMENTOS_ATIVOS_POR_ORIGEM[origem], function(resp) {
+                var atendimentos = (resp && resp.atendimentos) ? resp.atendimentos : {};
+                Object.keys(atendimentos).forEach(function(id) {
+                    mapaNovo[origem + ':' + id] = atendimentos[id];
+                });
+            }).always(function() {
+                pendentes--;
+                if (pendentes === 0) {
+                    atendimentosAtivos = mapaNovo;
+                    aplicarAtendimentos();
+                }
+            });
         });
     }
 
