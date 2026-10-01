@@ -387,7 +387,8 @@
                                     <div id="base_endosso_dropdown_seguradora" class="lista-suspensa d-none"></div>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            {# ID oculto: continua existindo pro JS (ver base_endosso_id_display), so nao aparece na tela. Pra voltar a mostrar, tira o "d-none". #}
+                            <div class="col-md-2 d-none">
                                 <label class="fw-bold small mb-1">ID</label>
                                 <input type="text" id="base_endosso_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
                             </div>
@@ -409,9 +410,9 @@
                                 </div>
                             </div>
                             -->
-                            <div class="col-md-2"><label class="fw-bold small mb-1">Apólice</label>{{ form_indicacao.numero_contrato }}</div>
+                            <div class="col-md-4"><label class="fw-bold small mb-1">Apólice</label>{{ form_indicacao.numero_contrato }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">Motivo</label>{{ form_indicacao.tipo_endosso }}</div>
                             <div class="col-md-1"><label class="fw-bold small mb-1">Item</label>{{ form_indicacao.item }}</div>
-                            <div class="col-md-2"><label class="fw-bold small mb-1">Endosso</label>{{ form_indicacao.tipo_endosso }}</div>
                             <div class="col-md-3"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
                         </div>
 
