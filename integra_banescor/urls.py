@@ -85,6 +85,7 @@ urlpatterns = [
     # Emissão: mesma base, mas só com as vendas já fechadas (Central/Agência)
     path('producao/vendas/emissao/', views.vendas_emissao, name='vendas_emissao'),
     path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
+    path('producao/vendas/buscar-cliente/', views.buscar_cliente_por_cpf, name='buscar_cliente_por_cpf'),
     path('producao/vendas/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),
     # Trava de atendimento ("em ligação") - marcar/encerrar e listar os ativos (polling)
     path('producao/vendas/atendimento/<int:id>/iniciar/', views.marcar_atendimento, name='marcar_atendimento'),

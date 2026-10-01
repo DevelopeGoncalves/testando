@@ -17,7 +17,7 @@ from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, Ag
 from .anbima import processar_planilha_anbima
 from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
 # Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
-from .clientes_sync import sincronizar_cliente, dados_do_cliente
+from .clientes_sync import sincronizar_cliente, dados_do_cliente, buscar_cliente
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -1742,6 +1742,23 @@ def gerar_protocolo_ligacao(request):
     return JsonResponse({'protocolo': LigacaoIndicacao.gerar_proximo_protocolo()})
 
 @login_required
+def buscar_cliente_por_cpf(request):
+    """Ficha de Vendas (Novo/Renovação/Endosso): ao informar o CPF, puxa os dados
+    do cliente já cadastrado em Base > Formulários > Clientes (se existir), pra
+    preencher Nome/Telefone/E-mail sozinho. Sem CPF cadastrado, o usuário
+    preenche na mão e um cliente novo é criado ao salvar a ficha."""
+    cliente = buscar_cliente(request.GET.get('cpf', ''))
+    if not cliente:
+        return JsonResponse({'encontrado': False})
+    return JsonResponse({
+        'encontrado': True,
+        'id': cliente.id,
+        'nome': cliente.nome or '',
+        'telefone': cliente.celular or cliente.telefone or '',
+        'email': cliente.email or '',
+    })
+
+@login_required
 def gerar_protocolo_ligacao_renovacao(request):
     return JsonResponse({'protocolo': LigacaoRenovacao.gerar_proximo_protocolo()})
 
@@ -2038,6 +2055,20 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 
     era_novo = instancia is None
     indicacao = form.save()
+
+    # O card Clientes e a base: o CPF informado na ficha acha (ou cadastra) o
+    # cliente em Base > Formulários > Clientes, e o registro guarda o ID dele.
+    # Sem CPF nao da pra identificar a pessoa, entao fica sem vinculo mesmo.
+    cliente_obj = sincronizar_cliente(
+        cpf_cnpj=indicacao.cpf_cliente,
+        nome=indicacao.nome_cliente,
+        celular=indicacao.telefone_cliente,
+        email=indicacao.email_cliente,
+    )
+    cliente_novo_id = cliente_obj.id if cliente_obj else None
+    if indicacao.cliente_cadastro_id != cliente_novo_id:
+        indicacao.cliente_cadastro = cliente_obj
+        indicacao.save(update_fields=['cliente_cadastro'])
 
     # alex: quem CRIA o registro (Novo ou Base Novo) já entra como responsável pela
     # demanda. O Gestor continua podendo indicar/alterar depois (definir_responsavel_demanda).

@@ -417,8 +417,9 @@
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
                         <div class="row g-3">
-                            <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                            {# CPF primeiro: ao sair do campo, busca o cliente cadastrado e preenche o resto sozinho (ver JS no fim da pagina). #}
                             <div class="col-md-2"><label class="fw-bold small mb-1">CPF *</label>{{ form_indicacao.cpf_cliente }}</div>
+                            <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
                             <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
@@ -2173,6 +2174,30 @@
                 try { document.execCommand('copy'); } catch (err) {}
                 tmp.remove(); mostrarToastCopiado(true);
             }
+
+    // alex: ao sair do campo CPF, busca o cliente ja cadastrado em Base > Formularios
+    // > Clientes e preenche Nome/Telefone/E-mail sozinho (so o que ainda estiver
+    // vazio, pra nao sobrescrever o que o usuario ja digitou). Sem cadastro para
+    // aquele CPF, o usuario preenche na mao e um cliente novo e criado ao salvar.
+    (function () {
+        var campoCpf = document.getElementById('id_cpf_cliente');
+        if (!campoCpf) return;
+        var campoNome = document.getElementById('id_nome_cliente');
+        var campoTelefone = document.getElementById('id_telefone_cliente');
+        var campoEmail = document.getElementById('id_email_cliente');
+
+        campoCpf.addEventListener('blur', function () {
+            var cpf = (campoCpf.value || '').replace(/\D/g, '');
+            if (cpf.length < 11) return;
+            fetch('{% url "buscar_cliente_por_cpf" %}?cpf=' + encodeURIComponent(cpf))
+                .then(function (r) { return r.json(); })
+                .then(function (dados) {
+                    if (!dados.encontrado) return;
+                    if (campoNome && !campoNome.value.trim()) campoNome.value = dados.nome;
+                    if (campoTelefone && !campoTelefone.value.trim()) campoTelefone.value = dados.telefone;
+                    if (campoEmail && !campoEmail.value.trim()) campoEmail.value = dados.email;
+                })
+                .catch(function () {});
         });
     })();
 </script>

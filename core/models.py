@@ -309,6 +309,12 @@ class Indicacao(models.Model):
     telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
     cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)
     email_cliente = models.EmailField("E-mail do cliente", blank=True, null=True)
+    # ID do cadastro do cliente (Base > Formularios > Clientes). Preenchido
+    # automaticamente ao salvar, a partir do CPF informado na ficha.
+    cliente_cadastro = models.ForeignKey(
+        'Cliente', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='indicacoes_novo', verbose_name='Cliente (cadastro)'
+    )
     produto = models.CharField("Produto", max_length=100, blank=True, null=True)
     dados_veiculo = models.CharField("Dados do veículo (modelo, ano e placa)", max_length=200, blank=True, null=True)
     possui_seguro = models.CharField("Cliente já possui seguro?", max_length=10, blank=True, null=True)
@@ -477,6 +483,12 @@ class IndicacaoRenovacao(models.Model):
     telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
     cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)
     email_cliente = models.EmailField("E-mail do cliente", blank=True, null=True)
+    # ID do cadastro do cliente (Base > Formularios > Clientes). Preenchido
+    # automaticamente ao salvar, a partir do CPF informado na ficha.
+    cliente_cadastro = models.ForeignKey(
+        'Cliente', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='indicacoes_renovacao', verbose_name='Cliente (cadastro)'
+    )
     produto = models.CharField("Produto", max_length=100, blank=True, null=True)
     dados_veiculo = models.CharField("Dados do veículo (modelo, ano e placa)", max_length=200, blank=True, null=True)
     possui_seguro = models.CharField("Cliente já possui seguro?", max_length=10, blank=True, null=True)
@@ -619,6 +631,12 @@ class IndicacaoEndosso(models.Model):
     telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
     cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)
     email_cliente = models.EmailField("E-mail do cliente", blank=True, null=True)
+    # ID do cadastro do cliente (Base > Formularios > Clientes). Preenchido
+    # automaticamente ao salvar, a partir do CPF informado na ficha.
+    cliente_cadastro = models.ForeignKey(
+        'Cliente', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='indicacoes_endosso', verbose_name='Cliente (cadastro)'
+    )
     produto = models.CharField("Produto", max_length=100, blank=True, null=True)
     dados_veiculo = models.CharField("Dados do veículo (modelo, ano e placa)", max_length=200, blank=True, null=True)
     possui_seguro = models.CharField("Cliente já possui seguro?", max_length=10, blank=True, null=True)
