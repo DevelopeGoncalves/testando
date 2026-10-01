@@ -379,7 +379,7 @@
 
                         <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-user-tie"></i> Bloco Apólice</h5>
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="fw-bold small mb-1">Seguradora</label>
                                 <div class="input-container">
                                     <input type="hidden" name="seguradora" id="base_endosso_seguradora_val">
@@ -392,7 +392,7 @@
                                 <label class="fw-bold small mb-1">ID</label>
                                 <input type="text" id="base_endosso_id_display" class="form-control bg-light" readonly tabindex="-1" style="pointer-events:none;" placeholder="(gerado ao salvar)">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="fw-bold small mb-1">Grupo/Ramo *</label>
                                 <div class="input-container">
                                     <input type="hidden" name="ramo" id="base_endosso_ramo_val">
@@ -411,9 +411,12 @@
                             </div>
                             -->
                             <div class="col-md-4"><label class="fw-bold small mb-1">Apólice</label>{{ form_indicacao.numero_contrato }}</div>
-                            <div class="col-md-2"><label class="fw-bold small mb-1">Motivo</label>{{ form_indicacao.tipo_endosso }}</div>
-                            <div class="col-md-1"><label class="fw-bold small mb-1">Item</label>{{ form_indicacao.item }}</div>
-                            <div class="col-md-3"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
+                        </div>
+
+                        <div class="row g-3 mt-0">
+                            <div class="col-md-5"><label class="fw-bold small mb-1">Motivo</label>{{ form_indicacao.tipo_endosso }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">Item</label>{{ form_indicacao.item }}</div>
+                            <div class="col-md-5"><label class="fw-bold small mb-1">Data/hora do cadastro</label>{{ form_indicacao.carimbo_data_hora }}</div>
                         </div>
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
