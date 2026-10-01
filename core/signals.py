@@ -6,7 +6,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from decimal import Decimal
 from .models import Cliente, RegistroProducao, FinanceiroHabitacional
-from .clientes_sync import propagar_para_registros
+from .clientes_sync import propagar_para_registros, propagar_para_indicacoes
 
 @receiver(user_logged_in)
 def funcao_ao_logar(request, user, **kwargs):
@@ -18,10 +18,12 @@ def funcao_ao_deslogar(request, user, **kwargs):
 
 # O card Clientes e a base do cadastro: alterou ali (nome, e-mail, celular,
 # telefone, nome social, CPF/CNPJ), a mudanca desce na hora para os registos
-# de producao do Odonto e do Habitacional ligados aquele cliente.
+# de producao do Odonto/Habitacional e para a ficha de Vendas (Novo, Base Novo,
+# Renovação, Endosso) ligados aquele cliente.
 @receiver(post_save, sender=Cliente)
 def espelhar_cliente_nos_registros(sender, instance, **kwargs):
     propagar_para_registros(instance)
+    propagar_para_indicacoes(instance)
 
 
 @receiver(post_save, sender=RegistroProducao)

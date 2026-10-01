@@ -12,11 +12,14 @@
 #    repetido para o mesmo CPF/CNPJ.
 # 4) O card Clientes e a base: quando o cadastro muda ali, a alteracao desce na
 #    hora para todos os registos de producao ligados aquele cliente (ver o
-#    signal em core/signals.py).
+#    signal em core/signals.py). O mesmo vale para a ficha de Vendas (Novo,
+#    Base Novo, Renovacao, Endosso): mudou nome/telefone/e-mail na base ou na
+#    propria ficha, os dois lados ficam iguais. So muda o CPF/CNPJ que passa a
+#    ser outra pessoa (outro vinculo), nao atualiza o que ja existia.
 
 from django.db import IntegrityError, transaction
 
-from .models import Cliente, RegistroProducao, TipoPessoa
+from .models import Cliente, RegistroProducao, TipoPessoa, Indicacao, IndicacaoRenovacao, IndicacaoEndosso
 from .odonto import _sem_acento
 
 
@@ -176,5 +179,45 @@ def propagar_para_registros(cliente):
         total += RegistroProducao.objects.filter(
             cliente_cadastro__isnull=True, cpf_cnpj__in=variantes
         ).update(cliente_cadastro=cliente, **dados)
+
+    return total
+
+
+def dados_do_cliente_indicacao(cliente):
+    """Como os campos da ficha de Vendas (Novo/Renovação/Endosso) ficam segundo
+    o cadastro do card Clientes. Essa ficha so tem um telefone (nao separa
+    celular de telefone fixo como o card Clientes), por isso usa o celular e,
+    na falta dele, o telefone fixo."""
+    return {
+        'cpf_cliente': (cliente.cpf_cnpj or '')[:18],
+        'nome_cliente': (cliente.nome or '')[:150],
+        'telefone_cliente': (cliente.celular or cliente.telefone or '')[:20],
+        'email_cliente': (cliente.email or '')[:254],
+    }
+
+
+def propagar_para_indicacoes(cliente):
+    """Desce os dados do cadastro para as fichas de Vendas (Novo, Base Novo,
+    Renovação/Base Renovação, Endosso/Base Endosso) ligadas a este cliente.
+
+    Mesma regra do `propagar_para_registros`: quem ja tem o vinculo recebe os
+    dados atualizados; quem tem o mesmo CPF e ainda nao tinha o vinculo (ficha
+    antiga, de antes dessa sincronizacao existir) é adotado agora. So o CPF em
+    si nunca é sobrescrito por aqui — mudar o CPF na ficha de Vendas é outra
+    pessoa, tratado na hora de salvar (ver `sincronizar_cliente` em views.py).
+    """
+    if cliente is None or cliente.pk is None:
+        return 0
+
+    dados = dados_do_cliente_indicacao(cliente)
+    variantes = variantes_documento(cliente.cpf_cnpj)
+    total = 0
+
+    for Modelo in (Indicacao, IndicacaoRenovacao, IndicacaoEndosso):
+        total += Modelo.objects.filter(cliente_cadastro=cliente).update(**dados)
+        if variantes:
+            total += Modelo.objects.filter(
+                cliente_cadastro__isnull=True, cpf_cliente__in=variantes
+            ).update(cliente_cadastro=cliente, **dados)
 
     return total
