@@ -2294,7 +2294,8 @@ def _render_emissao(request, base):
         indicacoes = [i for i in indicacoes if i.status_emissao not in STATUS_EMISSAO_FINALIZADOS]
     indicacoes.sort(key=lambda i: i.carimbo_data_hora or timezone.now(), reverse=True)
 
-    return render(request, 'core/producao/vendas/emissao.html', {
+    template = 'core/producao/vendas/base_emissao.html' if base else 'core/producao/vendas/emissao.html'
+    return render(request, template, {
         'indicacoes': indicacoes,
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,

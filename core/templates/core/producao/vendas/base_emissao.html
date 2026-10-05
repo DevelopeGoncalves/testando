@@ -1,12 +1,12 @@
 {% extends 'core/layout.html' %}
 
-{% block title %}Vendas - Emissão{% endblock %}
+{% block title %}Vendas - Base Emissão{% endblock %}
 
 {% block breadcrumb %}
     <span style="font-size: 1rem; font-weight: normal;">
         <span class="text-primary">Produção</span> /
         <a href="{% url 'producao_vendas' %}" class="text-primary text-decoration-none">Vendas</a> /
-        <span class="text-primary">Emissão</span>
+        <span class="text-primary">Base Emissão</span>
     </span>
 {% endblock %}
 
@@ -126,7 +126,7 @@
 <div id="tela-base-novo">
     <div id="lista-base-novo">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> Emissão</h4>
+            <h4 class="m-0"><i class="fas fa-file-signature text-info"></i> Base Emissão</h4>
             <div>
                 <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
                     <i class="fas fa-filter"></i> Limpar Filtros
