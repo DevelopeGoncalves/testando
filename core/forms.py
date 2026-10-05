@@ -1,5 +1,6 @@
 from django import forms
 from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
+from .validadores import documento_cpf_cnpj_valido  # validador cpf alex
 
 
 class BootstrapMixin:
@@ -306,11 +307,13 @@ class ClienteForm(BootstrapMixin, forms.ModelForm):
 
     # Evita CPFs/CNPJs duplicados no cadastro manual
     def clean_cpf_cnpj(self):
-        doc = self.cleaned_data.get('cpf_cnpj')
+        # validador cpf alex: valida o formato/dígito verificador e já devolve
+        # o número completo (com os zeros à esquerda que faltarem) pra gravar.
+        doc = documento_cpf_cnpj_valido(self.cleaned_data.get('cpf_cnpj'))
         if doc:
             if Cliente.objects.filter(cpf_cnpj=doc).exclude(id=self.instance.id).exists():
                 raise forms.ValidationError("Este CPF/CNPJ já está cadastrado no sistema.")
-        return doc     
+        return doc
     
 class ApoliceForm(BootstrapMixin, forms.ModelForm):
     class Meta:
@@ -399,6 +402,12 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             for nome in CAMPOS_OBRIGATORIOS:
                 if nome in self.fields:
                     self.fields[nome].required = True
+
+    def clean_cpf_cliente(self):
+        # validador cpf alex: valida o formato/dígito verificador e já devolve
+        # o número completo (com os zeros à esquerda que faltarem) pra gravar.
+        # Vale pro Novo/Base Novo e, por herança, também Renovação e Endosso.
+        return documento_cpf_cnpj_valido(self.cleaned_data.get('cpf_cliente'))
 
     def clean(self):
         cleaned_data = super().clean()

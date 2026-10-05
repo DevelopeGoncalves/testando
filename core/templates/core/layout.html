@@ -916,7 +916,38 @@
             verificarEstadoFiltros();
         }
     };
-    
+
+    // mascara cpf cnpj alex
+    // ------------------------------------------------------------------
+    // Mascara visual de CPF/CNPJ: so deixa digitar numero, e formata sozinho
+    // com ponto/traco (CPF, ate 11 digitos) ou ponto/barra/traco (CNPJ, de 12
+    // a 14 digitos) enquanto a pessoa digita. E so visual - no banco continua
+    // gravando so o numero (quem valida o digito verificador e completa o
+    // numero sem os zeros a esquerda e o backend, ver "validador cpf alex" em
+    // core/validadores.py). Funciona em qualquer input de CPF/CNPJ do
+    // sistema automaticamente, sem precisar chamar nada - so pelo "name" do
+    // campo ser "cpf_cnpj" ou "cpf_cliente".
+    window.aplicarMascaraCpfCnpj = function (input) {
+        var v = (input.value || '').replace(/\D/g, '').slice(0, 14);
+        if (v.length <= 11) {
+            v = v.replace(/^(\d{3})(\d)/, '$1.$2');
+            v = v.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+            v = v.replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+        } else {
+            v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+            v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            v = v.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4');
+            v = v.replace(/\/(\d{4})(\d{1,2})$/, '/$1-$2');
+        }
+        input.value = v;
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('input[name="cpf_cnpj"], input[name="cpf_cliente"]').forEach(function (campo) {
+            campo.addEventListener('input', function () { aplicarMascaraCpfCnpj(campo); });
+        });
+    });
+
     // --- PADRÃO ELEGANTE DE AVISO/CONFIRMAÇÃO (substitui alert()/confirm() do navegador) ---
     window.avisoElegante = function(mensagem, titulo) {
         document.getElementById('modalAvisoGlobalTitulo').textContent = titulo || 'Aviso';

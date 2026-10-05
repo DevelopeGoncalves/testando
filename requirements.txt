@@ -4,3 +4,4 @@ openpyxl==3.1.5
 numpy==2.5.0
 xlrd==2.0.2
 lxml==6.1.1
+validate-docbr==2.0.1
