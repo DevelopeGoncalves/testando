@@ -98,7 +98,9 @@
                 {% if form_cliente.errors %}
                 <div class="alert alert-danger shadow-sm">
                     <strong><i class="fas fa-exclamation-triangle"></i> Ops, não foi possível salvar!</strong><br>
-                    Parece que você tentou cadastrar um <b>CPF/CNPJ</b> que já existe no sistema.
+                    {# validador cpf alex: mostra o erro de verdade (CPF/CNPJ duplicado, #}
+                    {# inválido, etc.) em vez de uma frase fixa que só valia pra duplicado. #}
+                    {% for campo, erros in form_cliente.errors.items %}{% for erro in erros %}{{ erro }}{% if not forloop.last %}<br>{% endif %}{% endfor %}{% endfor %}
                 </div>
                 {% endif %}
                 <form method="post">
