@@ -48,12 +48,12 @@
             </div>
         </a>
 
-        <a href="{% url 'vendas_emissao' %}" class="link-card vendas-grid-emissao">
+        <a href="{% url 'vendas_emissao' %}" class="link-card">
             <div class="card card-menu h-100">
-                <div class="card-body text-center p-4 h-100 d-flex flex-column justify-content-center">
+                <div class="card-body text-center p-4">
                     <i class="fas fa-file-invoice-dollar fa-3x mb-3" style="color: var(--brand-green);"></i>
                     <h5 class="card-title text-dark fw-bold">Emissão</h5>
-                    <p class="card-text text-muted small">Vendas fechadas para emissão</p>
+                    <p class="card-text text-muted small">Acompanhar vendas a emitir</p>
                 </div>
             </div>
         </a>
@@ -88,11 +88,20 @@
             </div>
         </a>
 
+        <a href="{% url 'vendas_base_emissao' %}" class="link-card">
+            <div class="card card-menu h-100">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-folder-open fa-3x mb-3" style="color: var(--brand-green);"></i>
+                    <h5 class="card-title text-dark fw-bold">Base Emissão</h5>
+                    <p class="card-text text-muted small">Gerenciar base de emissões</p>
+                </div>
+            </div>
+        </a>
+
     </div>
 </div>
 
 <style>
-    /* alex: Emissão preenche o espaço vazio ao lado (ocupa 2 linhas), resto do grid uniforme. */
     .vendas-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -100,15 +109,9 @@
         gap: 1rem;
         margin-bottom: 1rem;
     }
-    .vendas-grid-emissao {
-        grid-row: span 2;
-    }
     @media (max-width: 991.98px) {
         .vendas-grid {
             grid-template-columns: repeat(2, 1fr);
-        }
-        .vendas-grid-emissao {
-            grid-row: auto;
         }
     }
 </style>

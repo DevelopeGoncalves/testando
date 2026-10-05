@@ -11,7 +11,7 @@ from .models import (
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
     IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
     CompatibilidadeRamoOdonto, IndicacaoRenovacao, LigacaoRenovacao,
-    IndicacaoEndosso, LigacaoEndosso,
+    IndicacaoEndosso, LigacaoEndosso, AcompanhamentoEmissao,
 )
 from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, IndicacaoForm, IndicacaoRenovacaoForm, IndicacaoEndossoForm, EstadoAnbimaForm, FundoAnbimaForm
 from .anbima import processar_planilha_anbima
@@ -290,7 +290,7 @@ def excluir_em_massa(request):
             messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
             return redirect('vendas_endosso')
     elif tipo == 'indicacao_emissao':
-        if not _usuario_pode_excluir(user, 'prod_vendas_emissao'):
+        if not (_usuario_pode_excluir(user, 'prod_vendas_emissao') or _usuario_pode_excluir(user, 'prod_vendas_baseemissao')):
             messages.error(request, 'Acesso Negado. Apenas Gestor pode excluir registros de Vendas.')
             return redirect('vendas_emissao')
     elif not user.is_superuser:
@@ -2226,6 +2226,22 @@ ORIGENS_EMISSAO = {
     'endosso': (IndicacaoEndosso, LigacaoEndosso, IndicacaoEndossoForm),
 }
 
+# alex: status do acompanhamento que "finalizam" a venda - ela sai da Emissão (continua na Base Emissão).
+STATUS_EMISSAO_FINALIZADOS = (AcompanhamentoEmissao.STATUS_EMITIDA, AcompanhamentoEmissao.STATUS_RECUSADA)
+
+def _anexar_acompanhamentos(registros, origem):
+    """Pendura em cada registro a lista 'acompanhamentos' (mais recente primeiro) e o
+    'status_emissao' atual (o status do último acompanhamento; 'Aguardando emissão' se não houver)."""
+    ids = [r.id for r in registros]
+    por_registro = defaultdict(list)
+    if ids:
+        for a in AcompanhamentoEmissao.objects.filter(origem=origem, registro_id__in=ids):
+            por_registro[a.registro_id].append(a)
+    for r in registros:
+        lista = sorted(por_registro.get(r.id, []), key=lambda a: (a.data_registro, a.id), reverse=True)
+        r.acompanhamentos = lista
+        r.status_emissao = lista[0].status if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
+
 def _vendas_fechadas(model_indicacao, model_ligacao, origem):
     """Registros com venda fechada (última ligação Central/Agência) de UMA origem,
     já com os campos auxiliares (nome_agencia, status_fechamento etc.) calculados."""
@@ -2247,23 +2263,24 @@ def _vendas_fechadas(model_indicacao, model_ligacao, origem):
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
         ind.status_fechamento = _status_fechamento_indicacao(ind)
         ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+    _anexar_acompanhamentos(registros, origem)
     return registros
 
-@login_required
-def vendas_emissao(request):
-    """Card 'Emissão': mostra SOMENTE os registros cuja venda foi fechada (a última
-    ligação está marcada como 'Vendas Central' ou 'Vendas Agência'), juntando as 3
-    origens (Novo, Renovação, Endosso) - nada é duplicado no banco, cada linha mantém
-    a sua origem (atributo 'origem') para editar/excluir na tabela certa."""
+def _render_emissao(request, base):
+    """Monta a tela da Emissão (base=False) ou da Base Emissão (base=True). As duas mostram as
+    vendas fechadas; a Base Emissão registra TUDO, a Emissão só as que ainda não foram finalizadas
+    (último status diferente de Emitida/Recusada)."""
+    campo = 'prod_vendas_baseemissao' if base else 'prod_vendas_emissao'
+    rota = 'vendas_base_emissao' if base else 'vendas_emissao'
     if request.method == 'POST':
         origem = request.POST.get('origem') or 'novo'
         model_indicacao, model_ligacao, form_class = ORIGENS_EMISSAO.get(origem, ORIGENS_EMISSAO['novo'])
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
-            request, processar_ligacoes=False, campo_permissao='prod_vendas_emissao',
+            request, processar_ligacoes=False, campo_permissao=campo,
             model_indicacao=model_indicacao, model_ligacao=model_ligacao, form_class=form_class,
         )
         if form is None:
-            return redirect('vendas_emissao')
+            return redirect(rota)
     else:
         form = IndicacaoForm()
         erro_formulario_msg = ''
@@ -2273,6 +2290,8 @@ def vendas_emissao(request):
         + _vendas_fechadas(IndicacaoRenovacao, LigacaoRenovacao, 'renovacao')
         + _vendas_fechadas(IndicacaoEndosso, LigacaoEndosso, 'endosso')
     )
+    if not base:
+        indicacoes = [i for i in indicacoes if i.status_emissao not in STATUS_EMISSAO_FINALIZADOS]
     indicacoes.sort(key=lambda i: i.carimbo_data_hora or timezone.now(), reverse=True)
 
     return render(request, 'core/producao/vendas/emissao.html', {
@@ -2283,14 +2302,84 @@ def vendas_emissao(request):
         # alex: seguradoras para o dropdown da LIGAÇÃO (relacionamento só na ligação)
         'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         'modo_emissao': True,
-        # Permissões deste card usam o campo da "Emissão" (prod_vendas_emissao).
-        'usuario_gestor': _usuario_e_gestor(request.user, 'prod_vendas_emissao'),
-        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, 'prod_vendas_emissao'),
-        'usuario_pode_excluir': _usuario_pode_excluir(request.user, 'prod_vendas_emissao'),
+        'modo_base_emissao': base,
+        'status_emissao_choices': AcompanhamentoEmissao.STATUS_CHOICES,
+        # Permissões de cada card usam o próprio campo (Emissão x Base Emissão).
+        'usuario_gestor': _usuario_e_gestor(request.user, campo),
+        'usuario_pode_editar': _usuario_pode_editar_dados(request.user, campo),
+        'usuario_pode_excluir': _usuario_pode_excluir(request.user, campo),
         'colaboradores_demanda': Colaborador.objects.filter(inativo=False).order_by('colaborador'),
         # alex: autocomplete do campo Agência (Unidade: "CID - nome")
         'unidades_agencia': Unidade.objects.filter(inativada=False).order_by('cid_unidade'),
     })
+
+@login_required
+def vendas_emissao(request):
+    """Card 'Emissão': só as vendas fechadas que ainda NÃO foram finalizadas (último
+    acompanhamento diferente de Emitida/Recusada). Junta as 3 origens (Novo, Renovação,
+    Endosso) - nada é duplicado no banco, cada linha mantém a sua origem."""
+    return _render_emissao(request, base=False)
+
+@login_required
+def vendas_base_emissao(request):
+    """Card 'Base Emissão': TODAS as vendas fechadas (inclusive as já emitidas/recusadas)."""
+    return _render_emissao(request, base=True)
+
+@login_required
+def salvar_acompanhamento_emissao(request):
+    """Registra um novo acompanhamento da emissão (data e atendente são automáticos)."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    user = request.user
+    if not (_usuario_pode_editar_dados(user, 'prod_vendas_emissao') or _usuario_pode_editar_dados(user, 'prod_vendas_baseemissao')):
+        return JsonResponse({'ok': False, 'erro': 'Você não tem permissão para registrar o acompanhamento.'}, status=403)
+
+    origem = request.POST.get('origem') or ''
+    registro_id = request.POST.get('registro_id') or ''
+    if origem not in ORIGENS_EMISSAO or not registro_id.isdigit():
+        return JsonResponse({'ok': False, 'erro': 'Registro inválido.'}, status=400)
+    if not ORIGENS_EMISSAO[origem][0].objects.filter(id=registro_id).exists():
+        return JsonResponse({'ok': False, 'erro': 'Registro não encontrado.'}, status=404)
+
+    status = request.POST.get('status') or ''
+    if status not in dict(AcompanhamentoEmissao.STATUS_CHOICES):
+        return JsonResponse({'ok': False, 'erro': 'Selecione o status.'}, status=400)
+
+    def _data(nome):
+        valor = (request.POST.get(nome) or '').strip()
+        if not valor:
+            return None
+        try:
+            return datetime.strptime(valor, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+
+    apolice_enviada = request.POST.get('apolice_enviada') == '1'
+    data_envio = _data('data_envio_cliente') if apolice_enviada else None
+    if apolice_enviada and not data_envio:
+        return JsonResponse({'ok': False, 'erro': 'Informe a data de envio da apólice ao cliente.'}, status=400)
+
+    data_emissao, numero_apolice = None, ''
+    if status == AcompanhamentoEmissao.STATUS_EMITIDA:
+        data_emissao = _data('data_emissao')
+        numero_apolice = (request.POST.get('numero_apolice') or '').strip()
+        if not data_emissao:
+            return JsonResponse({'ok': False, 'erro': 'Informe a data de emissão.'}, status=400)
+        if not numero_apolice:
+            return JsonResponse({'ok': False, 'erro': 'Informe o número da apólice.'}, status=400)
+
+    AcompanhamentoEmissao.objects.create(
+        origem=origem,
+        registro_id=int(registro_id),
+        atendente=(user.get_full_name() or user.username),
+        observacao=(request.POST.get('observacao') or '').strip(),
+        status=status,
+        apolice_enviada=apolice_enviada,
+        data_envio_cliente=data_envio,
+        data_emissao=data_emissao,
+        numero_apolice=numero_apolice,
+    )
+    return JsonResponse({'ok': True})
 
 @login_required
 def vendas_renovacao(request):
@@ -3809,7 +3898,7 @@ PERMISSOES_CAMPOS = [
     
     # PRODUÇÃO
     'prod_vendas_novo', 'prod_vendas_renovacao', 'prod_vendas_endosso', 'prod_vendas_emissao',
-    'prod_vendas_basenovo', 'prod_vendas_baserenovacao', 'prod_vendas_baseendosso',
+    'prod_vendas_basenovo', 'prod_vendas_baserenovacao', 'prod_vendas_baseendosso', 'prod_vendas_baseemissao',
     'prod_form_vida', 'prod_form_bap', 'prod_form_prestamista',
     'prod_form_patrimonialedemais', 'prod_form_consorcio', 'prod_form_odonto',
     'prod_form_previdencia', 'prod_form_banescap', 'prod_form_saude',

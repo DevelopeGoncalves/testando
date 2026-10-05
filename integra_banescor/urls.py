@@ -84,6 +84,8 @@ urlpatterns = [
     path('producao/vendas/base-novo/', views.lista_base_novo, name='lista_base_novo'),
     # Emissão: mesma base, mas só com as vendas já fechadas (Central/Agência)
     path('producao/vendas/emissao/', views.vendas_emissao, name='vendas_emissao'),
+    path('producao/vendas/base-emissao/', views.vendas_base_emissao, name='vendas_base_emissao'),
+    path('producao/vendas/emissao/acompanhamento/', views.salvar_acompanhamento_emissao, name='salvar_acompanhamento_emissao'),
     path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
     path('producao/vendas/buscar-cliente/', views.buscar_cliente_por_cpf, name='buscar_cliente_por_cpf'),
     path('producao/vendas/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),

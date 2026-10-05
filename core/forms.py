@@ -499,6 +499,7 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
     prod_vendas_baserenovacao = criar_campo_permissao("↳ Vendas - Base Renovação")
     prod_vendas_baseendosso = criar_campo_permissao("↳ Vendas - Base Endosso")
     prod_vendas_emissao = criar_campo_permissao("↳ Vendas - Emissao")
+    prod_vendas_baseemissao = criar_campo_permissao("↳ Vendas - Base Emissao")
 
     prod_form_vida = criar_campo_permissao("↳ Form - Vida")
     prod_form_bap = criar_campo_permissao("↳ Form - BAP")

@@ -454,6 +454,44 @@ class LigacaoIndicacao(models.Model):
         ordering = ['-data_ligacao', '-id']
 
 
+# --- ACOMPANHAMENTO DA EMISSÃO: histórico de andamento de uma venda fechada (Novo/Renovação/
+# Endosso). Fica numa tabela só, ligada ao registro por (origem, registro_id), pois a Emissão
+# junta as 3 origens e os IDs não são únicos entre as tabelas. ---
+class AcompanhamentoEmissao(models.Model):
+    STATUS_AGUARDANDO = 'Aguardando emissão'
+    STATUS_PENDENCIA = 'Pendência'
+    STATUS_RECUSADA = 'Recusada'
+    STATUS_EMITIDA = 'Emitida'
+    STATUS_CHOICES = [
+        (STATUS_AGUARDANDO, 'Aguardando emissão'),
+        (STATUS_PENDENCIA, 'Pendência'),
+        (STATUS_RECUSADA, 'Recusada'),
+        (STATUS_EMITIDA, 'Emitida'),
+    ]
+    ORIGENS = [('novo', 'Novo'), ('renovacao', 'Renovação'), ('endosso', 'Endosso')]
+
+    origem = models.CharField("Origem", max_length=10, choices=ORIGENS)
+    registro_id = models.PositiveIntegerField("ID do registro (na tabela da origem)")
+    data_registro = models.DateTimeField("Data do registro", default=timezone.now)
+    atendente = models.CharField("Atendente", max_length=150, blank=True, null=True)
+    observacao = models.TextField("Observação", blank=True, null=True)
+    status = models.CharField("Status", max_length=20, choices=STATUS_CHOICES, default=STATUS_AGUARDANDO)
+    apolice_enviada = models.BooleanField("Apólice enviada ao cliente", default=False)
+    data_envio_cliente = models.DateField("Data de envio ao cliente", null=True, blank=True)
+    # Só preenchidos quando o status é "Emitida"
+    data_emissao = models.DateField("Data de emissão", null=True, blank=True)
+    numero_apolice = models.CharField("Número da apólice", max_length=50, blank=True, null=True)
+
+    def __str__(self):
+        return f"Emissão {self.origem}:{self.registro_id} - {self.status}"
+
+    class Meta:
+        verbose_name = "Acompanhamento de Emissão"
+        verbose_name_plural = "Acompanhamentos de Emissão"
+        ordering = ['-data_registro', '-id']
+        indexes = [models.Index(fields=['origem', 'registro_id'])]
+
+
 # --- BASE RENOVAÇÃO (mesma estrutura da Indicacao/LigacaoIndicacao do Novo/Base Novo,
 # mas em tabelas próprias - os dados NÃO são compartilhados entre os dois cards) ---
 class IndicacaoRenovacao(models.Model):
@@ -777,6 +815,7 @@ class PerfilUsuario(models.Model):
     prod_vendas_basenovo = models.IntegerField('Prod_Vendas_BaseNovo', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_vendas_baserenovacao = models.IntegerField('Prod_Vendas_BaseRenovacao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_vendas_baseendosso = models.IntegerField('Prod_Vendas_BaseEndosso', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    prod_vendas_baseemissao = models.IntegerField('Prod_Vendas_BaseEmissao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     prod_vendas_emissao = models.IntegerField('Prod_Vendas_Emissao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
     prod_form_vida = models.IntegerField('Prod_Form_Vida', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
