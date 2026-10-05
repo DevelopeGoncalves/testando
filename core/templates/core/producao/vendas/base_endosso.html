@@ -2112,27 +2112,40 @@
         });
     })();
 
-    // alex: ao sair do campo CPF, busca o cliente ja cadastrado em Base > Formularios
-    // > Clientes e preenche Nome/Telefone/E-mail sozinho (so o que ainda estiver
-    // vazio, pra nao sobrescrever o que o usuario ja digitou). Sem cadastro para
-    // aquele CPF, o usuario preenche na mao e um cliente novo e criado ao salvar.
+    // alex: CPF manda nos dados do cliente. Ao sair do campo CPF, busca o cliente
+    // ja cadastrado em Base > Formularios > Clientes e PREENCHE Nome/Telefone/E-mail
+    // (sobrescreve o que tiver, porque mudou de CPF é outra pessoa). Apagou o CPF
+    // pra informar outro? Nome/Telefone/E-mail limpam na hora. Sem cadastro para
+    // aquele CPF, o usuario preenche na mao e um cliente novo é criado ao salvar.
     (function () {
         var campoCpf = document.getElementById('id_cpf_cliente');
         if (!campoCpf) return;
         var campoNome = document.getElementById('id_nome_cliente');
         var campoTelefone = document.getElementById('id_telefone_cliente');
         var campoEmail = document.getElementById('id_email_cliente');
+        var ultimoCpfConsultado = '';
+
+        campoCpf.addEventListener('input', function () {
+            var cpf = (campoCpf.value || '').replace(/\D/g, '');
+            if (cpf.length === 0) {
+                ultimoCpfConsultado = '';
+                if (campoNome) campoNome.value = '';
+                if (campoTelefone) campoTelefone.value = '';
+                if (campoEmail) campoEmail.value = '';
+            }
+        });
 
         campoCpf.addEventListener('blur', function () {
             var cpf = (campoCpf.value || '').replace(/\D/g, '');
-            if (cpf.length < 11) return;
+            if (cpf.length < 11 || cpf === ultimoCpfConsultado) return;
             fetch('{% url "buscar_cliente_por_cpf" %}?cpf=' + encodeURIComponent(cpf))
                 .then(function (r) { return r.json(); })
                 .then(function (dados) {
+                    ultimoCpfConsultado = cpf;
                     if (!dados.encontrado) return;
-                    if (campoNome && !campoNome.value.trim()) campoNome.value = dados.nome;
-                    if (campoTelefone && !campoTelefone.value.trim()) campoTelefone.value = dados.telefone;
-                    if (campoEmail && !campoEmail.value.trim()) campoEmail.value = dados.email;
+                    if (campoNome) campoNome.value = dados.nome;
+                    if (campoTelefone) campoTelefone.value = dados.telefone;
+                    if (campoEmail) campoEmail.value = dados.email;
                 })
                 .catch(function () {});
         });
