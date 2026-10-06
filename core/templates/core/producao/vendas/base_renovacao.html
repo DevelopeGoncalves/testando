@@ -424,7 +424,8 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="fw-bold small mb-1">CPF / CNPJ *</label>
+                                {# validador cpf alex: o rotulo acompanha a caixinha "Tipo" (ver JS no fim da pagina), pra nao confundir mostrando CPF/CNPJ junto. #}
+                                <label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *</label>
                                 {{ form_indicacao.cpf_cliente }}
                                 <small id="feedback_cpf_cliente" class="form-text"></small>
                             </div>
@@ -2134,7 +2135,15 @@
         var campoTelefone = document.getElementById('id_telefone_cliente');
         var campoEmail = document.getElementById('id_email_cliente');
         var feedback = document.getElementById('feedback_cpf_cliente');
+        var labelTipo = document.getElementById('label_tipo_doc_cliente');
         var ultimaConsulta = '';
+
+        // validador cpf alex: o rotulo do campo acompanha a caixinha "Tipo" (CPF ou
+        // CNPJ), pra nao ficar escrito "CPF / CNPJ" o tempo todo e confundir.
+        function atualizarLabelTipo() {
+            if (labelTipo) labelTipo.textContent = (campoTipo && campoTipo.value === 'CNPJ') ? 'CNPJ' : 'CPF';
+        }
+        atualizarLabelTipo();
 
         function limparValidacao() {
             campoCpf.classList.remove('is-invalid', 'is-valid');
@@ -2187,6 +2196,7 @@
 
         if (campoTipo) {
             campoTipo.addEventListener('change', function () {
+                atualizarLabelTipo();
                 aplicarMascaraCpfCnpj(campoCpf);
                 ultimaConsulta = '';
                 limparValidacao();
