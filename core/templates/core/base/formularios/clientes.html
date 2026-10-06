@@ -13,6 +13,12 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    {# validador cpf alex: trava visual do Tipo de Pessoa ao editar um cliente ja #}
+    {# existente (mesmo padrao de campo travado usado nas fichas de Vendas) - o #}
+    {# valor continua sendo enviado no salvamento, so nao da pra clicar/trocar. #}
+    #id_tipo_pessoa.campo-travado { background-color: #f3f4f6; pointer-events: none; }
+</style>
 <div id="tela-clientes">
     <div id="lista-clientes">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -137,8 +143,10 @@
             $('#lista-' + tipo).hide(); 
             $('#form-' + tipo).show(); 
             if(!$('#cliente_id_hidden').val() && {{ form_cliente.errors|yesno:"false,true" }}) {
-                $('form')[1].reset(); 
+                $('form')[1].reset();
                 $('#titulo-form-cliente').text("Novo Cliente");
+                // validador cpf alex: cliente novo pode escolher Física ou Jurídica à vontade.
+                $('#id_tipo_pessoa').removeClass('campo-travado').removeAttr('title');
             }
         } else { 
             $('#form-' + tipo).hide(); 
@@ -152,7 +160,13 @@
         var id = row.getAttribute('data-id');
         $('#cliente_id_hidden').val(id);
         
-        $('#id_tipo_pessoa').val(row.getAttribute('data-tipo'));
+        // validador cpf alex: cliente já cadastrado não pode trocar Pessoa Física <->
+        // Pessoa Jurídica (isso mudaria o tipo de documento dele) - pra isso é
+        // necessário cadastrar um cliente novo. O valor continua sendo enviado no
+        // salvamento, só fica travado pra não dar pra clicar/trocar.
+        $('#id_tipo_pessoa').val(row.getAttribute('data-tipo'))
+            .addClass('campo-travado')
+            .attr('title', 'Não é possível trocar o Tipo de Pessoa de um cliente já cadastrado. Cadastre um novo cliente para isso.');
         $('#id_cpf_cnpj').val(row.getAttribute('data-doc'));
         $('#id_nome').val(row.getAttribute('data-nome'));
         $('#id_nome_social').val(row.getAttribute('data-nomesocial'));

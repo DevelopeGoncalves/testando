@@ -20,6 +20,7 @@
 from django import forms
 from validate_docbr import CNPJ, CPF
 
+from .models import TipoPessoa
 from .odonto import _sem_acento
 
 
@@ -91,6 +92,15 @@ def verificar_documento_por_tipo(valor, tipo):
     if not CPF().validate(documento):
         return False, documento, 'CPF inválido. Confira o número digitado.'
     return True, documento, 'CPF válido.'
+
+
+def tipos_pessoa_selecionaveis():
+    """Opções de Tipo de Pessoa pra escolher num formulário (Cliente e Vendas)
+    - tira "Pessoa Estrangeira" da lista porque esse cadastro só lida com CPF
+    (Física) e CNPJ (Jurídica). Não apaga a linha de Base > Formulários >
+    Tipos de pessoa, só não deixa escolher ela aqui.
+    """
+    return TipoPessoa.objects.exclude(tipo_pessoa__icontains='estrangeir').order_by('tipo_pessoa')
 
 
 def tipo_cpf_ou_cnpj(tipo_pessoa):

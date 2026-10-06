@@ -1,6 +1,6 @@
 from django import forms
-from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, TipoPessoa, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
-from .validadores import documento_valido_por_tipo_pessoa  # validador cpf alex
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
+from .validadores import documento_valido_por_tipo_pessoa, tipos_pessoa_selecionaveis  # validador cpf alex
 
 
 class BootstrapMixin:
@@ -307,6 +307,10 @@ class ClienteForm(BootstrapMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # validador cpf alex: tira "Pessoa Estrangeira" da lista - esse cadastro
+        # só lida com CPF (Física) e CNPJ (Jurídica).
+        self.fields['tipo_pessoa'].queryset = tipos_pessoa_selecionaveis()
+        self.fields['tipo_pessoa'].empty_label = '-- Selecione --'
         # validador cpf alex: cliente que já existe não pode trocar Pessoa
         # Física <-> Pessoa Jurídica (isso mudaria o tipo de documento dele -
         # pra isso é um cliente novo, não uma troca no mesmo cadastro).
@@ -382,7 +386,7 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
         self.fields['tipo_documento'].queryset = TipoDocumento.objects.all().order_by('tipo_documento')
         # validador cpf alex: relacionamento com Base > Formulários > Tipos de
         # pessoa - decide se o CPF/CNPJ abaixo é validado como CPF ou CNPJ.
-        self.fields['tipo_pessoa'].queryset = TipoPessoa.objects.all().order_by('tipo_pessoa')
+        self.fields['tipo_pessoa'].queryset = tipos_pessoa_selecionaveis()
         for campo in ('seguradora', 'ramo', 'tipo_documento', 'tipo_pessoa'):
             self.fields[campo].empty_label = '-- Selecione --'
 
