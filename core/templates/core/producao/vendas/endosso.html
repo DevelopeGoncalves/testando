@@ -430,7 +430,7 @@
                                     <option value="CNPJ">CNPJ</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 {# validador cpf alex: o rotulo acompanha a caixinha "Tipo" (ver JS no fim da pagina), pra nao confundir mostrando CPF/CNPJ junto. #}
                                 <label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *</label>
                                 {{ form_indicacao.cpf_cliente }}
@@ -438,8 +438,8 @@
                             </div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
-                            <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
-                            <div class="col-md-2"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                            <div class="col-md-3"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
+                            <div class="col-md-1"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                         </div>
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
