@@ -927,9 +927,18 @@
     // core/validadores.py). Funciona em qualquer input de CPF/CNPJ do
     // sistema automaticamente, sem precisar chamar nada - so pelo "name" do
     // campo ser "cpf_cnpj" ou "cpf_cliente".
+    //
+    // Nas fichas de Vendas existe tambem a caixinha "Tipo" (id
+    // "selecao_tipo_doc_cliente") onde a pessoa escolhe CPF ou CNPJ na mao -
+    // quando ela existe na pagina, manda nela em vez de adivinhar pelo
+    // tamanho do numero (assim o formato ja fica certo mesmo no meio da
+    // digitacao de um CNPJ, antes de bater 12 digitos).
     window.aplicarMascaraCpfCnpj = function (input) {
-        var v = (input.value || '').replace(/\D/g, '').slice(0, 14);
-        if (v.length <= 11) {
+        var v = (input.value || '').replace(/\D/g, '');
+        var seletorTipo = document.getElementById('selecao_tipo_doc_cliente');
+        var ehCnpj = seletorTipo ? (seletorTipo.value === 'CNPJ') : (v.length > 11);
+        v = v.slice(0, ehCnpj ? 14 : 11);
+        if (!ehCnpj) {
             v = v.replace(/^(\d{3})(\d)/, '$1.$2');
             v = v.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
             v = v.replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');

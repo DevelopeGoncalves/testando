@@ -418,12 +418,24 @@
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
                         <div class="row g-3">
-                            {# CPF primeiro: ao sair do campo, busca o cliente cadastrado e preenche o resto sozinho (ver JS no fim da pagina). #}
-                            <div class="col-md-2"><label class="fw-bold small mb-1">CPF / CNPJ *</label>{{ form_indicacao.cpf_cliente }}</div>
-                            <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                            {# validador cpf alex: a pessoa escolhe CPF ou CNPJ aqui - essa escolha manda na mascara e na validacao #}
+                            {# (ao sair do campo ou apertar Enter, ja confirma se e valido, sem precisar salvar - ver JS no fim da pagina). #}
+                            <div class="col-md-1">
+                                <label class="fw-bold small mb-1">Tipo</label>
+                                <select class="form-control" id="selecao_tipo_doc_cliente">
+                                    <option value="CPF">CPF</option>
+                                    <option value="CNPJ">CNPJ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="fw-bold small mb-1">CPF / CNPJ *</label>
+                                {{ form_indicacao.cpf_cliente }}
+                                <small id="feedback_cpf_cliente" class="form-text"></small>
+                            </div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
-                            <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                            <div class="col-md-2"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                         </div>
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
@@ -2112,43 +2124,81 @@
         });
     })();
 
-    // alex: CPF manda nos dados do cliente. Ao sair do campo CPF, busca o cliente
-    // ja cadastrado em Base > Formularios > Clientes e PREENCHE Nome/Telefone/E-mail
-    // (sobrescreve o que tiver, porque mudou de CPF é outra pessoa). Apagou o CPF
-    // pra informar outro? Nome/Telefone/E-mail limpam na hora. Sem cadastro para
-    // aquele CPF, o usuario preenche na mao e um cliente novo é criado ao salvar.
+    // validador cpf alex (tempo real): a pessoa escolhe CPF ou CNPJ na caixinha
+    // "Tipo"; ao sair do campo (ou apertar Enter) ja confirma na hora se e valido,
+    // sem precisar salvar a ficha (borda verde/vermelha + mensagem embaixo do campo).
+    // Sendo valido e ja cadastrado em Base > Formularios > Clientes, preenche
+    // Nome/Telefone/E-mail sozinho (sobrescreve o que tiver - mudou de CPF/CNPJ e
+    // outra pessoa). Apagou o numero pra informar outro? Nome/Telefone/E-mail e o
+    // aviso de validacao limpam na hora. Sem cadastro: preenche na mao e um cliente
+    // novo e criado ao salvar.
     (function () {
         var campoCpf = document.getElementById('id_cpf_cliente');
         if (!campoCpf) return;
+        var campoTipo = document.getElementById('selecao_tipo_doc_cliente');
         var campoNome = document.getElementById('id_nome_cliente');
         var campoTelefone = document.getElementById('id_telefone_cliente');
         var campoEmail = document.getElementById('id_email_cliente');
-        var ultimoCpfConsultado = '';
+        var feedback = document.getElementById('feedback_cpf_cliente');
+        var ultimaConsulta = '';
+
+        function limparValidacao() {
+            campoCpf.classList.remove('is-invalid', 'is-valid');
+            if (feedback) feedback.textContent = '';
+        }
+
+        function verificarDocumento() {
+            var numero = campoCpf.value.replace(/\D/g, '');
+            var tipo = (campoTipo && campoTipo.value) || 'CPF';
+            var chave = tipo + ':' + numero;
+            if (!numero) { limparValidacao(); return; }
+            if (chave === ultimaConsulta) return;
+
+            fetch('{% url "buscar_cliente_por_cpf" %}?cpf=' + encodeURIComponent(numero) + '&tipo=' + encodeURIComponent(tipo))
+                .then(function (r) { return r.json(); })
+                .then(function (dados) {
+                    ultimaConsulta = chave;
+                    campoCpf.classList.remove('is-invalid', 'is-valid');
+                    campoCpf.classList.add(dados.valido ? 'is-valid' : 'is-invalid');
+                    if (feedback) {
+                        feedback.textContent = dados.mensagem || '';
+                        feedback.className = 'form-text ' + (dados.valido ? 'text-success' : 'text-danger');
+                    }
+                    if (!dados.valido || !dados.encontrado) return;
+                    if (campoNome) campoNome.value = dados.nome;
+                    if (campoTelefone) campoTelefone.value = dados.telefone;
+                    if (campoEmail) campoEmail.value = dados.email;
+                })
+                .catch(function () {});
+        }
 
         campoCpf.addEventListener('input', function () {
-            var cpf = (campoCpf.value || '').replace(/\D/g, '');
-            if (cpf.length === 0) {
-                ultimoCpfConsultado = '';
+            ultimaConsulta = '';
+            limparValidacao();
+            if (campoCpf.value.replace(/\D/g, '').length === 0) {
                 if (campoNome) campoNome.value = '';
                 if (campoTelefone) campoTelefone.value = '';
                 if (campoEmail) campoEmail.value = '';
             }
         });
 
-        campoCpf.addEventListener('blur', function () {
-            var cpf = (campoCpf.value || '').replace(/\D/g, '');
-            if (cpf.length < 11 || cpf === ultimoCpfConsultado) return;
-            fetch('{% url "buscar_cliente_por_cpf" %}?cpf=' + encodeURIComponent(cpf))
-                .then(function (r) { return r.json(); })
-                .then(function (dados) {
-                    ultimoCpfConsultado = cpf;
-                    if (!dados.encontrado) return;
-                    if (campoNome) campoNome.value = dados.nome;
-                    if (campoTelefone) campoTelefone.value = dados.telefone;
-                    if (campoEmail) campoEmail.value = dados.email;
-                })
-                .catch(function () {});
+        campoCpf.addEventListener('blur', verificarDocumento);
+
+        campoCpf.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                verificarDocumento();
+            }
         });
+
+        if (campoTipo) {
+            campoTipo.addEventListener('change', function () {
+                aplicarMascaraCpfCnpj(campoCpf);
+                ultimaConsulta = '';
+                limparValidacao();
+                verificarDocumento();
+            });
+        }
     })();
 </script>
 {% endblock %}

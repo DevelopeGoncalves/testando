@@ -54,3 +54,38 @@ def documento_cpf_cnpj_valido(valor):
             raise forms.ValidationError('CNPJ inválido. Confira o número digitado.')
 
     return documento
+
+
+def verificar_documento_por_tipo(valor, tipo):
+    """Confere o CPF/CNPJ de acordo com o TIPO escolhido na caixinha da ficha
+    (CPF ou CNPJ) - ao contrário de `documento_cpf_cnpj_valido`, que adivinha
+    o tipo pelo tamanho do número, aqui quem manda é a escolha da pessoa.
+
+    Usado na validação em tempo real (ver "validador cpf alex (tempo real)"
+    no JavaScript do formulário e em `buscar_cliente_por_cpf` no views.py):
+    ao sair do campo ou apertar Enter, confirma na hora se é válido, sem
+    precisar salvar a ficha.
+
+    Devolve (valido, documento_completo, mensagem) - nunca levanta exceção
+    (diferente de `documento_cpf_cnpj_valido`), pra ficar fácil de transformar
+    em JSON na view.
+    """
+    digitos = somente_digitos(valor)
+    if not digitos:
+        return True, '', ''  # campo vazio: cada formulário decide se é obrigatório
+
+    if (tipo or '').strip().upper() == 'CNPJ':
+        if len(digitos) > 14:
+            return False, digitos, 'CNPJ inválido: tem dígitos demais.'
+        documento = digitos.zfill(14)
+        if not CNPJ().validate(documento):
+            return False, documento, 'CNPJ inválido. Confira o número digitado.'
+        return True, documento, 'CNPJ válido.'
+
+    # CPF (padrão)
+    if len(digitos) > 11:
+        return False, digitos, 'CPF inválido: tem dígitos demais.'
+    documento = digitos.zfill(11)
+    if not CPF().validate(documento):
+        return False, documento, 'CPF inválido. Confira o número digitado.'
+    return True, documento, 'CPF válido.'

@@ -18,6 +18,7 @@ from .anbima import processar_planilha_anbima
 from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
 # Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
 from .clientes_sync import sincronizar_cliente, dados_do_cliente, buscar_cliente
+from .validadores import verificar_documento_por_tipo  # validador cpf alex
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -1743,20 +1744,31 @@ def gerar_protocolo_ligacao(request):
 
 @login_required
 def buscar_cliente_por_cpf(request):
-    """Ficha de Vendas (Novo/Renovação/Endosso): ao informar o CPF, puxa os dados
-    do cliente já cadastrado em Base > Formulários > Clientes (se existir), pra
-    preencher Nome/Telefone/E-mail sozinho. Sem CPF cadastrado, o usuário
-    preenche na mão e um cliente novo é criado ao salvar a ficha."""
-    cliente = buscar_cliente(request.GET.get('cpf', ''))
-    if not cliente:
-        return JsonResponse({'encontrado': False})
-    return JsonResponse({
-        'encontrado': True,
-        'id': cliente.id,
-        'nome': cliente.nome or '',
-        'telefone': cliente.celular or cliente.telefone or '',
-        'email': cliente.email or '',
-    })
+    """Ficha de Vendas (Novo/Renovação/Endosso): valida o CPF/CNPJ na hora
+    (de acordo com o tipo escolhido na caixinha CPF/CNPJ da ficha) e, se for
+    válido e já tiver cadastro em Base > Formulários > Clientes, puxa os
+    dados pra preencher Nome/Telefone/E-mail sozinho. Sem CPF/CNPJ cadastrado,
+    o usuário preenche na mão e um cliente novo é criado ao salvar a ficha."""
+    # validador cpf alex (tempo real): mesma validação do salvar, só que na
+    # hora, sem precisar enviar o formulário.
+    valido, documento, mensagem = verificar_documento_por_tipo(
+        request.GET.get('cpf', ''), request.GET.get('tipo', 'CPF')
+    )
+
+    resposta = {'valido': valido, 'mensagem': mensagem, 'encontrado': False}
+
+    if valido and documento:
+        cliente = buscar_cliente(documento)
+        if cliente:
+            resposta.update({
+                'encontrado': True,
+                'id': cliente.id,
+                'nome': cliente.nome or '',
+                'telefone': cliente.celular or cliente.telefone or '',
+                'email': cliente.email or '',
+            })
+
+    return JsonResponse(resposta)
 
 @login_required
 def gerar_protocolo_ligacao_renovacao(request):
