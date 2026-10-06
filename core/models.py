@@ -305,6 +305,13 @@ class Indicacao(models.Model):
     enviar_orcamento_para = models.CharField("Enviar orçamento para", max_length=15, choices=ENVIAR_ORCAMENTO, blank=True, null=True)
     origem_informacao = models.CharField("Origem da informação", max_length=30, choices=ORIGEM_INFORMACAO, blank=True, null=True)
 
+    # validador cpf alex: relacionamento com Base > Formularios > Tipos de pessoa
+    # (mesma tabela do card Clientes) - decide se o documento abaixo e validado
+    # como CPF (Pessoa Fisica) ou CNPJ (Pessoa Juridica).
+    tipo_pessoa = models.ForeignKey(
+        'TipoPessoa', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='Tipo de Pessoa'
+    )
     nome_cliente = models.CharField("Nome completo do cliente", max_length=150, blank=True, null=True)
     telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
     cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)
@@ -517,6 +524,13 @@ class IndicacaoRenovacao(models.Model):
     enviar_orcamento_para = models.CharField("Enviar orçamento para", max_length=15, choices=ENVIAR_ORCAMENTO, blank=True, null=True)
     origem_informacao = models.CharField("Origem da informação", max_length=30, choices=ORIGEM_INFORMACAO, blank=True, null=True)
 
+    # validador cpf alex: relacionamento com Base > Formularios > Tipos de pessoa
+    # (mesma tabela do card Clientes) - decide se o documento abaixo e validado
+    # como CPF (Pessoa Fisica) ou CNPJ (Pessoa Juridica).
+    tipo_pessoa = models.ForeignKey(
+        'TipoPessoa', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='Tipo de Pessoa'
+    )
     nome_cliente = models.CharField("Nome completo do cliente", max_length=150, blank=True, null=True)
     telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
     cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)
@@ -665,6 +679,13 @@ class IndicacaoEndosso(models.Model):
     enviar_orcamento_para = models.CharField("Enviar orçamento para", max_length=15, choices=ENVIAR_ORCAMENTO, blank=True, null=True)
     origem_informacao = models.CharField("Origem da informação", max_length=30, choices=ORIGEM_INFORMACAO, blank=True, null=True)
 
+    # validador cpf alex: relacionamento com Base > Formularios > Tipos de pessoa
+    # (mesma tabela do card Clientes) - decide se o documento abaixo e validado
+    # como CPF (Pessoa Fisica) ou CNPJ (Pessoa Juridica).
+    tipo_pessoa = models.ForeignKey(
+        'TipoPessoa', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='Tipo de Pessoa'
+    )
     nome_cliente = models.CharField("Nome completo do cliente", max_length=150, blank=True, null=True)
     telefone_cliente = models.CharField("Telefone ou celular do cliente", max_length=20, blank=True, null=True)
     cpf_cliente = models.CharField("CPF do cliente", max_length=18, blank=True, null=True)

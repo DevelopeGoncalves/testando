@@ -1,6 +1,6 @@
 from django import forms
-from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
-from .validadores import documento_cpf_cnpj_valido  # validador cpf alex
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, TipoPessoa, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
+from .validadores import documento_valido_por_tipo_pessoa  # validador cpf alex
 
 
 class BootstrapMixin:
@@ -305,16 +305,25 @@ class ClienteForm(BootstrapMixin, forms.ModelForm):
             'cpf_cnpj': forms.TextInput(attrs={'placeholder': 'Apenas números...'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # validador cpf alex: cliente que já existe não pode trocar Pessoa
+        # Física <-> Pessoa Jurídica (isso mudaria o tipo de documento dele -
+        # pra isso é um cliente novo, não uma troca no mesmo cadastro).
+        if self.instance and self.instance.pk:
+            self.fields['tipo_pessoa'].disabled = True
+
     # Evita CPFs/CNPJs duplicados no cadastro manual
     def clean_cpf_cnpj(self):
-        # validador cpf alex: valida o formato/dígito verificador e já devolve
-        # o número completo (com os zeros à esquerda que faltarem) pra gravar.
-        doc = documento_cpf_cnpj_valido(self.cleaned_data.get('cpf_cnpj'))
+        # validador cpf alex: valida de acordo com o Tipo de Pessoa escolhido
+        # (Física -> CPF, Jurídica -> CNPJ) e já devolve o número completo
+        # (com os zeros à esquerda que faltarem) pra gravar.
+        doc = documento_valido_por_tipo_pessoa(self.cleaned_data.get('cpf_cnpj'), self.cleaned_data.get('tipo_pessoa'))
         if doc:
             if Cliente.objects.filter(cpf_cnpj=doc).exclude(id=self.instance.id).exists():
                 raise forms.ValidationError("Este CPF/CNPJ já está cadastrado no sistema.")
         return doc
-    
+
 class ApoliceForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Apolice
@@ -340,6 +349,7 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             'telefone_indicador',
             'enviar_orcamento_para',
             'origem_informacao',
+            'tipo_pessoa',
             'nome_cliente',
             'telefone_cliente',
             'cpf_cliente',
@@ -370,7 +380,10 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
         self.fields['ramo'].queryset = Ramo.objects.all().order_by('grupo_e_ramo')
         self.fields['ramo'].label_from_instance = lambda obj: obj.grupo_e_ramo or f"{obj.grupo} - {obj.ramo}"
         self.fields['tipo_documento'].queryset = TipoDocumento.objects.all().order_by('tipo_documento')
-        for campo in ('seguradora', 'ramo', 'tipo_documento'):
+        # validador cpf alex: relacionamento com Base > Formulários > Tipos de
+        # pessoa - decide se o CPF/CNPJ abaixo é validado como CPF ou CNPJ.
+        self.fields['tipo_pessoa'].queryset = TipoPessoa.objects.all().order_by('tipo_pessoa')
+        for campo in ('seguradora', 'ramo', 'tipo_documento', 'tipo_pessoa'):
             self.fields[campo].empty_label = '-- Selecione --'
 
         if ficha_somente_leitura:
@@ -387,6 +400,7 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
             # obrigatorio
             CAMPOS_OBRIGATORIOS = [
                 'ramo',           # ramo = (Grupo/Ramo), 'seguradora', 'tipo_documento'
+                'tipo_pessoa',    # Tipo de Pessoa (Dados do Cliente) - validador cpf alex
                 'nome_cliente',   # Nome (Dados do Cliente)
                 'cpf_cliente',    # CPF (Dados do Cliente)
             #   'numero_contrato', 'numero_endosso', 'possui_seguro' (Renovação),
@@ -404,10 +418,11 @@ class IndicacaoForm(BootstrapMixin, forms.ModelForm):
                     self.fields[nome].required = True
 
     def clean_cpf_cliente(self):
-        # validador cpf alex: valida o formato/dígito verificador e já devolve
-        # o número completo (com os zeros à esquerda que faltarem) pra gravar.
-        # Vale pro Novo/Base Novo e, por herança, também Renovação e Endosso.
-        return documento_cpf_cnpj_valido(self.cleaned_data.get('cpf_cliente'))
+        # validador cpf alex: valida de acordo com o Tipo de Pessoa escolhido
+        # (Física -> CPF, Jurídica -> CNPJ) e já devolve o número completo
+        # (com os zeros à esquerda que faltarem) pra gravar. Vale pro
+        # Novo/Base Novo e, por herança, também Renovação e Endosso.
+        return documento_valido_por_tipo_pessoa(self.cleaned_data.get('cpf_cliente'), self.cleaned_data.get('tipo_pessoa'))
 
     def clean(self):
         cleaned_data = super().clean()

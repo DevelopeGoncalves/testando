@@ -418,17 +418,14 @@
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
                         <div class="row g-3">
-                            {# validador cpf alex: a pessoa escolhe CPF ou CNPJ aqui - essa escolha manda na mascara e na validacao #}
-                            {# (ao sair do campo ou apertar Enter, ja confirma se e valido, sem precisar salvar - ver JS no fim da pagina). #}
-                            <div class="col-md-1">
-                                <label class="fw-bold small mb-1">Tipo</label>
-                                <select class="form-control" id="selecao_tipo_doc_cliente">
-                                    <option value="CPF">CPF</option>
-                                    <option value="CNPJ">CNPJ</option>
-                                </select>
+                            {# validador cpf alex: Tipo de Pessoa e relacionamento com Base > Formularios > Tipos de pessoa #}
+                            {# (mesma tabela do card Clientes) - decide se o CPF/CNPJ abaixo e validado como CPF ou CNPJ, e #}
+                            {# ao sair do campo (ou apertar Enter) ja confirma se e valido, sem precisar salvar - ver JS no fim da pagina. #}
+                            <div class="col-md-2">
+                                <label class="fw-bold small mb-1">Tipo de Pessoa *</label>
+                                {{ form_indicacao.tipo_pessoa }}
                             </div>
-                            <div class="col-md-3">
-                                {# validador cpf alex: o rotulo acompanha a caixinha "Tipo" (ver JS no fim da pagina), pra nao confundir mostrando CPF/CNPJ junto. #}
+                            <div class="col-md-2">
                                 <label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *</label>
                                 {{ form_indicacao.cpf_cliente }}
                                 <small id="feedback_cpf_cliente" class="form-text"></small>
@@ -2140,7 +2137,7 @@
     (function () {
         var campoCpf = document.getElementById('id_cpf_cliente');
         if (!campoCpf) return;
-        var campoTipo = document.getElementById('selecao_tipo_doc_cliente');
+        var campoTipo = document.getElementById('id_tipo_pessoa');
         var campoNome = document.getElementById('id_nome_cliente');
         var campoTelefone = document.getElementById('id_telefone_cliente');
         var campoEmail = document.getElementById('id_email_cliente');
@@ -2148,10 +2145,15 @@
         var labelTipo = document.getElementById('label_tipo_doc_cliente');
         var ultimaConsulta = '';
 
-        // validador cpf alex: o rotulo do campo acompanha a caixinha "Tipo" (CPF ou
-        // CNPJ), pra nao ficar escrito "CPF / CNPJ" o tempo todo e confundir.
+        // validador cpf alex: CPF ou CNPJ vem do relacionamento "Tipo de Pessoa"
+        // (ehTipoPessoaJuridica esta em core/templates/core/layout.html, a mesma
+        // funcao que a mascara usa). O rotulo do campo acompanha essa escolha, pra
+        // nao ficar escrito "CPF / CNPJ" o tempo todo e confundir.
+        function tipoCpfOuCnpj() {
+            return ehTipoPessoaJuridica() ? 'CNPJ' : 'CPF';
+        }
         function atualizarLabelTipo() {
-            if (labelTipo) labelTipo.textContent = (campoTipo && campoTipo.value === 'CNPJ') ? 'CNPJ' : 'CPF';
+            if (labelTipo) labelTipo.textContent = tipoCpfOuCnpj();
         }
         atualizarLabelTipo();
 
@@ -2162,7 +2164,7 @@
 
         function verificarDocumento() {
             var numero = campoCpf.value.replace(/\D/g, '');
-            var tipo = (campoTipo && campoTipo.value) || 'CPF';
+            var tipo = tipoCpfOuCnpj();
             var chave = tipo + ':' + numero;
             if (!numero) { limparValidacao(); return; }
             if (chave === ultimaConsulta) return;

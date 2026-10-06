@@ -20,6 +20,8 @@
 from django import forms
 from validate_docbr import CNPJ, CPF
 
+from .odonto import _sem_acento
+
 
 def somente_digitos(valor):
     """Tira ponto, traço, barra e espaço do CPF/CNPJ - fica só o número."""
@@ -89,3 +91,41 @@ def verificar_documento_por_tipo(valor, tipo):
     if not CPF().validate(documento):
         return False, documento, 'CPF inválido. Confira o número digitado.'
     return True, documento, 'CPF válido.'
+
+
+def tipo_cpf_ou_cnpj(tipo_pessoa):
+    """'CNPJ' se o TipoPessoa for Pessoa Jurídica, 'CPF' em qualquer outro
+    caso (inclusive sem escolher nenhum - Pessoa Física é o padrão)."""
+    texto = _sem_acento(getattr(tipo_pessoa, 'tipo_pessoa', '') or '')
+    return 'CNPJ' if 'JURID' in texto else 'CPF'
+
+
+def documento_valido_por_tipo_pessoa(valor, tipo_pessoa):
+    """Valida CPF/CNPJ de acordo com o TipoPessoa escolhido no formulário -
+    relacionamento com Base > Formulários > Tipos de pessoa, a mesma tabela
+    usada no card Clientes. 'Pessoa Jurídica' valida como CNPJ; qualquer
+    outro valor (inclusive sem escolher) valida como CPF.
+
+    Mesmo comportamento de `documento_cpf_cnpj_valido` (completa o número com
+    zero à esquerda e levanta `ValidationError` se for inválido) - a única
+    diferença é que aqui quem decide CPF ou CNPJ é a escolha da pessoa no
+    campo "Tipo de Pessoa", não o tamanho do número digitado.
+    """
+    digitos = somente_digitos(valor)
+    if not digitos:
+        return ''
+
+    if tipo_cpf_ou_cnpj(tipo_pessoa) == 'CNPJ':
+        if len(digitos) > 14:
+            raise forms.ValidationError('CNPJ inválido: tem dígitos demais. Confira o número.')
+        documento = digitos.zfill(14)
+        if not CNPJ().validate(documento):
+            raise forms.ValidationError('CNPJ inválido. Confira o número digitado.')
+    else:
+        if len(digitos) > 11:
+            raise forms.ValidationError('CPF inválido: tem dígitos demais. Confira o número.')
+        documento = digitos.zfill(11)
+        if not CPF().validate(documento):
+            raise forms.ValidationError('CPF inválido. Confira o número digitado.')
+
+    return documento

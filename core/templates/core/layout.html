@@ -928,15 +928,24 @@
     // sistema automaticamente, sem precisar chamar nada - so pelo "name" do
     // campo ser "cpf_cnpj" ou "cpf_cliente".
     //
-    // Nas fichas de Vendas existe tambem a caixinha "Tipo" (id
-    // "selecao_tipo_doc_cliente") onde a pessoa escolhe CPF ou CNPJ na mao -
-    // quando ela existe na pagina, manda nela em vez de adivinhar pelo
-    // tamanho do numero (assim o formato ja fica certo mesmo no meio da
-    // digitacao de um CNPJ, antes de bater 12 digitos).
+    // Nas fichas de Vendas e no card Clientes existe o campo "Tipo de Pessoa"
+    // (id "id_tipo_pessoa", relacionamento com Base > Formulários > Tipos de
+    // pessoa) onde a pessoa escolhe Física ou Jurídica - quando ele existe na
+    // página, manda nele em vez de adivinhar pelo tamanho do número (assim o
+    // formato já fica certo mesmo no meio da digitação de um CNPJ, antes de
+    // bater 12 dígitos).
+    function ehTipoPessoaJuridica() {
+        var seletor = document.getElementById('id_tipo_pessoa');
+        if (!seletor || seletor.selectedIndex < 0) return null;
+        var texto = (seletor.options[seletor.selectedIndex].text || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        return texto.indexOf('JURID') !== -1;
+    }
+
     window.aplicarMascaraCpfCnpj = function (input) {
         var v = (input.value || '').replace(/\D/g, '');
-        var seletorTipo = document.getElementById('selecao_tipo_doc_cliente');
-        var ehCnpj = seletorTipo ? (seletorTipo.value === 'CNPJ') : (v.length > 11);
+        var tipoEscolhido = ehTipoPessoaJuridica();
+        var ehCnpj = tipoEscolhido === null ? (v.length > 11) : tipoEscolhido;
         v = v.slice(0, ehCnpj ? 14 : 11);
         if (!ehCnpj) {
             v = v.replace(/^(\d{3})(\d)/, '$1.$2');
