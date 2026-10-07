@@ -2169,22 +2169,32 @@
                     ultimaConsulta = chave;
                     campoCpf.classList.toggle('is-invalid', !dados.valido);
                     if (feedback) feedback.textContent = dados.valido ? '' : (dados.mensagem || '');
-                    if (!dados.valido || !dados.encontrado) return;
-                    if (campoNome) campoNome.value = dados.nome;
-                    if (campoTelefone) campoTelefone.value = dados.telefone;
-                    if (campoEmail) campoEmail.value = dados.email;
+                    // validador cpf alex: achou cliente cadastrado -> preenche. Nao achou
+                    // (numero valido mas sem cadastro, ou invalido) -> fica limpo mesmo,
+                    // pra pessoa preencher na mao (e um cliente novo).
+                    if (dados.valido && dados.encontrado) {
+                        if (campoNome) campoNome.value = dados.nome;
+                        if (campoTelefone) campoTelefone.value = dados.telefone;
+                        if (campoEmail) campoEmail.value = dados.email;
+                    } else {
+                        if (campoNome) campoNome.value = '';
+                        if (campoTelefone) campoTelefone.value = '';
+                        if (campoEmail) campoEmail.value = '';
+                    }
                 })
                 .catch(function () {});
         }
 
         campoCpf.addEventListener('input', function () {
+            // validador cpf alex: qualquer alteracao no numero invalida o que tinha
+            // sido puxado de outro cliente - limpa na hora e so preenche de novo se
+            // a proxima consulta (ao sair do campo ou apertar Enter) encontrar um
+            // cliente cadastrado com o numero novo.
             ultimaConsulta = '';
             limparValidacao();
-            if (campoCpf.value.replace(/\D/g, '').length === 0) {
-                if (campoNome) campoNome.value = '';
-                if (campoTelefone) campoTelefone.value = '';
-                if (campoEmail) campoEmail.value = '';
-            }
+            if (campoNome) campoNome.value = '';
+            if (campoTelefone) campoTelefone.value = '';
+            if (campoEmail) campoEmail.value = '';
         });
 
         campoCpf.addEventListener('blur', verificarDocumento);
