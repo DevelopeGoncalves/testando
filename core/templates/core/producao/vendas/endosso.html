@@ -428,19 +428,20 @@
                                 <label class="fw-bold small mb-1">Tipo de Pessoa *</label>
                                 {{ form_indicacao.tipo_pessoa }}
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *</label>
                                 {{ form_indicacao.cpf_cliente }}
                                 <small id="feedback_cpf_cliente" class="form-text"></small>
                             </div>
-                            <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
-                            <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
-                            <div class="col-md-3"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
+                            <div class="col-md-4"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                            <div class="col-md-3"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
                         </div>
 
                         <div class="row g-3 mt-0">
-                            {# "Dados do item" desceu pra linha propria: o rotulo e grande e ficava espremido junto dos outros campos. #}
-                            <div class="col-md-4"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                            {# E-mail desceu pra ficar junto de "Dados do item" (rotulo grande) na mesma linha, #}
+                            {# sem espremer - CPF ficou maior em cima no lugar que o E-mail deixou livre. #}
+                            <div class="col-md-5"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
+                            <div class="col-md-7"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                         </div>
 
                         <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
