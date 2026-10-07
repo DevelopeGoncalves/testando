@@ -189,9 +189,11 @@
         });
         if (campoTipo) {
             campoTipo.addEventListener('change', function () {
-                aplicarMascaraCpfCnpj(campoDoc);
+                // validador cpf alex: trocou o Tipo de Pessoa (Fisica/Juridica) - o
+                // numero que tava digitado nao faz mais sentido (era CPF e agora
+                // precisa de CNPJ, ou vice-versa), entao limpa o campo junto.
+                campoDoc.value = '';
                 limpar();
-                verificar();
             });
         }
         window.limparValidacaoDocCliente = limpar;

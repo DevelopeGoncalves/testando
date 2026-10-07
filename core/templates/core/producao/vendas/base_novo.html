@@ -2198,11 +2198,17 @@
 
         if (campoTipo) {
             campoTipo.addEventListener('change', function () {
+                // validador cpf alex: trocou o Tipo de Pessoa (Fisica/Juridica) -
+                // o numero que tava digitado nao faz mais sentido (era CPF e agora
+                // precisa de CNPJ, ou vice-versa), entao limpa tudo junto, igual
+                // quando a pessoa apaga o campo CPF/CNPJ na mao.
                 atualizarLabelTipo();
-                aplicarMascaraCpfCnpj(campoCpf);
+                campoCpf.value = '';
                 ultimaConsulta = '';
                 limparValidacao();
-                verificarDocumento();
+                if (campoNome) campoNome.value = '';
+                if (campoTelefone) campoTelefone.value = '';
+                if (campoEmail) campoEmail.value = '';
             });
         }
     })();
