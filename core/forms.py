@@ -288,6 +288,10 @@ class TipoDocumentoForm(BootstrapMixin, forms.ModelForm):
         return nome
 
 class ClienteForm(BootstrapMixin, forms.ModelForm):
+    # 18 = CNPJ com a máscara (11.222.333/0001-81); no banco continua só os 14 dígitos.
+    cpf_cnpj = forms.CharField(label='CPF / CNPJ', max_length=18, required=False,
+                               widget=forms.TextInput(attrs={'placeholder': 'Apenas números...'}))
+
     class Meta:
         model = Cliente
         fields = [
@@ -302,7 +306,6 @@ class ClienteForm(BootstrapMixin, forms.ModelForm):
         ]
         widgets = {
             'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 80 caracteres...'}),
-            'cpf_cnpj': forms.TextInput(attrs={'placeholder': 'Apenas números...'}),
         }
 
     def __init__(self, *args, **kwargs):
