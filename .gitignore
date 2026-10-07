@@ -7,6 +7,9 @@ env/
 # Banco de dados local: cada ambiente usa o seu (nao versionar)
 db.sqlite3
 
+# Migrations: cada ambiente usa as suas, nao vem do github
+/core/migrations/
+
 # Saida do collectstatic (STATIC_ROOT) - gerada no deploy, nao versionar
 /static/
 
