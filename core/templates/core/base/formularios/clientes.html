@@ -138,8 +138,68 @@
         {% endif %}
     });
 
+    // validador cpf alex (tempo real): mesma checagem das fichas de Vendas - ao sair
+    // do campo (ou apertar Enter) confere o CPF/CNPJ de acordo com o Tipo de Pessoa
+    // e so avisa quando for invalido ("CPF invalido." na frente do rotulo).
+    (function () {
+        var campoDoc = document.getElementById('id_cpf_cnpj');
+        if (!campoDoc) return;
+        var campoTipo = document.getElementById('id_tipo_pessoa');
+        var label = document.querySelector('label[for="id_cpf_cnpj"]');
+        var feedback = document.createElement('span');
+        feedback.className = 'text-danger ms-2';
+        if (label) label.appendChild(feedback);
+        var ultimaConsulta = '';
+
+        function chaveAtual() {
+            return (ehTipoPessoaJuridica() ? 'CNPJ' : 'CPF') + ':' + campoDoc.value.replace(/\D/g, '');
+        }
+
+        function limpar() {
+            ultimaConsulta = '';
+            campoDoc.classList.remove('is-invalid');
+            feedback.textContent = '';
+        }
+
+        function verificar() {
+            var chave = chaveAtual();
+            var tipo = chave.split(':')[0];
+            var numero = chave.split(':')[1];
+            if (!numero) { limpar(); return; }
+            if (chave === ultimaConsulta) return;
+
+            fetch('{% url "buscar_cliente_por_cpf" %}?cpf=' + encodeURIComponent(numero) + '&tipo=' + encodeURIComponent(tipo))
+                .then(function (r) { return r.json(); })
+                .then(function (dados) {
+                    if (chave !== chaveAtual()) return;
+                    ultimaConsulta = chave;
+                    campoDoc.classList.toggle('is-invalid', !dados.valido);
+                    feedback.textContent = dados.valido ? '' : (dados.mensagem || '');
+                })
+                .catch(function () {});
+        }
+
+        campoDoc.addEventListener('input', limpar);
+        campoDoc.addEventListener('blur', verificar);
+        campoDoc.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                verificar();
+            }
+        });
+        if (campoTipo) {
+            campoTipo.addEventListener('change', function () {
+                aplicarMascaraCpfCnpj(campoDoc);
+                limpar();
+                verificar();
+            });
+        }
+        window.limparValidacaoDocCliente = limpar;
+    })();
+
     function toggleFormLocal(tipo, mostrar) {
-        if(mostrar) { 
+        if (window.limparValidacaoDocCliente) limparValidacaoDocCliente();
+        if(mostrar) {
             $('#lista-' + tipo).hide(); 
             $('#form-' + tipo).show(); 
             if(!$('#cliente_id_hidden').val() && {{ form_cliente.errors|yesno:"false,true" }}) {

@@ -425,9 +425,8 @@
                                 {{ form_indicacao.tipo_pessoa }}
                             </div>
                             <div class="col-md-2">
-                                <label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *</label>
+                                <label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *<span id="feedback_cpf_cliente" class="text-danger ms-2"></span></label>
                                 {{ form_indicacao.cpf_cliente }}
-                                <small id="feedback_cpf_cliente" class="form-text"></small>
                             </div>
                             <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
                             <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
@@ -2191,7 +2190,7 @@
 
     // validador cpf alex (tempo real): a pessoa escolhe CPF ou CNPJ na caixinha
     // "Tipo"; ao sair do campo (ou apertar Enter) ja confirma na hora se e valido,
-    // sem precisar salvar a ficha (borda verde/vermelha + mensagem embaixo do campo).
+    // sem precisar salvar a ficha (so avisa quando for invalido: borda vermelha + "CPF invalido." na frente do rotulo).
     // Sendo valido e ja cadastrado em Base > Formularios > Clientes, preenche
     // Nome/Telefone/E-mail sozinho (sobrescreve o que tiver - mudou de CPF/CNPJ e
     // outra pessoa). Apagou o numero pra informar outro? Nome/Telefone/E-mail e o
@@ -2236,12 +2235,8 @@
                 .then(function (r) { return r.json(); })
                 .then(function (dados) {
                     ultimaConsulta = chave;
-                    campoCpf.classList.remove('is-invalid', 'is-valid');
-                    campoCpf.classList.add(dados.valido ? 'is-valid' : 'is-invalid');
-                    if (feedback) {
-                        feedback.textContent = dados.mensagem || '';
-                        feedback.className = 'form-text ' + (dados.valido ? 'text-success' : 'text-danger');
-                    }
+                    campoCpf.classList.toggle('is-invalid', !dados.valido);
+                    if (feedback) feedback.textContent = dados.valido ? '' : (dados.mensagem || '');
                     if (!dados.valido || !dados.encontrado) return;
                     if (campoNome) campoNome.value = dados.nome;
                     if (campoTelefone) campoTelefone.value = dados.telefone;

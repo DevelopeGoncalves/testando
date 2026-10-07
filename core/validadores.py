@@ -77,21 +77,22 @@ def verificar_documento_por_tipo(valor, tipo):
     if not digitos:
         return True, '', ''  # campo vazio: cada formulário decide se é obrigatório
 
+    # Válido não mostra mensagem nenhuma na tela, só o inválido avisa.
     if (tipo or '').strip().upper() == 'CNPJ':
         if len(digitos) > 14:
-            return False, digitos, 'CNPJ inválido: tem dígitos demais.'
+            return False, digitos, 'CNPJ inválido.'
         documento = digitos.zfill(14)
         if not CNPJ().validate(documento):
-            return False, documento, 'CNPJ inválido. Confira o número digitado.'
-        return True, documento, 'CNPJ válido.'
+            return False, documento, 'CNPJ inválido.'
+        return True, documento, ''
 
     # CPF (padrão)
     if len(digitos) > 11:
-        return False, digitos, 'CPF inválido: tem dígitos demais.'
+        return False, digitos, 'CPF inválido.'
     documento = digitos.zfill(11)
     if not CPF().validate(documento):
-        return False, documento, 'CPF inválido. Confira o número digitado.'
-    return True, documento, 'CPF válido.'
+        return False, documento, 'CPF inválido.'
+    return True, documento, ''
 
 
 def tipos_pessoa_selecionaveis():
