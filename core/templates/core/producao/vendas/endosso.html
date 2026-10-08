@@ -232,6 +232,12 @@
         #tabela-base-endosso td {
             vertical-align: middle !important;
         }
+        /* validador cpf alex: as colunas desta lista nunca quebram linha (ex.: "Cadastrado
+           em" virando duas linhas) - a lista inteira rola na horizontal se precisar (ja tem
+           overflow-x:auto no .tabela-container). */
+        #tabela-base-endosso th, #tabela-base-endosso td {
+            white-space: nowrap;
+        }
 
         .dropdown-menu {
             text-align: left !important;
@@ -1210,7 +1216,7 @@
             }
         });
 
-        iniciarTabelaExcel('tabela-base-endosso', [1, 25, 2, 3, 14, 5, 7, 12, 10, 17]);
+        iniciarTabelaExcel('tabela-base-endosso', [1, 25, 2, 3, 17, 14, 5, 7, 12, 10]);
 
 
         atualizarAtendimentos();

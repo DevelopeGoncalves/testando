@@ -230,6 +230,12 @@
         #tabela-base-renovacao td {
             vertical-align: middle !important;
         }
+        /* validador cpf alex: as colunas desta lista nunca quebram linha (ex.: "Cadastrado
+           em" virando duas linhas) - a lista inteira rola na horizontal se precisar (ja tem
+           overflow-x:auto no .tabela-container). */
+        #tabela-base-renovacao th, #tabela-base-renovacao td {
+            white-space: nowrap;
+        }
 
         .dropdown-menu {
             text-align: left !important;
