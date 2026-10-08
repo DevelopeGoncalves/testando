@@ -91,6 +91,7 @@
                             data-telefone-indicador="{{ i.telefone_indicador|default:'' }}"
                             data-orcamento="{{ i.enviar_orcamento_para|default:'' }}"
                             data-origem-informacao="{{ i.origem_informacao|default:'' }}"
+                            data-tipo-pessoa="{{ i.tipo_pessoa_id|default:'' }}"
                             data-nome-cliente="{{ i.nome_cliente|default:'' }}"
                             data-telefone-cliente="{{ i.telefone_cliente|default:'' }}"
                             data-cpf-cliente="{{ i.cpf_cliente|default:'' }}"
@@ -1673,6 +1674,12 @@
         $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
         $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
         $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
+        // validador cpf alex: restaura o Tipo de Pessoa salvo (sem disparar 'change',
+        // que limpa CPF/Nome/Telefone/E-mail - aqui quem preenche esses campos e'
+        // os proximos .val() desta mesma funcao, com os dados ja salvos).
+        $('#id_tipo_pessoa').val(row.getAttribute('data-tipo-pessoa'));
+        var _labelTipoDoc = document.getElementById('label_tipo_doc_cliente');
+        if (_labelTipoDoc) _labelTipoDoc.textContent = ehTipoPessoaJuridica() ? 'CNPJ' : 'CPF';
         $('#id_nome_cliente').val(row.getAttribute('data-nome-cliente'));
         $('#id_telefone_cliente').val(row.getAttribute('data-telefone-cliente'));
         $('#id_cpf_cliente').val(row.getAttribute('data-cpf-cliente'));
