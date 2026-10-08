@@ -1533,6 +1533,10 @@ def producao_vendas(request):
 def vendas_endosso(request):
     """Card 'Base Endosso'. Mesma lógica do Base Novo/Base Renovação, mas na tabela
     própria IndicacaoEndosso/LigacaoEndosso (não mistura os dados com os outros)."""
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, 'prod_vendas_baseendosso') == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
             request, processar_ligacoes=True, travar_dados=True,
@@ -1575,6 +1579,11 @@ def vendas_endosso(request):
 
 @login_required
 def vendas_novo_negocio(request):
+
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, 'prod_vendas_novo') == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
 
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, campo_permissao='prod_vendas_novo')
@@ -1634,6 +1643,10 @@ def vendas_novo_negocio(request):
 def vendas_nova_renovacao(request):
     """Card 'Renovação' (Ligação). Mesma lógica do card 'Novo', mas grava na tabela
     própria IndicacaoRenovacao/LigacaoRenovacao (não mistura os dados com o Novo)."""
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, 'prod_vendas_renovacao') == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
             request, campo_permissao='prod_vendas_renovacao',
@@ -1688,6 +1701,10 @@ def vendas_nova_renovacao(request):
 def vendas_novo_endosso(request):
     """Card 'Endosso' (Ligação). Mesma lógica do card 'Novo'/'Renovação', mas grava na
     tabela própria IndicacaoEndosso/LigacaoEndosso (não mistura os dados com os outros)."""
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, 'prod_vendas_endosso') == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
             request, campo_permissao='prod_vendas_endosso',
@@ -2188,6 +2205,10 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 
 @login_required
 def lista_base_novo(request):
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, 'prod_vendas_basenovo') == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
     if request.method == 'POST':
         # trava os dados (só salvam via "Editar dados"), mas PROCESSA as ligações
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=True, campo_permissao='prod_vendas_basenovo')
@@ -2284,6 +2305,10 @@ def _render_emissao(request, base):
     (último status diferente de Emitida/Recusada)."""
     campo = 'prod_vendas_baseemissao' if base else 'prod_vendas_emissao'
     rota = 'vendas_base_emissao' if base else 'vendas_emissao'
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, campo) == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
     if request.method == 'POST':
         origem = request.POST.get('origem') or 'novo'
         model_indicacao, model_ligacao, form_class = ORIGENS_EMISSAO.get(origem, ORIGENS_EMISSAO['novo'])
@@ -2398,6 +2423,10 @@ def salvar_acompanhamento_emissao(request):
 def vendas_renovacao(request):
     """Card 'Base Renovação'. Mesma lógica do Base Novo, mas na tabela própria
     IndicacaoRenovacao/LigacaoRenovacao (não mistura os dados com o Base Novo)."""
+    # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
+    if _nivel_vendas(request.user, 'prod_vendas_baserenovacao') == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('producao_vendas')
     if request.method == 'POST':
         form, erro_formulario_msg = _salvar_indicacao_e_ligacoes(
             request, processar_ligacoes=True, travar_dados=True,
