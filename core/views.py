@@ -19,6 +19,9 @@ from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as
 # Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
 from .clientes_sync import sincronizar_cliente, dados_do_cliente, buscar_cliente
 from .validadores import verificar_documento_por_tipo  # validador cpf alex
+from .cache_vendas import (  # cache das telas de Vendas no navegador
+    cache_navegador_vendas, TABELAS_NOVO, TABELAS_RENOVACAO, TABELAS_ENDOSSO, TABELAS_EMISSAO,
+)
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -1530,6 +1533,7 @@ def producao_vendas(request):
     return render(request, 'core/producao/vendas/index.html')
 
 @login_required
+@cache_navegador_vendas(TABELAS_ENDOSSO)
 def vendas_endosso(request):
     """Card 'Base Endosso'. Mesma lógica do Base Novo/Base Renovação, mas na tabela
     própria IndicacaoEndosso/LigacaoEndosso (não mistura os dados com os outros)."""
@@ -1552,8 +1556,8 @@ def vendas_endosso(request):
 
     indicacoes = list(
         IndicacaoEndosso.objects.all().order_by('-id')
-        .select_related('ramo', 'responsavel_demanda')
-        .prefetch_related('ligacoes')
+        .select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento')
+        .prefetch_related(Prefetch('ligacoes', queryset=LigacaoEndosso.objects.select_related('seguradora')))
     )
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
@@ -1578,6 +1582,7 @@ def vendas_endosso(request):
     })
 
 @login_required
+@cache_navegador_vendas(TABELAS_NOVO)
 def vendas_novo_negocio(request):
 
     # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
@@ -1604,7 +1609,7 @@ def vendas_novo_negocio(request):
         Q(ultima_central__isnull=True)
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
     #).order_by('-id').select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda').prefetch_related('ligacoes')
-    ).order_by('-id').select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+    ).order_by('-id').select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento').prefetch_related(Prefetch('ligacoes', queryset=LigacaoIndicacao.objects.select_related('seguradora')))
 
     indicacoes = list(indicacoes)
     # Mapa CID -> nome da agência (tabela Unidade), para exibir "CID - Nome" concatenado
@@ -1640,6 +1645,7 @@ def vendas_novo_negocio(request):
     })
 
 @login_required
+@cache_navegador_vendas(TABELAS_RENOVACAO)
 def vendas_nova_renovacao(request):
     """Card 'Renovação' (Ligação). Mesma lógica do card 'Novo', mas grava na tabela
     própria IndicacaoRenovacao/LigacaoRenovacao (não mistura os dados com o Novo)."""
@@ -1667,7 +1673,7 @@ def vendas_nova_renovacao(request):
     ).filter(
         Q(ultima_central__isnull=True)
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
-    ).order_by('-id').select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+    ).order_by('-id').select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento').prefetch_related(Prefetch('ligacoes', queryset=LigacaoRenovacao.objects.select_related('seguradora')))
 
     indicacoes = list(indicacoes)
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
@@ -1698,6 +1704,7 @@ def vendas_nova_renovacao(request):
     })
 
 @login_required
+@cache_navegador_vendas(TABELAS_ENDOSSO)
 def vendas_novo_endosso(request):
     """Card 'Endosso' (Ligação). Mesma lógica do card 'Novo'/'Renovação', mas grava na
     tabela própria IndicacaoEndosso/LigacaoEndosso (não mistura os dados com os outros)."""
@@ -1725,7 +1732,7 @@ def vendas_novo_endosso(request):
     ).filter(
         Q(ultima_central__isnull=True)
         | Q(ultima_central=False, ultima_agn=False, ultima_motivo__isnull=True)
-    ).order_by('-id').select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+    ).order_by('-id').select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento').prefetch_related(Prefetch('ligacoes', queryset=LigacaoEndosso.objects.select_related('seguradora')))
 
     indicacoes = list(indicacoes)
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
@@ -2204,6 +2211,7 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
 
 
 @login_required
+@cache_navegador_vendas(TABELAS_NOVO)
 def lista_base_novo(request):
     # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
     if _nivel_vendas(request.user, 'prod_vendas_basenovo') == 0:
@@ -2221,8 +2229,8 @@ def lista_base_novo(request):
     indicacoes = list(
         Indicacao.objects.all().order_by('-id')
         #.select_related('seguradora', 'ramo', 'tipo_documento', 'responsavel_demanda')
-        .select_related('ramo', 'responsavel_demanda')
-        .prefetch_related('ligacoes')
+        .select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento')
+        .prefetch_related(Prefetch('ligacoes', queryset=LigacaoIndicacao.objects.select_related('seguradora')))
     )
     # Nome da agência (tabela Unidade) para concatenar "CID - Nome" na lista, igual ao Novo
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
@@ -2285,7 +2293,7 @@ def _vendas_fechadas(model_indicacao, model_ligacao, origem):
             ultima_agn=Subquery(ultima_ligacao.values('agn')[:1]),
         ).filter(
             Q(ultima_central=True) | Q(ultima_agn=True)
-        ).select_related('ramo', 'responsavel_demanda').prefetch_related('ligacoes')
+        ).select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento').prefetch_related(Prefetch('ligacoes', queryset=model_ligacao.objects.select_related('seguradora')))
     )
     cids = {(i.cid_agencia or '').strip() for i in registros if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
@@ -2352,6 +2360,7 @@ def _render_emissao(request, base):
     })
 
 @login_required
+@cache_navegador_vendas(TABELAS_EMISSAO)
 def vendas_emissao(request):
     """Card 'Emissão': só as vendas fechadas que ainda NÃO foram finalizadas (último
     acompanhamento diferente de Emitida/Recusada). Junta as 3 origens (Novo, Renovação,
@@ -2359,6 +2368,7 @@ def vendas_emissao(request):
     return _render_emissao(request, base=False)
 
 @login_required
+@cache_navegador_vendas(TABELAS_EMISSAO)
 def vendas_base_emissao(request):
     """Card 'Base Emissão': TODAS as vendas fechadas (inclusive as já emitidas/recusadas)."""
     return _render_emissao(request, base=True)
@@ -2420,6 +2430,7 @@ def salvar_acompanhamento_emissao(request):
     return JsonResponse({'ok': True})
 
 @login_required
+@cache_navegador_vendas(TABELAS_RENOVACAO)
 def vendas_renovacao(request):
     """Card 'Base Renovação'. Mesma lógica do Base Novo, mas na tabela própria
     IndicacaoRenovacao/LigacaoRenovacao (não mistura os dados com o Base Novo)."""
@@ -2442,8 +2453,8 @@ def vendas_renovacao(request):
 
     indicacoes = list(
         IndicacaoRenovacao.objects.all().order_by('-id')
-        .select_related('ramo', 'responsavel_demanda')
-        .prefetch_related('ligacoes')
+        .select_related('ramo', 'responsavel_demanda', 'seguradora', 'tipo_documento')
+        .prefetch_related(Prefetch('ligacoes', queryset=LigacaoRenovacao.objects.select_related('seguradora')))
     )
     cids = {(i.cid_agencia or '').strip() for i in indicacoes if i.cid_agencia}
     mapa_agencia = {u.cid_unidade: u.unidade for u in Unidade.objects.filter(cid_unidade__in=cids)} if cids else {}
