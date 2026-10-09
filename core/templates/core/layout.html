@@ -12,6 +12,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
+        /* Listas grandes de Vendas: ficam fora do layout (display:none) ate o DataTables
+           terminar de montar - com visibility:hidden o navegador ainda calculava o layout
+           da tabela inteira (milhares de linhas) varias vezes, e era isso que demorava. */
+        #tabela-base-novo:not(.dt-pronta),
+        #tabela-base-renovacao:not(.dt-pronta),
+        #tabela-base-endosso:not(.dt-pronta) { display: none; }
         /* ==========================================================================
            TEMA MODERNO LIGHT COM IDENTIDADE VISUAL DA MARCA (SIDEBAR DARK)
            ========================================================================== */
@@ -665,7 +671,20 @@
         }
 
         tableInstance = $('#' + tabelaId).DataTable({
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+            // Traducao embutida: antes buscava um arquivo no cdn.datatables.net e a
+            // tabela so montava depois que ele chegava (ou falhava).
+            language: {
+                emptyTable: 'Nenhum registro encontrado',
+                info: 'Mostrando de _START_ até _END_ de _TOTAL_ registros',
+                infoEmpty: 'Mostrando 0 até 0 de 0 registros',
+                infoFiltered: '(filtrados de _MAX_ registros)',
+                loadingRecords: 'Carregando...',
+                processing: 'Processando...',
+                zeroRecords: 'Nenhum registro encontrado',
+                search: 'Pesquisar',
+                lengthMenu: 'Exibir _MENU_ resultados por página',
+                paginate: { first: 'Primeiro', last: 'Último', next: 'Próximo', previous: 'Anterior' }
+            },
             ordering: true,
             order: [],
             columnDefs: columnDefs,
@@ -679,7 +698,9 @@
                 
                 var api = this.api();
                 // Só monta o dropdown "estilo Excel" nas colunas visíveis: as ocultas
-                api.columns(':visible').every(function () {
+                // "visible()" (e nao ':visible') pra funcionar com a tabela ainda escondida.
+                api.columns().every(function () {
+                    if (!this.visible()) return;
                     var column = this;
                     var header = $(column.header());
                     // Índice REAL da coluna no DataTables. Não usar header.index() (posição
@@ -698,7 +719,7 @@
 
                     var dropdown = `
                         <div class="dropdown">
-                            <button class="excel-header-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="window" aria-expanded="false" onclick="currentFilterColumn = ${colIndex}">
+                            <button class="excel-header-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="window" aria-expanded="false" onclick="currentFilterColumn = ${colIndex}; atualizarListasDeFiltro(tableInstance, ${colIndex})">
                                 ${title}
                             </button>
                             <div class="dropdown-menu excel-dropdown-menu">
@@ -728,104 +749,55 @@
                 // (elimina o "flash" da tabela crua renderizada pelo servidor).
                 revelarTabela(tabelaId);
 
-                setTimeout(() => { atualizarListasDeFiltro(api); }, 500);
             }
         });
         
-        tableInstance.on('draw', function() { 
-             atualizarListasDeFiltro(tableInstance); 
-        });
 
         $(document).on('click', '.excel-dropdown-menu', function (e) { e.stopPropagation(); });
     }
 
-        function atualizarListasDeFiltro(api) {
-        // 1. Coleta os filtros que estão ativos no momento (expressões regulares geradas pelo DataTables)
-        var colSearches = {};
-        api.columns().every(function() {
-            var s = this.search();
-            if (s) {
-                try {
-                    colSearches[this.index()] = new RegExp(s, 'i');
-                } catch(e) {
-                    colSearches[this.index()] = null;
-                }
-            }
-        });
+    // Monta a lista de valores do filtro "estilo Excel" de UMA coluna, so na hora
+    // em que o filtro dela e aberto (antes montava as listas de todas as colunas a
+    // cada redesenho da tabela - abrir, ordenar, filtrar, trocar de pagina). A
+    // lista mostra so os valores das linhas que passam nos filtros das OUTRAS colunas.
+    function atualizarListasDeFiltro(api, colIndex) {
+        var textoDaCelula = function (valor) {
+            return valor ? valor.toString().replace(/<[^>]+>/g, '').trim() : '';
+        };
 
-        var colsToUpdate = [];
-        var validValuesForCol = {};
-        
-        // 2. Define quais colunas terão as listas atualizadas (ignorando a que está aberta no momento)
+        var filtrosOutrasColunas = [];
         api.columns().every(function () {
-            var colIndex = this.index();
-            if ($(this.header()).find('.excel-header-btn').length > 0 && currentFilterColumn !== colIndex) {
-                colsToUpdate.push(colIndex);
-                validValuesForCol[colIndex] = new Set();
+            var s = this.search();
+            if (s && this.index() !== colIndex) {
+                try { filtrosOutrasColunas.push([this.index(), new RegExp(s, 'i')]); } catch (e) {}
             }
         });
 
-        // 3. Itera sobre todas as linhas para fazer o "cruzamento" dos filtros
-        api.rows().every(function() {
-            var rowData = this.data();
-            var colPasses = {};
-            
-            // Checa em quais filtros esta linha específica passa
-            api.columns().every(function() {
-                var colIdx = this.index();
-                if (!colSearches[colIdx]) {
-                    colPasses[colIdx] = true;
-                } else {
-                    var cellVal = rowData[colIdx];
-                    var text = cellVal ? cellVal.toString().replace(/<[^>]+>/g, '').trim() : "";
-                    colPasses[colIdx] = colSearches[colIdx].test(text);
-                }
-            });
-
-            // Adiciona o valor à lista de uma coluna APENAS se a linha passar nos filtros das OUTRAS colunas
-            colsToUpdate.forEach(function(colIdx) {
-                var matchesOtherCols = true;
-                for (var key in colPasses) {
-                    if (parseInt(key) !== colIdx && !colPasses[key]) {
-                        matchesOtherCols = false;
-                        break;
-                    }
-                }
-                if (matchesOtherCols) {
-                    var cellVal = rowData[colIdx];
-                    var text = cellVal ? cellVal.toString().replace(/<[^>]+>/g, '').trim() : "";
-                    if (text) {
-                        validValuesForCol[colIdx].add(text);
-                    }
-                }
-            });
-        });
-
-        // 4. Constrói o HTML dos dropdowns com os dados corretos
-        colsToUpdate.forEach(function(colIndex) {
-            var column = api.column(colIndex);
-            var listContainer = $('#list-' + colIndex);
-            
-            var currentSearch = column.search();
-            var activeFilters = [];
-            if(currentSearch) {
-                var cleanSearch = currentSearch.replace(/^\^\(/, '').replace(/\)\$$/, '').replace(/^\^/, '').replace(/\$$/, '');
-                activeFilters = cleanSearch.split('|').map(item => item.replace(/\\/g, ''));
+        var valores = new Set();
+        api.rows().data().each(function (rowData) {
+            for (var k = 0; k < filtrosOutrasColunas.length; k++) {
+                var f = filtrosOutrasColunas[k];
+                if (!f[1].test(textoDaCelula(rowData[f[0]]))) return;
             }
-
-            var uniqueData = Array.from(validValuesForCol[colIndex]).sort();
-
-            listContainer.empty();
-            var allChecked = (activeFilters.length === 0);
-
-            listContainer.append(`<div class="excel-list-label border-bottom pb-2 mb-1" onclick="toggleAllCheckboxes(this)"><input type="checkbox" ${allChecked ? 'checked' : ''}> (Selecionar Tudo)</div>`);
-
-            uniqueData.forEach(function (text) {
-                var isChecked = allChecked || activeFilters.includes($.fn.dataTable.util.escapeRegex(text));
-                var safeValue = text.replace(/"/g, '&quot;');
-                listContainer.append(`<div class="excel-list-label" onclick="toggleCheckbox(this)"><input type="checkbox" class="chk-item" value="${safeValue}" ${isChecked ? 'checked' : ''}> ${text}</div>`);
-            });
+            var text = textoDaCelula(rowData[colIndex]);
+            if (text) valores.add(text);
         });
+
+        var currentSearch = api.column(colIndex).search();
+        var activeFilters = [];
+        if (currentSearch) {
+            var cleanSearch = currentSearch.replace(/^\^\(/, '').replace(/\)\$$/, '').replace(/^\^/, '').replace(/\$$/, '');
+            activeFilters = cleanSearch.split('|').map(item => item.replace(/\\/g, ''));
+        }
+        var allChecked = (activeFilters.length === 0);
+
+        var html = `<div class="excel-list-label border-bottom pb-2 mb-1" onclick="toggleAllCheckboxes(this)"><input type="checkbox" ${allChecked ? 'checked' : ''}> (Selecionar Tudo)</div>`;
+        Array.from(valores).sort().forEach(function (text) {
+            var isChecked = allChecked || activeFilters.includes($.fn.dataTable.util.escapeRegex(text));
+            var safeValue = text.replace(/"/g, '&quot;');
+            html += `<div class="excel-list-label" onclick="toggleCheckbox(this)"><input type="checkbox" class="chk-item" value="${safeValue}" ${isChecked ? 'checked' : ''}> ${text}</div>`;
+        });
+        $('#list-' + colIndex).html(html);
     }
 
     // --- FUNÇÕES DE AÇÃO ---
@@ -909,8 +881,6 @@
             
             // Remove a cor azul de todos os botões
             $('.excel-header-btn').removeClass('header-filtered');
-            
-            atualizarListasDeFiltro(tableInstance);
             
             // Esconde o botão novamente
             verificarEstadoFiltros();
