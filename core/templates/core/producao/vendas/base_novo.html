@@ -227,11 +227,26 @@
         #tabela-base-novo td {
             vertical-align: middle !important;
         }
-        /* validador cpf alex: as colunas desta lista nunca quebram linha (ex.: "Cadastrado
-           em" virando duas linhas) - a lista inteira rola na horizontal se precisar (ja tem
-           overflow-x:auto no .tabela-container). */
+        /* alex: a lista cabe na tela sem rolar pro lado - titulos e textos longos quebram
+           linha entre as palavras (ex.: "Cadastrado" em cima, "em" embaixo). */
+        #tabela-base-novo { width: 100% !important; }
         #tabela-base-novo th, #tabela-base-novo td {
-            white-space: nowrap;
+            white-space: normal;
+        }
+        #tabela-base-novo th, #tabela-base-novo td {
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
+        #tabela-base-novo th .excel-header-btn {
+            line-height: 1.2;
+            padding: 8px 4px !important;
+        }
+        #tabela-base-novo .badge {
+            white-space: normal;
+            line-height: 1.25;
+        }
+        @media (max-width: 1500px) {
+            #tabela-base-novo { font-size: 0.78rem !important; }
         }
 
         .dropdown-menu {
