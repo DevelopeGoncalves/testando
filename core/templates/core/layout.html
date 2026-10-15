@@ -187,6 +187,21 @@
         .excel-header-btn.header-filtered { color: var(--brand-blue-card) !important; }
         .excel-header-btn.header-filtered::after { color: var(--brand-blue-card) !important; opacity: 1 !important; }
 
+        /* alex: listas que cabem na tela sem rolar pro lado - titulos e textos longos quebram
+           linha entre as palavras (ex.: "Cadastrado" em cima, "em" embaixo). Basta colocar a
+           classe "tabela-cabe-na-tela" na <table>. */
+        table.tabela-cabe-na-tela { width: 100% !important; }
+        table.tabela-cabe-na-tela th, table.tabela-cabe-na-tela td {
+            white-space: normal !important;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
+        table.tabela-cabe-na-tela th .excel-header-btn { line-height: 1.2; padding: 8px 4px !important; }
+        table.tabela-cabe-na-tela .badge { white-space: normal; line-height: 1.25; }
+        @media (max-width: 1500px) {
+            table.tabela-cabe-na-tela { font-size: 0.78rem !important; }
+        }
+
         /* Dropdown Flutuante */
         .excel-dropdown-menu {
             min-width: 300px; padding: 0; border-radius: 10px;
