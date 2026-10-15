@@ -2340,11 +2340,18 @@ def _render_emissao(request, base):
 
     # alex: card "Emissão" vira 2 botões (Banseg / Outras cias) de acordo com a
     # Seguradora de cada venda - Banseg é só "BANESTES", o resto cai em Outras cias.
+    # A seguradora vem da ligação que fechou a venda (a última); o campo da ficha é só reserva.
+    def _eh_banestes(ind):
+        ligacoes = list(ind.ligacoes.all())
+        ultima = max(ligacoes, key=lambda l: l.id) if ligacoes else None
+        seguradora = (ultima.seguradora if ultima else None) or ind.seguradora
+        return bool(seguradora) and (seguradora.seguradora or '').strip().upper() == 'BANESTES'
+
     cia = (request.GET.get('cia') or '').strip().lower()
     if cia == 'banseg':
-        indicacoes = [i for i in indicacoes if i.seguradora and (i.seguradora.seguradora or '').strip().upper() == 'BANESTES']
+        indicacoes = [i for i in indicacoes if _eh_banestes(i)]
     elif cia == 'outras':
-        indicacoes = [i for i in indicacoes if not (i.seguradora and (i.seguradora.seguradora or '').strip().upper() == 'BANESTES')]
+        indicacoes = [i for i in indicacoes if not _eh_banestes(i)]
 
     indicacoes.sort(key=lambda i: i.carimbo_data_hora or timezone.now(), reverse=True)
 
