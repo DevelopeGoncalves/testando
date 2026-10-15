@@ -2337,11 +2337,21 @@ def _render_emissao(request, base):
     )
     if not base:
         indicacoes = [i for i in indicacoes if i.status_emissao not in STATUS_EMISSAO_FINALIZADOS]
+
+    # alex: card "Emissão" vira 2 botões (Banseg / Outras cias) de acordo com a
+    # Seguradora de cada venda - Banseg é só "BANESTES", o resto cai em Outras cias.
+    cia = (request.GET.get('cia') or '').strip().lower()
+    if cia == 'banseg':
+        indicacoes = [i for i in indicacoes if i.seguradora and (i.seguradora.seguradora or '').strip().upper() == 'BANESTES']
+    elif cia == 'outras':
+        indicacoes = [i for i in indicacoes if not (i.seguradora and (i.seguradora.seguradora or '').strip().upper() == 'BANESTES')]
+
     indicacoes.sort(key=lambda i: i.carimbo_data_hora or timezone.now(), reverse=True)
 
     template = 'core/producao/vendas/base_emissao.html' if base else 'core/producao/vendas/emissao.html'
     return render(request, template, {
         'indicacoes': indicacoes,
+        'cia_filtro': cia if cia in ('banseg', 'outras') else '',
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
