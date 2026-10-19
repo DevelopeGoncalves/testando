@@ -12,6 +12,19 @@
 
 {% block content %}
 <style>
+    /* Pop-up "Registrar acompanhamento" (mesmo visual do pop-up de ligacao do card Novo) */
+    #modalAcompanhamento .modal-body { padding-bottom: 40px; }
+    #modalAcompanhamento .btn-acao-ligacao {
+        --cor-botao-ligacao: #065534;
+        color: var(--cor-botao-ligacao);
+        background-color: #ffffff;
+        border: 1px solid var(--cor-botao-ligacao);
+    }
+    #modalAcompanhamento .btn-acao-ligacao:hover {
+        color: #ffffff;
+        background-color: var(--cor-botao-ligacao);
+        border-color: var(--cor-botao-ligacao);
+    }
     /* Evita o "flash" da tabela crua */
     #tabela-base-novo { visibility: hidden; }
     #tabela-base-novo.dt-pronta { visibility: visible; }
@@ -263,7 +276,9 @@
                                       data-enviada="{{ a.apolice_enviada|yesno:'1,0' }}"
                                       data-envio="{{ a.data_envio_cliente|date:'Y-m-d' }}"
                                       data-emissao="{{ a.data_emissao|date:'Y-m-d' }}"
-                                      data-apolice="{{ a.numero_apolice|default:'' }}"></span>
+                                      data-apolice="{{ a.numero_apolice|default:'' }}"
+                                      data-anexo-url="{% if a.anexo %}{% url 'anexo_acompanhamento_emissao' a.id %}{% endif %}"
+                                      data-anexo-nome="{{ a.anexo_nome|default:'' }}"></span>
                                 {% endfor %}
                             </td>
 
@@ -314,6 +329,7 @@
                             <td class="text-center">
                                 {% if i.status_emissao == 'Emitida' %}<span class="badge bg-success">{{ i.status_emissao }}</span>
                                 {% elif i.status_emissao == 'Recusada' %}<span class="badge bg-danger">{{ i.status_emissao }}</span>
+                                {% elif i.status_emissao == 'Cancelado' %}<span class="badge bg-dark">{{ i.status_emissao }}</span>
                                 {% elif i.status_emissao == 'Pendência' %}<span class="badge bg-warning text-dark">{{ i.status_emissao }}</span>
                                 {% else %}<span class="badge bg-secondary">{{ i.status_emissao }}</span>{% endif %}
                             </td>
@@ -496,58 +512,17 @@
                     <!-- onde o histórico vai aparecer fora do modal -->
                     <div id="historico-ligacoes-ficha" class="mt-4" style="display:none;"></div>
 
-                    <!-- Acompanhamento da emissão: cada registro novo entra no histórico logo abaixo. -->
+                    <!-- Acompanhamento da emissão: o botão abre um pop-up (igual ao de ligação do card Novo)
+                         e cada registro novo entra no histórico logo abaixo. -->
                     <div id="bloco-acompanhamento" class="mt-4">
-                        <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-clipboard-check"></i> Acompanhamento da Emissão</h5>
-                        {% if usuario_pode_editar %}
-                        <div class="card bg-light border-0 shadow-sm mb-3">
-                            <div class="card-body py-3">
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="fw-bold small mb-1">Data do registro</label>
-                                        <input type="text" id="acomp-data" class="form-control bg-light" readonly tabindex="-1">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="fw-bold small mb-1">Atendente</label>
-                                        <input type="text" id="acomp-atendente" class="form-control bg-light" readonly tabindex="-1" value="{{ request.user.get_full_name|default:request.user.username }}">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="fw-bold small mb-1">Status *</label>
-                                        <select id="acomp-status" class="form-select">
-                                            <option value="">Selecione...</option>
-                                            {% for valor, rotulo in status_emissao_choices %}<option value="{{ valor }}">{{ forloop.counter }} - {{ rotulo }}</option>{% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="fw-bold small mb-1">Apólice enviada ao cliente</label>
-                                        <select id="acomp-enviada" class="form-select">
-                                            <option value="0">2 - Não</option>
-                                            <option value="1">1 - Sim</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 d-none" id="acomp-col-envio">
-                                        <label class="fw-bold small mb-1">Data de envio ao cliente *</label>
-                                        <input type="date" id="acomp-data-envio" class="form-control">
-                                    </div>
-                                    <div class="col-md-3 d-none acomp-col-emitida">
-                                        <label class="fw-bold small mb-1">Data de emissão *</label>
-                                        <input type="date" id="acomp-data-emissao" class="form-control">
-                                    </div>
-                                    <div class="col-md-3 d-none acomp-col-emitida">
-                                        <label class="fw-bold small mb-1">Número da apólice *</label>
-                                        <input type="text" id="acomp-numero-apolice" class="form-control" maxlength="50" autocomplete="off">
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="fw-bold small mb-1">Observação</label>
-                                        <textarea id="acomp-obs" class="form-control" rows="2" style="resize:none;"></textarea>
-                                    </div>
-                                    <div class="col-12 text-end">
-                                        <button type="button" class="btn btn-primary fw-bold" onclick="salvarAcompanhamento()"><i class="fas fa-plus"></i> Registrar acompanhamento</button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h5 class="text-secondary m-0"><i class="fas fa-clipboard-check"></i> Acompanhamento da Emissão</h5>
+                            {% if usuario_pode_editar %}
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalAcompanhamento()">
+                                <i class="fas fa-plus"></i> Registrar acompanhamento
+                            </button>
+                            {% endif %}
                         </div>
-                        {% endif %}
                         <div id="historico-acompanhamento"></div>
                     </div>
                 </div>
@@ -562,6 +537,72 @@
     </div>
 
     <!-- Pop-up (só leitura) com o histórico de ligações/vendas de um registro. -->
+    {% if usuario_pode_editar %}
+    <!-- POP-UP para registrar o acompanhamento da emissão (fora do <form> da ficha, pra o Enter
+         dentro dele não salvar a ficha por engano). -->
+    <div class="modal fade" id="modalAcompanhamento" tabindex="-1" aria-labelledby="modalAcompanhamentoLabel"
+         data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title m-0" id="modalAcompanhamentoLabel"><i class="fas fa-clipboard-check"></i> Registrar Acompanhamento</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-acao-ligacao fw-bold me-2" onclick="fecharModalAcompanhamento()"><i class="fas fa-times"></i> Cancelar</button>
+                        <button type="button" id="btn-salvar-acompanhamento" class="btn btn-sm btn-acao-ligacao fw-bold px-4" onclick="salvarAcompanhamento()"><i class="fa-regular fa-floppy-disk"></i> Salvar</button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="fw-bold small mb-1">Data do registro</label>
+                            <input type="text" id="acomp-data" class="form-control bg-light" readonly tabindex="-1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold small mb-1">Atendente</label>
+                            <input type="text" id="acomp-atendente" class="form-control bg-light" readonly tabindex="-1" value="{{ request.user.get_full_name|default:request.user.username }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold small mb-1">Status *</label>
+                            <select id="acomp-status" class="form-select">
+                                <option value="">Selecione...</option>
+                                {% for valor, rotulo in status_emissao_choices %}<option value="{{ valor }}">{{ forloop.counter }} - {{ rotulo }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold small mb-1">Apólice enviada ao cliente</label>
+                            <select id="acomp-enviada" class="form-select">
+                                <option value="0">2 - Não</option>
+                                <option value="1">1 - Sim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-none" id="acomp-col-envio">
+                            <label class="fw-bold small mb-1">Data de envio ao cliente *</label>
+                            <input type="date" id="acomp-data-envio" class="form-control">
+                        </div>
+                        <div class="col-md-6 d-none acomp-col-emitida">
+                            <label class="fw-bold small mb-1">Data de emissão *</label>
+                            <input type="date" id="acomp-data-emissao" class="form-control">
+                        </div>
+                        <div class="col-md-6 d-none acomp-col-emitida">
+                            <label class="fw-bold small mb-1">Número da apólice *</label>
+                            <input type="text" id="acomp-numero-apolice" class="form-control" maxlength="50" autocomplete="off">
+                        </div>
+                        <div class="col-12 d-none acomp-col-anexo">
+                            <label class="fw-bold small mb-1"><i class="fas fa-paperclip"></i> Anexo (PDF ou imagem)</label>
+                            <input type="file" id="acomp-anexo" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/*">
+                            <small class="text-muted">Opcional. PDF, JPG, PNG, GIF ou WEBP, até 10 MB.</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold small mb-1">Observação</label>
+                            <textarea id="acomp-obs" class="form-control" rows="3" style="resize:none;"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="modal fade" id="modalHistoricoLigacoes" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -979,7 +1020,7 @@
     const URL_SALVAR_ACOMPANHAMENTO = "{% url 'salvar_acompanhamento_emissao' %}";
     const CLASSE_STATUS_EMISSAO = {
         'Aguardando emissão': 'bg-secondary', 'Pendência': 'bg-warning text-dark',
-        'Recusada': 'bg-danger', 'Emitida': 'bg-success'
+        'Recusada': 'bg-danger', 'Emitida': 'bg-success', 'Cancelado': 'bg-dark'
     };
 
     function formatarDataIso(iso) {
@@ -1003,6 +1044,9 @@
                 extra += '<div class="col-md-3"><strong>Data de emissão:</strong> ' + (escHtml(formatarDataIso(d.emissao)) || '-') + '</div>'
                        + '<div class="col-md-3"><strong>Nº da apólice:</strong> ' + (escHtml(d.apolice) || '-') + '</div>';
             }
+            if (d.anexoUrl) {
+                extra += '<div class="col-12"><strong>Anexo:</strong> <a href="' + escHtml(d.anexoUrl) + '" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> ' + (escHtml(d.anexoNome) || 'Abrir anexo') + '</a></div>';
+            }
             html += ''
               + '<div class="card mb-2 border-0 shadow-sm bg-light">'
               +   '<div class="card-header py-2 d-flex justify-content-between align-items-center">'
@@ -1023,17 +1067,31 @@
     function alternarCamposAcompanhamento() {
         $('#acomp-col-envio').toggleClass('d-none', $('#acomp-enviada').val() !== '1');
         $('.acomp-col-emitida').toggleClass('d-none', $('#acomp-status').val() !== 'Emitida');
+        $('.acomp-col-anexo').toggleClass('d-none', STATUS_COM_ANEXO.indexOf($('#acomp-status').val()) === -1);
     }
     $(document).on('change', '#acomp-enviada, #acomp-status', alternarCamposAcompanhamento);
 
     function limparFormAcompanhamento() {
         $('#acomp-status').val('');
         $('#acomp-enviada').val('0');
-        $('#acomp-data-envio, #acomp-data-emissao, #acomp-numero-apolice, #acomp-obs').val('');
+        $('#acomp-data-envio, #acomp-data-emissao, #acomp-numero-apolice, #acomp-obs, #acomp-anexo').val('');
         alternarCamposAcompanhamento();
         var agora = new Date();
         var p = function(n) { return String(n).padStart(2, '0'); };
         $('#acomp-data').val(p(agora.getDate()) + '/' + p(agora.getMonth() + 1) + '/' + agora.getFullYear() + ' ' + p(agora.getHours()) + ':' + p(agora.getMinutes()));
+    }
+
+    const STATUS_COM_ANEXO = ['Recusada', 'Cancelado'];
+    const ANEXO_EXTENSOES = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ANEXO_TAMANHO_MAX = 10 * 1024 * 1024;
+
+    function abrirModalAcompanhamento() {
+        limparFormAcompanhamento();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAcompanhamento')).show();
+    }
+
+    function fecharModalAcompanhamento() {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAcompanhamento')).hide();
     }
 
     function salvarAcompanhamento() {
@@ -1044,19 +1102,29 @@
         if (status === 'Emitida' && (!$('#acomp-data-emissao').val() || !$('#acomp-numero-apolice').val().trim())) {
             avisoElegante('Para o status Emitida, informe a data de emissão e o número da apólice.', 'Campos obrigatórios'); return;
         }
+        var dados = new FormData();
+        dados.append('origem', $('#origem_hidden').val() || 'novo');
+        dados.append('registro_id', $('#base_novo_id_hidden').val());
+        dados.append('status', status);
+        dados.append('apolice_enviada', enviada ? '1' : '0');
+        dados.append('data_envio_cliente', $('#acomp-data-envio').val());
+        dados.append('data_emissao', $('#acomp-data-emissao').val());
+        dados.append('numero_apolice', $('#acomp-numero-apolice').val());
+        dados.append('observacao', $('#acomp-obs').val());
+        var arquivo = STATUS_COM_ANEXO.indexOf(status) !== -1 ? document.getElementById('acomp-anexo').files[0] : null;
+        if (arquivo) {
+            var ext = (arquivo.name.match(/\.[^.]+$/) || [''])[0].toLowerCase();
+            if (ANEXO_EXTENSOES.indexOf(ext) === -1) { avisoElegante('O anexo precisa ser um PDF ou uma imagem (JPG, PNG, GIF ou WEBP).', 'Anexo inválido'); return; }
+            if (arquivo.size > ANEXO_TAMANHO_MAX) { avisoElegante('O anexo é maior que 10 MB. Envie um arquivo menor.', 'Anexo muito grande'); return; }
+            dados.append('anexo', arquivo);
+        }
+        $('#btn-salvar-acompanhamento').prop('disabled', true);
         $.ajax({
             url: URL_SALVAR_ACOMPANHAMENTO, method: 'POST',
             headers: { 'X-CSRFToken': csrfAtendimento() },
-            data: {
-                origem: $('#origem_hidden').val() || 'novo',
-                registro_id: $('#base_novo_id_hidden').val(),
-                status: status,
-                apolice_enviada: enviada ? '1' : '0',
-                data_envio_cliente: $('#acomp-data-envio').val(),
-                data_emissao: $('#acomp-data-emissao').val(),
-                numero_apolice: $('#acomp-numero-apolice').val(),
-                observacao: $('#acomp-obs').val()
-            }
+            data: dados, processData: false, contentType: false
+        }).always(function() {
+            $('#btn-salvar-acompanhamento').prop('disabled', false);
         }).done(function(resp) {
             if (resp && resp.ok) {
                 // Recarrega a lista: a Emissão tira da tela quem foi finalizado (Emitida/Recusada).

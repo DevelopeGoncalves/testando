@@ -1,3 +1,8 @@
+import os
+import uuid
+
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.db import models, transaction
 from django.db.models import F
 from django.contrib.auth.models import User
@@ -464,17 +469,33 @@ class LigacaoIndicacao(models.Model):
 # --- ACOMPANHAMENTO DA EMISSÃO: histórico de andamento de uma venda fechada (Novo/Renovação/
 # Endosso). Fica numa tabela só, ligada ao registro por (origem, registro_id), pois a Emissão
 # junta as 3 origens e os IDs não são únicos entre as tabelas. ---
+def storage_anexos_emissao():
+    # Pasta propria, FORA de static/ e de qualquer pasta servida direto pelo
+    # servidor: os anexos so saem pela view que confere login e permissao.
+    return FileSystemStorage(location=str(settings.BASE_DIR / 'anexos_emissao'))
+
+
+def caminho_anexo_emissao(instance, filename):
+    # Nome gravado em disco e sempre gerado aqui (nunca o que veio do usuario).
+    extensao = os.path.splitext(filename)[1].lower()
+    return f'{instance.origem}/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{extensao}'
+
+
 class AcompanhamentoEmissao(models.Model):
     STATUS_AGUARDANDO = 'Aguardando emissão'
     STATUS_PENDENCIA = 'Pendência'
     STATUS_RECUSADA = 'Recusada'
     STATUS_EMITIDA = 'Emitida'
+    STATUS_CANCELADO = 'Cancelado'
     STATUS_CHOICES = [
         (STATUS_AGUARDANDO, 'Aguardando emissão'),
         (STATUS_PENDENCIA, 'Pendência'),
         (STATUS_RECUSADA, 'Recusada'),
         (STATUS_EMITIDA, 'Emitida'),
+        (STATUS_CANCELADO, 'Cancelado'),
     ]
+    # Status que pedem o anexo (PDF ou imagem) do motivo.
+    STATUS_COM_ANEXO = (STATUS_RECUSADA, STATUS_CANCELADO)
     ORIGENS = [('novo', 'Novo'), ('renovacao', 'Renovação'), ('endosso', 'Endosso')]
 
     origem = models.CharField("Origem", max_length=10, choices=ORIGENS)
@@ -488,6 +509,10 @@ class AcompanhamentoEmissao(models.Model):
     # Só preenchidos quando o status é "Emitida"
     data_emissao = models.DateField("Data de emissão", null=True, blank=True)
     numero_apolice = models.CharField("Número da apólice", max_length=50, blank=True, null=True)
+    # Só para Recusada/Cancelado: PDF ou imagem com o motivo (opcional).
+    anexo = models.FileField("Anexo (PDF ou imagem)", upload_to=caminho_anexo_emissao,
+                             storage=storage_anexos_emissao, max_length=255, blank=True, null=True)
+    anexo_nome = models.CharField("Nome original do anexo", max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Emissão {self.origem}:{self.registro_id} - {self.status}"

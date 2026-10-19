@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 import csv
+import os
 import openpyxl
 from collections import defaultdict
 from .models import (
@@ -25,6 +26,7 @@ from .cache_vendas import (  # cache das telas de Vendas no navegador
 import pandas as pd
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
+from urllib.parse import quote
 from django.contrib import messages
 from django.db import transaction, IntegrityError, connection
 from django.db.models import Q, Sum, OuterRef, Subquery, Prefetch
@@ -2268,7 +2270,11 @@ ORIGENS_EMISSAO = {
 }
 
 # alex: status do acompanhamento que "finalizam" a venda - ela sai da Emissão (continua na Base Emissão).
-STATUS_EMISSAO_FINALIZADOS = (AcompanhamentoEmissao.STATUS_EMITIDA, AcompanhamentoEmissao.STATUS_RECUSADA)
+STATUS_EMISSAO_FINALIZADOS = (
+    AcompanhamentoEmissao.STATUS_EMITIDA,
+    AcompanhamentoEmissao.STATUS_RECUSADA,
+    AcompanhamentoEmissao.STATUS_CANCELADO,
+)
 
 def _anexar_acompanhamentos(registros, origem):
     """Pendura em cada registro a lista 'acompanhamentos' (mais recente primeiro) e o
@@ -2310,7 +2316,7 @@ def _vendas_fechadas(model_indicacao, model_ligacao, origem):
 def _render_emissao(request, base):
     """Monta a tela da Emissão (base=False) ou da Base Emissão (base=True). As duas mostram as
     vendas fechadas; a Base Emissão registra TUDO, a Emissão só as que ainda não foram finalizadas
-    (último status diferente de Emitida/Recusada)."""
+    (último status diferente de Emitida/Recusada/Cancelado)."""
     campo = 'prod_vendas_baseemissao' if base else 'prod_vendas_emissao'
     rota = 'vendas_base_emissao' if base else 'vendas_emissao'
     # validador cpf alex: nega acesso a quem o Usuários deixou sem permissão neste card
@@ -2380,7 +2386,7 @@ def _render_emissao(request, base):
 @cache_navegador_vendas(TABELAS_EMISSAO)
 def vendas_emissao(request):
     """Card 'Emissão': só as vendas fechadas que ainda NÃO foram finalizadas (último
-    acompanhamento diferente de Emitida/Recusada). Junta as 3 origens (Novo, Renovação,
+    acompanhamento diferente de Emitida/Recusada/Cancelado). Junta as 3 origens (Novo, Renovação,
     Endosso) - nada é duplicado no banco, cada linha mantém a sua origem."""
     return _render_emissao(request, base=False)
 
@@ -2433,7 +2439,16 @@ def salvar_acompanhamento_emissao(request):
         if not numero_apolice:
             return JsonResponse({'ok': False, 'erro': 'Informe o número da apólice.'}, status=400)
 
-    AcompanhamentoEmissao.objects.create(
+    # Anexo (PDF ou imagem): so vale para Recusada/Cancelado e e opcional.
+    anexo = request.FILES.get('anexo') if status in AcompanhamentoEmissao.STATUS_COM_ANEXO else None
+    anexo_nome = ''
+    if anexo:
+        erro_anexo = _validar_anexo_emissao(anexo)
+        if erro_anexo:
+            return JsonResponse({'ok': False, 'erro': erro_anexo}, status=400)
+        anexo_nome = os.path.basename(anexo.name.replace('\\', '/'))[:255]
+
+    acompanhamento = AcompanhamentoEmissao(
         origem=origem,
         registro_id=int(registro_id),
         atendente=(user.get_full_name() or user.username),
@@ -2444,7 +2459,64 @@ def salvar_acompanhamento_emissao(request):
         data_emissao=data_emissao,
         numero_apolice=numero_apolice,
     )
+    if anexo:
+        acompanhamento.anexo = anexo
+        acompanhamento.anexo_nome = anexo_nome
+    acompanhamento.save()
     return JsonResponse({'ok': True})
+
+
+# --- Anexos do acompanhamento da Emissão (PDF ou imagem) ---
+ANEXO_EMISSAO_TAMANHO_MAX = 10 * 1024 * 1024  # 10 MB
+# extensao -> (tipo do arquivo, inicios validos do conteudo). O conteudo e conferido
+# de verdade (nao so o nome) pra ninguem enviar outro tipo de arquivo renomeado.
+ANEXO_EMISSAO_TIPOS = {
+    '.pdf': ('application/pdf', (b'%PDF-',)),
+    '.jpg': ('image/jpeg', (b'\xff\xd8\xff',)),
+    '.jpeg': ('image/jpeg', (b'\xff\xd8\xff',)),
+    '.png': ('image/png', (b'\x89PNG\r\n\x1a\n',)),
+    '.gif': ('image/gif', (b'GIF87a', b'GIF89a')),
+    '.webp': ('image/webp', (b'RIFF',)),
+}
+
+def _validar_anexo_emissao(arquivo):
+    """Devolve o texto do erro, ou '' se o anexo pode ser gravado."""
+    extensao = os.path.splitext(arquivo.name)[1].lower()
+    if extensao not in ANEXO_EMISSAO_TIPOS:
+        return 'O anexo precisa ser um PDF ou uma imagem (JPG, PNG, GIF ou WEBP).'
+    if arquivo.size > ANEXO_EMISSAO_TAMANHO_MAX:
+        return 'O anexo é maior que 10 MB. Envie um arquivo menor.'
+    if arquivo.size == 0:
+        return 'O anexo está vazio.'
+    inicio = arquivo.read(16)
+    arquivo.seek(0)
+    if not inicio.startswith(ANEXO_EMISSAO_TIPOS[extensao][1]):
+        return 'O conteúdo do arquivo não bate com o tipo informado. Envie um PDF ou uma imagem de verdade.'
+    if extensao == '.webp' and inicio[8:12] != b'WEBP':
+        return 'O conteúdo do arquivo não bate com o tipo informado. Envie um PDF ou uma imagem de verdade.'
+    return ''
+
+@login_required
+def anexo_acompanhamento_emissao(request, id):
+    """Abre o anexo de um acompanhamento (so quem tem acesso a Emissao/Base Emissao)."""
+    user = request.user
+    if _nivel_vendas(user, 'prod_vendas_emissao') == 0 and _nivel_vendas(user, 'prod_vendas_baseemissao') == 0:
+        return HttpResponse('Acesso negado.', status=403)
+    acompanhamento = get_object_or_404(AcompanhamentoEmissao, id=id)
+    if not acompanhamento.anexo:
+        return HttpResponse('Este acompanhamento não tem anexo.', status=404)
+    try:
+        arquivo = acompanhamento.anexo.open('rb')
+    except FileNotFoundError:
+        return HttpResponse('O arquivo do anexo não foi encontrado no servidor.', status=404)
+    extensao = os.path.splitext(acompanhamento.anexo.name)[1].lower()
+    tipo = ANEXO_EMISSAO_TIPOS.get(extensao, ('application/octet-stream',))[0]
+    resposta = FileResponse(arquivo, content_type=tipo)
+    nome = acompanhamento.anexo_nome or os.path.basename(acompanhamento.anexo.name)
+    resposta['Content-Disposition'] = "inline; filename*=UTF-8''" + quote(nome)
+    resposta['X-Content-Type-Options'] = 'nosniff'
+    resposta['Cache-Control'] = 'private, no-store'
+    return resposta
 
 @login_required
 @cache_navegador_vendas(TABELAS_RENOVACAO)

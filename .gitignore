@@ -15,3 +15,6 @@ db.sqlite3
 
 # Pasta de analise local: tem planilha com dados reais de clientes (CPF, financeiro) - nao versionar
 /analise/
+
+# Anexos (PDF/imagem) do acompanhamento da Emissao: documentos de clientes - nao versionar
+/anexos_emissao/
