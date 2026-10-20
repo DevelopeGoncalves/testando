@@ -167,10 +167,13 @@
                 <!-- alex: lixeira logo depois do Exportar. Excluir SÓ para Gestor. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
+                {# Pra mostrar o botao de novo: apague as duas linhas {% comment %} e {% endcomment %} abaixo. #}
+                {% comment "botao banseg gestao" %}
                 {% if usuario_gestor_banseg %}
                 <!-- Relacionar as seguradoras ao Banseg: só superusuário ou perfil Gestor. -->
                 <button class="btn btn-outline-success me-1" onclick="abrirModalBanseg()" title="Relacionar seguradoras ao Banseg"><i class="fas fa-link"></i> Banseg</button>
                 {% endif %}
+                {% endcomment %}
                 {% if usuario_pode_excluir %}
                 <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
@@ -943,7 +946,10 @@
             }
         });
 
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 27, 28, 3, 4, 15, 6, 8, 13, 11, 18, 29]);
+        // Ordem: Origem, Cadastrado em, Último atendente, Responsável, Em uso por, Produto, Indicador,
+        // Agência, CPF do cliente, Nome do cliente, Seguradora, Status emissão.
+        // ("Apólice" e "Apólice enviada ao cliente" ficam ocultas.)
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 18, 27]);
 
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);
