@@ -78,6 +78,10 @@ class Seguradora(models.Model):
     seguradora = models.CharField("Seguradora", max_length=50, null=True)
     cnpj = models.CharField("CNPJ", max_length=14, blank=True)
     observacoes = models.CharField("Observações", max_length=80, blank=True, null=True)
+    # Card Emissão: True = as vendas dessa seguradora vão pro Banseg, False = ficam em Outras cias,
+    # vazio (None) = ninguém escolheu ainda (vale o nome: Banestes Seguros = Banseg).
+    # Escolhido no botão do título da Emissão (Produção > Vendas > Emissão).
+    banseg = models.BooleanField("Vai para o Banseg (Emissão)", null=True, blank=True, default=None)
 
     def __str__(self):
         return f"{self.cod_seguradora} - {self.seguradora}"

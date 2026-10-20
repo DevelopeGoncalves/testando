@@ -85,6 +85,7 @@ urlpatterns = [
     # Emissão: mesma base, mas só com as vendas já fechadas (Central/Agência)
     path('producao/vendas/emissao/', views.vendas_emissao, name='vendas_emissao'),
     path('producao/vendas/base-emissao/', views.vendas_base_emissao, name='vendas_base_emissao'),
+    path('producao/vendas/emissao/banseg/', views.salvar_banseg_emissao, name='salvar_banseg_emissao'),
     path('producao/vendas/emissao/acompanhamento/', views.salvar_acompanhamento_emissao, name='salvar_acompanhamento_emissao'),
     path('producao/vendas/emissao/anexo/<int:id>/', views.anexo_acompanhamento_emissao, name='anexo_acompanhamento_emissao'),
     path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),

@@ -2289,12 +2289,22 @@ def _anexar_acompanhamentos(registros, origem):
         r.acompanhamentos = lista
         r.status_emissao = lista[0].status if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
 
-def _eh_seguradora_banseg(seguradora):
-    """Banseg = Banestes Seguros. Aceita 'BANESTES', 'Banestes Seguros' (com ou sem
-    acento/maiúscula, com 'S.A.' no fim etc.) e 'Banseg'. Outras empresas do grupo
-    (ex.: Banestes Capitalização) NÃO entram."""
+def _nome_parece_banseg(seguradora):
+    """Regra pelo nome, usada só enquanto ninguém escolheu a seguradora no botão do
+    Banseg: 'BANESTES', 'Banestes Seguros' (com ou sem acento/maiúscula, com 'S.A.'
+    no fim etc.) e 'Banseg'. Outras empresas do grupo (ex.: Banestes Capitalização)
+    NÃO entram."""
     nome = _texto_comparavel(getattr(seguradora, 'seguradora', '') or '')
     return nome == 'BANESTES' or 'BANESTES SEGUROS' in nome or 'BANSEG' in nome
+
+def _eh_seguradora_banseg(seguradora):
+    """A seguradora vai pro Banseg? Vale o que foi escolhido no botão do Banseg (campo
+    'banseg' da seguradora); se ainda não foi escolhido, vale a regra pelo nome."""
+    if seguradora is None:
+        return False
+    if seguradora.banseg is not None:
+        return seguradora.banseg
+    return _nome_parece_banseg(seguradora)
 
 def _seguradora_da_venda(ind):
     """Seguradora que vale para a venda na Emissão. Ela pode estar em dois lugares: no
@@ -2381,6 +2391,11 @@ def _render_emissao(request, base):
     return render(request, template, {
         'indicacoes': indicacoes,
         'cia_filtro': cia if cia in ('banseg', 'outras') else '',
+        # Lista do botão "Banseg": todas as seguradoras, já marcadas as que vão pro Banseg.
+        'seguradoras_banseg': [
+            {'id': sg.id, 'nome': sg.seguradora or sg.cod_seguradora or f'Seguradora {sg.id}', 'marcada': _eh_seguradora_banseg(sg)}
+            for sg in Seguradora.objects.all().order_by('seguradora')
+        ],
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
@@ -2411,6 +2426,24 @@ def vendas_emissao(request):
 def vendas_base_emissao(request):
     """Card 'Base Emissão': TODAS as vendas fechadas (inclusive as já emitidas/recusadas)."""
     return _render_emissao(request, base=True)
+
+@login_required
+def salvar_banseg_emissao(request):
+    """Grava quais seguradoras vão pro card Banseg da Emissão (as outras ficam em Outras cias).
+    Só Gestor da Emissão/Base Emissão."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    user = request.user
+    if not (_usuario_e_gestor(user, 'prod_vendas_emissao') or _usuario_e_gestor(user, 'prod_vendas_baseemissao')):
+        return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem escolher as seguradoras do Banseg.'}, status=403)
+
+    ids = [i for i in request.POST.getlist('seguradoras') if i.isdigit()]
+    with transaction.atomic():
+        Seguradora.objects.filter(id__in=ids).update(banseg=True)
+        Seguradora.objects.exclude(id__in=ids).update(banseg=False)
+    nomes = list(Seguradora.objects.filter(id__in=ids).order_by('seguradora').values_list('seguradora', flat=True))
+    registrar_auditoria_backend(usuario=user, acao='Alterou', detalhe='Seguradoras do Banseg (Emissão): ' + (', '.join(n or '-' for n in nomes) or 'nenhuma'))
+    return JsonResponse({'ok': True})
 
 @login_required
 def salvar_acompanhamento_emissao(request):

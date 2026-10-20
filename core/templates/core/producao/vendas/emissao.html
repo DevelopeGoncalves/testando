@@ -14,6 +14,18 @@
 <style>
     /* Pop-up "Registrar acompanhamento" (mesmo visual do pop-up de ligacao do card Novo) */
     #modalAcompanhamento .modal-body { padding-bottom: 40px; }
+    #modalBanseg .btn-acao-ligacao {
+        --cor-botao-ligacao: #065534;
+        color: var(--cor-botao-ligacao);
+        background-color: #ffffff;
+        border: 1px solid var(--cor-botao-ligacao);
+    }
+    #modalBanseg .btn-acao-ligacao:hover {
+        color: #ffffff;
+        background-color: var(--cor-botao-ligacao);
+        border-color: var(--cor-botao-ligacao);
+    }
+    #modalBanseg .lista-seguradoras-banseg { max-height: 50vh; overflow-y: auto; }
     #modalAcompanhamento .btn-acao-ligacao {
         --cor-botao-ligacao: #065534;
         color: var(--cor-botao-ligacao);
@@ -141,10 +153,17 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="m-0">
                 <i class="fas fa-file-signature text-info"></i> Emissão
+                {# O selo vira botao (so Gestor): abre o pop-up pra escolher quais seguradoras vao pro Banseg. #}
                 {% if cia_filtro == 'banseg' %}
-                    <span class="badge bg-success align-middle">Banseg</span>
+                    {% if usuario_gestor %}
+                    <button type="button" class="btn btn-sm btn-success fw-bold align-middle" onclick="abrirModalBanseg()" title="Escolher as seguradoras do Banseg">Banseg <i class="fas fa-link ms-1"></i></button>
+                    {% else %}<span class="badge bg-success align-middle">Banseg</span>{% endif %}
                 {% elif cia_filtro == 'outras' %}
-                    <span class="badge bg-secondary align-middle">Outras cias</span>
+                    {% if usuario_gestor %}
+                    <button type="button" class="btn btn-sm btn-secondary fw-bold align-middle" onclick="abrirModalBanseg()" title="Escolher as seguradoras do Banseg (as outras ficam aqui)">Outras cias <i class="fas fa-link ms-1"></i></button>
+                    {% else %}<span class="badge bg-secondary align-middle">Outras cias</span>{% endif %}
+                {% elif usuario_gestor %}
+                    <button type="button" class="btn btn-sm btn-outline-success fw-bold align-middle" onclick="abrirModalBanseg()" title="Escolher as seguradoras do Banseg"><i class="fas fa-link"></i> Seguradoras do Banseg</button>
                 {% endif %}
             </h4>
             <div>
@@ -615,6 +634,37 @@
     </div>
     {% endif %}
 
+    {% if usuario_gestor %}
+    <!-- POP-UP: escolher quais seguradoras (Base > Formulários > Seguradoras) vão pro card Banseg. -->
+    <div class="modal fade" id="modalBanseg" tabindex="-1" aria-labelledby="modalBansegLabel"
+         data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title m-0" id="modalBansegLabel"><i class="fas fa-link"></i> Seguradoras do Banseg</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-acao-ligacao fw-bold me-2" onclick="fecharModalBanseg()"><i class="fas fa-times"></i> Cancelar</button>
+                        <button type="button" id="btn-salvar-banseg" class="btn btn-sm btn-acao-ligacao fw-bold px-4" onclick="salvarBanseg()"><i class="fa-regular fa-floppy-disk"></i> Salvar</button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Marque as seguradoras que devem aparecer no card <b>Banseg</b>. As demais ficam em <b>Outras cias</b>. A lista vem de Base &gt; Formulários &gt; Seguradoras.</p>
+                    <input type="text" id="banseg-busca" class="form-control form-control-sm mb-2" placeholder="Buscar seguradora..." autocomplete="off">
+                    <div class="lista-seguradoras-banseg border rounded p-2">
+                        {% for sg in seguradoras_banseg %}
+                        <label class="d-block py-1 item-banseg" style="cursor:pointer;">
+                            <input type="checkbox" class="form-check-input me-2 chk-banseg" value="{{ sg.id }}" {% if sg.marcada %}checked{% endif %}>{{ sg.nome }}
+                        </label>
+                        {% empty %}
+                        <div class="text-muted small">Nenhuma seguradora cadastrada em Base &gt; Formulários &gt; Seguradoras.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="modal fade" id="modalHistoricoLigacoes" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -1039,6 +1089,46 @@
         });
         div.innerHTML = html;
         div.style.display = 'block';
+    }
+
+    // ---------- Seguradoras do Banseg ----------
+    const URL_SALVAR_BANSEG = "{% url 'salvar_banseg_emissao' %}";
+
+    function abrirModalBanseg() {
+        $('#banseg-busca').val('').trigger('input');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalBanseg')).show();
+    }
+
+    function fecharModalBanseg() {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalBanseg')).hide();
+    }
+
+    $(document).on('input', '#banseg-busca', function () {
+        var termo = this.value.toLowerCase();
+        $('#modalBanseg .item-banseg').each(function () {
+            $(this).toggle($(this).text().toLowerCase().indexOf(termo) > -1);
+        });
+    });
+
+    function salvarBanseg() {
+        var ids = $('#modalBanseg .chk-banseg:checked').map(function () { return this.value; }).get();
+        $('#btn-salvar-banseg').prop('disabled', true);
+        $.ajax({
+            url: URL_SALVAR_BANSEG, method: 'POST',
+            headers: { 'X-CSRFToken': csrfAtendimento() },
+            data: { seguradoras: ids },
+            traditional: true
+        }).done(function (resp) {
+            if (resp && resp.ok) {
+                window.location.reload();
+            } else {
+                $('#btn-salvar-banseg').prop('disabled', false);
+                avisoElegante((resp && resp.erro) || 'Não foi possível salvar.', 'Erro');
+            }
+        }).fail(function (xhr) {
+            $('#btn-salvar-banseg').prop('disabled', false);
+            avisoElegante((xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível salvar.', 'Erro');
+        });
     }
 
     // ---------- Acompanhamento da emissão ----------
