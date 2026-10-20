@@ -2289,6 +2289,26 @@ def _anexar_acompanhamentos(registros, origem):
         r.acompanhamentos = lista
         r.status_emissao = lista[0].status if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
 
+def _eh_seguradora_banseg(seguradora):
+    """Banseg = Banestes Seguros. Aceita 'BANESTES', 'Banestes Seguros' (com ou sem
+    acento/maiúscula, com 'S.A.' no fim etc.) e 'Banseg'. Outras empresas do grupo
+    (ex.: Banestes Capitalização) NÃO entram."""
+    nome = _texto_comparavel(getattr(seguradora, 'seguradora', '') or '')
+    return nome == 'BANESTES' or 'BANESTES SEGUROS' in nome or 'BANSEG' in nome
+
+def _seguradora_da_venda(ind):
+    """Seguradora que vale para a venda na Emissão. Ela pode estar em dois lugares: no
+    Bloco Apólice da ficha e na última ligação (onde a venda foi fechada). Se qualquer
+    um dos dois for Banestes, vale ele (a venda vai pro card Banseg); senão vale o da
+    ficha e, na falta dele, o da última ligação."""
+    ligacoes = list(ind.ligacoes.all())
+    ultima = max(ligacoes, key=lambda l: l.id) if ligacoes else None
+    candidatas = [sg for sg in (ind.seguradora, ultima.seguradora if ultima else None) if sg]
+    for sg in candidatas:
+        if _eh_seguradora_banseg(sg):
+            return sg
+    return candidatas[0] if candidatas else None
+
 def _vendas_fechadas(model_indicacao, model_ligacao, origem):
     """Registros com venda fechada (última ligação Central/Agência) de UMA origem,
     já com os campos auxiliares (nome_agencia, status_fechamento etc.) calculados."""
@@ -2310,6 +2330,7 @@ def _vendas_fechadas(model_indicacao, model_ligacao, origem):
         ind.atendimento_ativo = bool(ind.atendimento_por and ind.atendimento_em and ind.atendimento_em >= limite_atend)
         ind.status_fechamento = _status_fechamento_indicacao(ind)
         ind.responsavel_ultima_ligacao = _responsavel_ultima_ligacao(ind)
+        ind.seguradora_efetiva = _seguradora_da_venda(ind)
     _anexar_acompanhamentos(registros, origem)
     return registros
 
@@ -2345,19 +2366,14 @@ def _render_emissao(request, base):
         indicacoes = [i for i in indicacoes if i.status_emissao not in STATUS_EMISSAO_FINALIZADOS]
 
     # alex: card "Emissão" vira 2 botões (Banseg / Outras cias) de acordo com a
-    # Seguradora de cada venda - Banseg é só "BANESTES", o resto cai em Outras cias.
-    # A seguradora vem da ligação que fechou a venda (a última); o campo da ficha é só reserva.
-    def _eh_banestes(ind):
-        ligacoes = list(ind.ligacoes.all())
-        ultima = max(ligacoes, key=lambda l: l.id) if ligacoes else None
-        seguradora = (ultima.seguradora if ultima else None) or ind.seguradora
-        return bool(seguradora) and (seguradora.seguradora or '').strip().upper() == 'BANESTES'
-
+    # Seguradora de cada venda - Banseg é Banestes Seguros, o resto cai em Outras cias.
+    # A seguradora pode estar no Bloco Apólice da ficha ou na última ligação (ver
+    # _seguradora_da_venda): se qualquer um dos dois for Banestes, vai pro Banseg.
     cia = (request.GET.get('cia') or '').strip().lower()
     if cia == 'banseg':
-        indicacoes = [i for i in indicacoes if _eh_banestes(i)]
+        indicacoes = [i for i in indicacoes if _eh_seguradora_banseg(i.seguradora_efetiva)]
     elif cia == 'outras':
-        indicacoes = [i for i in indicacoes if not _eh_banestes(i)]
+        indicacoes = [i for i in indicacoes if not _eh_seguradora_banseg(i.seguradora_efetiva)]
 
     indicacoes.sort(key=lambda i: i.carimbo_data_hora or timezone.now(), reverse=True)
 
