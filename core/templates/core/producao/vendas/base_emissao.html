@@ -564,8 +564,8 @@
                                 {% for valor, rotulo in status_emissao_choices %}<option value="{{ valor }}">{{ forloop.counter }} - {{ rotulo }}</option>{% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="fw-bold small mb-1">Apólice enviada ao cliente</label>
+                        <div class="col-md-6" id="acomp-col-enviada">
+                            <label class="fw-bold small mb-1" id="acomp-enviada-label">Apólice enviada ao cliente</label>
                             <select id="acomp-enviada" class="form-select">
                                 <option value="0">2 - Não</option>
                                 <option value="1">1 - Sim</option>
@@ -1076,10 +1076,25 @@
         div.innerHTML = html;
     }
 
+    const STATUS_SEM_CAMPO_ENVIADA = ['Aguardando emissão', 'Pendência'];
+    const LABEL_ENVIADA_POR_STATUS = {
+        'Cancelado': 'Cliente ciente do cancelamento',
+        'Emitida': 'Apólice/endosso enviada ao cliente',
+        'Recusada': 'Cliente ciente?'
+    };
+
     function alternarCamposAcompanhamento() {
+        var status = $('#acomp-status').val();
+        var mostraEnviada = STATUS_SEM_CAMPO_ENVIADA.indexOf(status) === -1;
+        $('#acomp-col-enviada').toggleClass('d-none', !mostraEnviada);
+        if (mostraEnviada) {
+            $('#acomp-enviada-label').text(LABEL_ENVIADA_POR_STATUS[status] || 'Apólice enviada ao cliente');
+        } else {
+            $('#acomp-enviada').val('0');
+        }
         $('#acomp-col-envio').toggleClass('d-none', $('#acomp-enviada').val() !== '1');
-        $('.acomp-col-emitida').toggleClass('d-none', $('#acomp-status').val() !== 'Emitida');
-        $('.acomp-col-anexo').toggleClass('d-none', STATUS_COM_ANEXO.indexOf($('#acomp-status').val()) === -1);
+        $('.acomp-col-emitida').toggleClass('d-none', status !== 'Emitida');
+        $('.acomp-col-anexo').toggleClass('d-none', STATUS_COM_ANEXO.indexOf(status) === -1);
     }
     $(document).on('change', '#acomp-enviada, #acomp-status', alternarCamposAcompanhamento);
 
@@ -1139,7 +1154,8 @@
             $('#btn-salvar-acompanhamento').prop('disabled', false);
         }).done(function(resp) {
             if (resp && resp.ok) {
-                // Recarrega a lista: a Emissão tira da tela quem foi finalizado (Emitida/Recusada).
+                // Recarrega a lista: a Emissão tira da tela quem foi finalizado (Emitida/Recusada/Cancelado)
+                // e já teve o cliente avisado (campo enviada/ciente marcado Sim).
                 window.location.reload();
             } else {
                 avisoElegante((resp && resp.erro) || 'Não foi possível registrar o acompanhamento.', 'Erro');
