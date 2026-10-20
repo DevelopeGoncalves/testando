@@ -146,9 +146,6 @@
                 {% elif cia_filtro == 'outras' %}
                     <span class="badge bg-secondary align-middle">Outras cias</span>
                 {% endif %}
-                {% if cia_filtro %}
-                    <a href="{% url 'vendas_emissao' %}" class="small ms-1">(ver todas)</a>
-                {% endif %}
             </h4>
             <div>
                 <button id="btn-limpar-filtros" class="btn btn-outline-primary me-1" onclick="limparFiltros()" style="display:none;">
@@ -206,6 +203,7 @@
                             <th class="text-center">Último atendente</th> <!-- 25 -->
                             <th class="text-center">Status emissão</th> <!-- 26 -->
                             <th class="text-center">Apólice</th> <!-- 27 -->
+                            <th class="text-center">Apólice enviada ao cliente</th> <!-- 28 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -334,6 +332,10 @@
                                 {% else %}<span class="badge bg-secondary">{{ i.status_emissao }}</span>{% endif %}
                             </td>
                             <td class="text-center">{{ i.acompanhamentos.0.numero_apolice|default:'-' }}</td>
+                            <td class="text-center">
+                                {% if i.acompanhamentos.0.apolice_enviada %}<span class="badge bg-success">Sim</span>
+                                {% else %}<span class="badge bg-secondary">Não</span>{% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -869,7 +871,7 @@
             }
         });
 
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 27, 28, 3, 4, 15, 6, 8, 13, 11, 18, 25]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 27, 28, 3, 4, 15, 6, 8, 13, 11, 18, 29]);
 
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);

@@ -197,7 +197,10 @@
             padding-right: 4px !important;
         }
         table.tabela-cabe-na-tela th .excel-header-btn { line-height: 1.2; padding: 8px 4px !important; }
-        table.tabela-cabe-na-tela .badge { white-space: normal; line-height: 1.25; }
+        /* Selos numa linha só, do mesmo tamanho do selo da coluna Origem (antes quebravam em 2 linhas e ficavam enormes).
+           Exceção: o selo vermelho ("Não venda: motivo...") pode ter texto longo, então esse continua quebrando linha. */
+        table.tabela-cabe-na-tela .badge { white-space: nowrap; line-height: 1.25; }
+        table.tabela-cabe-na-tela .badge.bg-danger { white-space: normal; }
         @media (max-width: 1500px) {
             table.tabela-cabe-na-tela { font-size: 0.78rem !important; }
         }
