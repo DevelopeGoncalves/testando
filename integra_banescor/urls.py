@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from core import views
+from core import views, views_vendas
 from django.contrib.auth import views as auth_views
 
 
@@ -76,55 +76,55 @@ urlpatterns = [
     path('producao/formularios/painel/<int:agrupamento_id>/fechar-mes/', views.producao_fechar_mes, name='producao_fechar_mes'),
 
     # 9.1 Esta rota abre a tela com os Cards (index)
-    path('producao/vendas/', views.producao_vendas, name='producao_vendas'),
+    path('producao/vendas/', views_vendas.producao_vendas, name='producao_vendas'),
     
     path('base/formularios/tipo-pessoa/', views.tipo_pessoa_lista, name='tipo_pessoa_lista'),
 
     # 10.1 Base Novo (Indicação de Seguridade) - card de Produção / Vendas
-    path('producao/vendas/base-novo/', views.lista_base_novo, name='lista_base_novo'),
+    path('producao/vendas/base-novo/', views_vendas.lista_base_novo, name='lista_base_novo'),
     # Emissão: mesma base, mas só com as vendas já fechadas (Central/Agência)
-    path('producao/vendas/emissao/', views.vendas_emissao, name='vendas_emissao'),
-    path('producao/vendas/base-emissao/', views.vendas_base_emissao, name='vendas_base_emissao'),
-    path('producao/vendas/emissao/banseg/', views.salvar_banseg_emissao, name='salvar_banseg_emissao'),
-    path('producao/vendas/emissao/acompanhamento/', views.salvar_acompanhamento_emissao, name='salvar_acompanhamento_emissao'),
-    path('producao/vendas/emissao/anexo/<int:id>/', views.anexo_acompanhamento_emissao, name='anexo_acompanhamento_emissao'),
-    path('producao/vendas/base-novo/gerar-protocolo/', views.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
-    path('producao/vendas/buscar-cliente/', views.buscar_cliente_por_cpf, name='buscar_cliente_por_cpf'),
-    path('producao/vendas/base-novo/agora/', views.agora_servidor_ligacao, name='agora_servidor_ligacao'),
+    path('producao/vendas/emissao/', views_vendas.vendas_emissao, name='vendas_emissao'),
+    path('producao/vendas/base-emissao/', views_vendas.vendas_base_emissao, name='vendas_base_emissao'),
+    path('producao/vendas/emissao/banseg/', views_vendas.salvar_banseg_emissao, name='salvar_banseg_emissao'),
+    path('producao/vendas/emissao/acompanhamento/', views_vendas.salvar_acompanhamento_emissao, name='salvar_acompanhamento_emissao'),
+    path('producao/vendas/emissao/anexo/<int:id>/', views_vendas.anexo_acompanhamento_emissao, name='anexo_acompanhamento_emissao'),
+    path('producao/vendas/base-novo/gerar-protocolo/', views_vendas.gerar_protocolo_ligacao, name='gerar_protocolo_ligacao'),
+    path('producao/vendas/buscar-cliente/', views_vendas.buscar_cliente_por_cpf, name='buscar_cliente_por_cpf'),
+    path('producao/vendas/base-novo/agora/', views_vendas.agora_servidor_ligacao, name='agora_servidor_ligacao'),
     # Trava de atendimento ("em ligação") - marcar/encerrar e listar os ativos (polling)
-    path('producao/vendas/atendimento/<int:id>/iniciar/', views.marcar_atendimento, name='marcar_atendimento'),
-    path('producao/vendas/atendimento/<int:id>/encerrar/', views.encerrar_atendimento, name='encerrar_atendimento'),
-    path('producao/vendas/atendimentos-ativos/', views.atendimentos_ativos, name='atendimentos_ativos'),
+    path('producao/vendas/atendimento/<int:id>/iniciar/', views_vendas.marcar_atendimento, name='marcar_atendimento'),
+    path('producao/vendas/atendimento/<int:id>/encerrar/', views_vendas.encerrar_atendimento, name='encerrar_atendimento'),
+    path('producao/vendas/atendimentos-ativos/', views_vendas.atendimentos_ativos, name='atendimentos_ativos'),
     # alex: Gestor indica o responsável pela demanda de um registro
-    path('producao/vendas/responsavel-demanda/<int:id>/', views.definir_responsavel_demanda, name='definir_responsavel_demanda'),
+    path('producao/vendas/responsavel-demanda/<int:id>/', views_vendas.definir_responsavel_demanda, name='definir_responsavel_demanda'),
     # alex: indicar o responsável para vários registros de uma vez (card Novo)
-    path('producao/vendas/responsavel-demanda-massa/', views.definir_responsavel_massa, name='definir_responsavel_massa'),
+    path('producao/vendas/responsavel-demanda-massa/', views_vendas.definir_responsavel_massa, name='definir_responsavel_massa'),
 
     # 10.1.1 Base Renovação - mesma estrutura da Base Novo, tabela própria (IndicacaoRenovacao)
-    path('producao/vendas/base-renovacao/gerar-protocolo/', views.gerar_protocolo_ligacao_renovacao, name='gerar_protocolo_ligacao_renovacao'),
-    path('producao/vendas/atendimento-renovacao/<int:id>/iniciar/', views.marcar_atendimento_renovacao, name='marcar_atendimento_renovacao'),
-    path('producao/vendas/atendimento-renovacao/<int:id>/encerrar/', views.encerrar_atendimento_renovacao, name='encerrar_atendimento_renovacao'),
-    path('producao/vendas/atendimentos-ativos-renovacao/', views.atendimentos_ativos_renovacao, name='atendimentos_ativos_renovacao'),
-    path('producao/vendas/responsavel-demanda-renovacao/<int:id>/', views.definir_responsavel_demanda_renovacao, name='definir_responsavel_demanda_renovacao'),
-    path('producao/vendas/responsavel-demanda-massa-renovacao/', views.definir_responsavel_massa_renovacao, name='definir_responsavel_massa_renovacao'),
+    path('producao/vendas/base-renovacao/gerar-protocolo/', views_vendas.gerar_protocolo_ligacao_renovacao, name='gerar_protocolo_ligacao_renovacao'),
+    path('producao/vendas/atendimento-renovacao/<int:id>/iniciar/', views_vendas.marcar_atendimento_renovacao, name='marcar_atendimento_renovacao'),
+    path('producao/vendas/atendimento-renovacao/<int:id>/encerrar/', views_vendas.encerrar_atendimento_renovacao, name='encerrar_atendimento_renovacao'),
+    path('producao/vendas/atendimentos-ativos-renovacao/', views_vendas.atendimentos_ativos_renovacao, name='atendimentos_ativos_renovacao'),
+    path('producao/vendas/responsavel-demanda-renovacao/<int:id>/', views_vendas.definir_responsavel_demanda_renovacao, name='definir_responsavel_demanda_renovacao'),
+    path('producao/vendas/responsavel-demanda-massa-renovacao/', views_vendas.definir_responsavel_massa_renovacao, name='definir_responsavel_massa_renovacao'),
 
     # 10.1.2 Base Endosso - mesma estrutura da Base Novo, tabela própria (IndicacaoEndosso)
-    path('producao/vendas/base-endosso/gerar-protocolo/', views.gerar_protocolo_ligacao_endosso, name='gerar_protocolo_ligacao_endosso'),
-    path('producao/vendas/atendimento-endosso/<int:id>/iniciar/', views.marcar_atendimento_endosso, name='marcar_atendimento_endosso'),
-    path('producao/vendas/atendimento-endosso/<int:id>/encerrar/', views.encerrar_atendimento_endosso, name='encerrar_atendimento_endosso'),
-    path('producao/vendas/atendimentos-ativos-endosso/', views.atendimentos_ativos_endosso, name='atendimentos_ativos_endosso'),
-    path('producao/vendas/responsavel-demanda-endosso/<int:id>/', views.definir_responsavel_demanda_endosso, name='definir_responsavel_demanda_endosso'),
-    path('producao/vendas/responsavel-demanda-massa-endosso/', views.definir_responsavel_massa_endosso, name='definir_responsavel_massa_endosso'),
+    path('producao/vendas/base-endosso/gerar-protocolo/', views_vendas.gerar_protocolo_ligacao_endosso, name='gerar_protocolo_ligacao_endosso'),
+    path('producao/vendas/atendimento-endosso/<int:id>/iniciar/', views_vendas.marcar_atendimento_endosso, name='marcar_atendimento_endosso'),
+    path('producao/vendas/atendimento-endosso/<int:id>/encerrar/', views_vendas.encerrar_atendimento_endosso, name='encerrar_atendimento_endosso'),
+    path('producao/vendas/atendimentos-ativos-endosso/', views_vendas.atendimentos_ativos_endosso, name='atendimentos_ativos_endosso'),
+    path('producao/vendas/responsavel-demanda-endosso/<int:id>/', views_vendas.definir_responsavel_demanda_endosso, name='definir_responsavel_demanda_endosso'),
+    path('producao/vendas/responsavel-demanda-massa-endosso/', views_vendas.definir_responsavel_massa_endosso, name='definir_responsavel_massa_endosso'),
 
 
     # 10. Rotas para cada Card específico de vendas
-    path('producao/vendas/endosso/', views.vendas_endosso, name='vendas_endosso'),
-    path('producao/vendas/renovacao/', views.vendas_renovacao, name='vendas_renovacao'),
+    path('producao/vendas/endosso/', views_vendas.vendas_endosso, name='vendas_endosso'),
+    path('producao/vendas/renovacao/', views_vendas.vendas_renovacao, name='vendas_renovacao'),
 
     # 10.2 Cards "Novo"/"Renovação"/"Endosso" (ainda em desenvolvimento, ligados aos poucos à respectiva "Base X")
-    path('producao/vendas/novo-negocio/', views.vendas_novo_negocio, name='vendas_novo_negocio'),
-    path('producao/vendas/nova-renovacao/', views.vendas_nova_renovacao, name='vendas_nova_renovacao'),
-    path('producao/vendas/novo-endosso/', views.vendas_novo_endosso, name='vendas_novo_endosso'),
+    path('producao/vendas/novo-negocio/', views_vendas.vendas_novo_negocio, name='vendas_novo_negocio'),
+    path('producao/vendas/nova-renovacao/', views_vendas.vendas_nova_renovacao, name='vendas_nova_renovacao'),
+    path('producao/vendas/novo-endosso/', views_vendas.vendas_novo_endosso, name='vendas_novo_endosso'),
     
     path('producao/processamentos/', views.producao_processamentos, name='producao_processamentos'),
     path('producao/relatorios/', views.producao_relatorios, name='producao_relatorios'),

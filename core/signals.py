@@ -1,4 +1,4 @@
-from core.views import registrar_auditoria_backend
+from core.auditoria import registrar_auditoria_backend
 
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
