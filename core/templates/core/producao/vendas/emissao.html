@@ -224,6 +224,7 @@
                             data-telefone-indicador="{{ i.telefone_indicador|default:'' }}"
                             data-orcamento="{{ i.enviar_orcamento_para|default:'' }}"
                             data-origem-informacao="{{ i.origem_informacao|default:'' }}"
+                            data-tipo-pessoa="{{ i.tipo_pessoa_id|default:'' }}"
                             data-nome-cliente="{{ i.nome_cliente|default:'' }}"
                             data-telefone-cliente="{{ i.telefone_cliente|default:'' }}"
                             data-cpf-cliente="{{ i.cpf_cliente|default:'' }}"
@@ -440,11 +441,20 @@
 
                     <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Cliente</h6>
                     <div class="row g-3">
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">CPF / CNPJ *</label>{{ form_indicacao.cpf_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
-                        <div class="col-md-2"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
-                        <div class="col-md-3"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
+                        {# Tipo de Pessoa (Base > Formularios > Tipos de pessoa): e obrigatorio no formulario que salva a ficha, #}
+                        {# entao precisa estar aqui tambem - sem ele o envio ia sem Tipo de Pessoa e dava erro ao salvar. #}
+                        <div class="col-md-2">
+                            <label class="fw-bold small mb-1">Tipo de Pessoa *</label>
+                            {{ form_indicacao.tipo_pessoa }}
+                        </div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1"><span id="label_tipo_doc_cliente">CPF</span> *</label>{{ form_indicacao.cpf_cliente }}</div>
+                        <div class="col-md-4"><label class="fw-bold small mb-1">Nome *</label>{{ form_indicacao.nome_cliente }}</div>
+                        <div class="col-md-3"><label class="fw-bold small mb-1">Telefone</label>{{ form_indicacao.telefone_cliente }}</div>
+                    </div>
+
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-5"><label class="fw-bold small mb-1">E-mail</label>{{ form_indicacao.email_cliente }}</div>
+                        <div class="col-md-7"><label class="fw-bold small mb-1">Dados do item (modelo, ano e placa)</label>{{ form_indicacao.dados_veiculo }}</div>
                     </div>
 
                     <h6 class="text-secondary border-bottom pb-2 mb-3 mt-5">Dados do Indicador</h6>
@@ -826,6 +836,19 @@
         return s ? s.texto : '';
     }
 
+    // Rotulo do documento acompanha o Tipo de Pessoa (ehTipoPessoaJuridica esta no layout.html).
+    function atualizarRotuloTipoDoc() {
+        var rotulo = document.getElementById('label_tipo_doc_cliente');
+        if (rotulo) rotulo.textContent = ehTipoPessoaJuridica() ? 'CNPJ' : 'CPF';
+    }
+    // Trocar o Tipo de Pessoa so ajusta rotulo e mascara - NAO apaga o CPF/CNPJ nem os outros dados
+    // (se o numero nao bater com o tipo escolhido, o salvamento avisa).
+    $(document).on('change', '#id_tipo_pessoa', function () {
+        atualizarRotuloTipoDoc();
+        var cpf = document.getElementById('id_cpf_cliente');
+        if (cpf) aplicarMascaraCpfCnpj(cpf);
+    });
+
     $(document).ready(function() {
 
         inicializarDropdownRelacionamento(
@@ -1197,6 +1220,9 @@
         $('#id_telefone_indicador').val(row.getAttribute('data-telefone-indicador'));
         $('#id_enviar_orcamento_para').val(row.getAttribute('data-orcamento'));
         $('#id_origem_informacao').val(row.getAttribute('data-origem-informacao'));
+        // Restaura o Tipo de Pessoa salvo (sem disparar 'change': aqui nada e apagado).
+        $('#id_tipo_pessoa').val(row.getAttribute('data-tipo-pessoa'));
+        atualizarRotuloTipoDoc();
         $('#id_nome_cliente').val(row.getAttribute('data-nome-cliente'));
         $('#id_telefone_cliente').val(row.getAttribute('data-telefone-cliente'));
         $('#id_cpf_cliente').val(row.getAttribute('data-cpf-cliente'));
