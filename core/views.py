@@ -2298,10 +2298,12 @@ def _nome_parece_banseg(seguradora):
     return nome == 'BANESTES' or 'BANESTES SEGUROS' in nome or 'BANSEG' in nome
 
 def _gestor_banseg(user):
-    """Quem pode relacionar as seguradoras ao Banseg: só quem tem o perfil Gestor (nível 3)
-    na Emissão ou na Base Emissão. Administrador (superusuário) sem esse perfil NÃO entra."""
+    """Quem pode relacionar as seguradoras ao Banseg: superusuário (acesso total) ou quem
+    tem o perfil Gestor (nível 3) na Emissão ou na Base Emissão."""
+    if user.is_superuser:
+        return True
     perfil = getattr(user, 'perfil', None)
-    if user.is_superuser or not perfil:
+    if not perfil:
         return False
     return any(int(getattr(perfil, campo, 0) or 0) == 3 for campo in ('prod_vendas_emissao', 'prod_vendas_baseemissao'))
 
@@ -2440,7 +2442,7 @@ def vendas_base_emissao(request):
 @login_required
 def salvar_banseg_emissao(request):
     """Grava quais seguradoras vão pro card Banseg da Emissão (as outras ficam em Outras cias).
-    Só quem tem o perfil Gestor da Emissão/Base Emissão (nem o administrador sem esse perfil)."""
+    Só superusuário ou quem tem o perfil Gestor da Emissão/Base Emissão."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     user = request.user

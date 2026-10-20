@@ -168,7 +168,7 @@
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 {% endif %}
                 {% if usuario_gestor_banseg %}
-                <!-- Relacionar as seguradoras ao Banseg: SÓ perfil Gestor (nem o administrador sem esse perfil vê). -->
+                <!-- Relacionar as seguradoras ao Banseg: só superusuário ou perfil Gestor. -->
                 <button class="btn btn-outline-success me-1" onclick="abrirModalBanseg()" title="Relacionar seguradoras ao Banseg"><i class="fas fa-link"></i> Banseg</button>
                 {% endif %}
                 {% if usuario_pode_excluir %}
