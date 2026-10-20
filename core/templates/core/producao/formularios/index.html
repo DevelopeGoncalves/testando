@@ -10,19 +10,41 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* Mesmo padrão da tela de Processamentos: todos os cards com a mesma altura... */
+    #grid-formularios .card-menu .card-body {
+        min-height: 168px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* ...e os "Em construção" ficam visualmente apagados (cinza, sem levantar ao passar o mouse). */
+    #grid-formularios .card-em-construcao {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+    #grid-formularios .card-em-construcao:hover {
+        transform: none !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+    }
+</style>
 <div class="container-fluid pt-3">
     <div class="row mb-4">
         <div class="col-12">
             <h4 class="text-secondary border-bottom pb-2"><i class="fas fa-clipboard-list"></i> Gestão de Formulários</h4>
         </div>
     </div>
-    
-    <div class="row">
+
+    <div class="row" id="grid-formularios">
         {% for agrupamento in agrupamentos %}
-        
+
             {% if request.user.is_superuser or 'vida' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_vida > 0 or 'bap' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_bap > 0 or 'prestamista' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_prestamista > 0 or 'patrimonial' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_patrimonialedemais > 0 or 'cons' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_consorcio > 0 or 'odonto' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_odonto > 0 or 'previd' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_previdencia > 0 or 'banescap' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_banescap > 0 or 'saúd' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_saude > 0 or 'saud' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_saude > 0 or 'habitacional' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_habitacional > 0 %}
-            
+
             <div class="col-lg-3 col-6">
+
+                {% if 'odonto' in agrupamento.agrupamento|lower or 'habitacional' in agrupamento.agrupamento|lower %}
+
                 <a href="{% url 'producao_formularios_painel' agrupamento.id %}" class="link-card">
                     <div class="card card-menu mb-4">
                         <div class="card-body text-center p-4">
@@ -32,8 +54,24 @@
                         </div>
                     </div>
                 </a>
+
+                {% else %}
+
+                <!-- Ainda não entrou em produção: mostra "Em construção" em vez de abrir o painel. -->
+                <a href="javascript:void(0);" class="link-card" onclick="avisoElegante('Este formulário ainda está em construção. Em breve estará disponível.', 'Em construção')">
+                    <div class="card card-menu mb-4 card-em-construcao">
+                        <div class="card-body text-center p-4">
+                            <i class="fas fa-tools fa-3x mb-3 text-muted"></i>
+                            <h5 class="card-title text-muted fw-bold">{{ agrupamento.agrupamento }}</h5>
+                            <p class="card-text text-muted small mb-0">Em construção</p>
+                        </div>
+                    </div>
+                </a>
+
+                {% endif %}
+
             </div>
-            
+
             {% endif %}
 
         {% empty %}
