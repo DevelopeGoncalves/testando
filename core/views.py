@@ -2297,6 +2297,14 @@ def _nome_parece_banseg(seguradora):
     nome = _texto_comparavel(getattr(seguradora, 'seguradora', '') or '')
     return nome == 'BANESTES' or 'BANESTES SEGUROS' in nome or 'BANSEG' in nome
 
+def _gestor_banseg(user):
+    """Quem pode relacionar as seguradoras ao Banseg: só quem tem o perfil Gestor (nível 3)
+    na Emissão ou na Base Emissão. Administrador (superusuário) sem esse perfil NÃO entra."""
+    perfil = getattr(user, 'perfil', None)
+    if user.is_superuser or not perfil:
+        return False
+    return any(int(getattr(perfil, campo, 0) or 0) == 3 for campo in ('prod_vendas_emissao', 'prod_vendas_baseemissao'))
+
 def _eh_seguradora_banseg(seguradora):
     """A seguradora vai pro Banseg? Vale o que foi escolhido no botão do Banseg (campo
     'banseg' da seguradora); se ainda não foi escolhido, vale a regra pelo nome."""
@@ -2391,11 +2399,13 @@ def _render_emissao(request, base):
     return render(request, template, {
         'indicacoes': indicacoes,
         'cia_filtro': cia if cia in ('banseg', 'outras') else '',
-        # Lista do botão "Banseg": todas as seguradoras, já marcadas as que vão pro Banseg.
+        # Botão do Banseg (ao lado da lixeira): só Gestor. A lista traz todas as seguradoras,
+        # já marcadas as que vão pro Banseg.
+        'usuario_gestor_banseg': _gestor_banseg(request.user),
         'seguradoras_banseg': [
             {'id': sg.id, 'nome': sg.seguradora or sg.cod_seguradora or f'Seguradora {sg.id}', 'marcada': _eh_seguradora_banseg(sg)}
             for sg in Seguradora.objects.all().order_by('seguradora')
-        ],
+        ] if _gestor_banseg(request.user) else [],
         'form_indicacao': form,
         'erro_formulario_msg': erro_formulario_msg,
         'motivos_nao_venda': LigacaoIndicacao.MOTIVO_NAO_VENDA,
@@ -2430,11 +2440,11 @@ def vendas_base_emissao(request):
 @login_required
 def salvar_banseg_emissao(request):
     """Grava quais seguradoras vão pro card Banseg da Emissão (as outras ficam em Outras cias).
-    Só Gestor da Emissão/Base Emissão."""
+    Só quem tem o perfil Gestor da Emissão/Base Emissão (nem o administrador sem esse perfil)."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     user = request.user
-    if not (_usuario_e_gestor(user, 'prod_vendas_emissao') or _usuario_e_gestor(user, 'prod_vendas_baseemissao')):
+    if not _gestor_banseg(user):
         return JsonResponse({'ok': False, 'erro': 'Apenas usuários Gestor podem escolher as seguradoras do Banseg.'}, status=403)
 
     ids = [i for i in request.POST.getlist('seguradoras') if i.isdigit()]

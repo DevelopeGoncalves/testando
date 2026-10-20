@@ -153,17 +153,10 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="m-0">
                 <i class="fas fa-file-signature text-info"></i> Emissão
-                {# O selo vira botao (so Gestor): abre o pop-up pra escolher quais seguradoras vao pro Banseg. #}
                 {% if cia_filtro == 'banseg' %}
-                    {% if usuario_gestor %}
-                    <button type="button" class="btn btn-sm btn-success fw-bold align-middle" onclick="abrirModalBanseg()" title="Escolher as seguradoras do Banseg">Banseg <i class="fas fa-link ms-1"></i></button>
-                    {% else %}<span class="badge bg-success align-middle">Banseg</span>{% endif %}
+                    <span class="badge bg-success align-middle">Banseg</span>
                 {% elif cia_filtro == 'outras' %}
-                    {% if usuario_gestor %}
-                    <button type="button" class="btn btn-sm btn-secondary fw-bold align-middle" onclick="abrirModalBanseg()" title="Escolher as seguradoras do Banseg (as outras ficam aqui)">Outras cias <i class="fas fa-link ms-1"></i></button>
-                    {% else %}<span class="badge bg-secondary align-middle">Outras cias</span>{% endif %}
-                {% elif usuario_gestor %}
-                    <button type="button" class="btn btn-sm btn-outline-success fw-bold align-middle" onclick="abrirModalBanseg()" title="Escolher as seguradoras do Banseg"><i class="fas fa-link"></i> Seguradoras do Banseg</button>
+                    <span class="badge bg-secondary align-middle">Outras cias</span>
                 {% endif %}
             </h4>
             <div>
@@ -173,6 +166,12 @@
                 {% if usuario_pode_excluir %}
                 <!-- alex: lixeira logo depois do Exportar. Excluir SÓ para Gestor. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
+                {% endif %}
+                {% if usuario_gestor_banseg %}
+                <!-- Relacionar as seguradoras ao Banseg: SÓ perfil Gestor (nem o administrador sem esse perfil vê). -->
+                <button class="btn btn-outline-success me-1" onclick="abrirModalBanseg()" title="Relacionar seguradoras ao Banseg"><i class="fas fa-link"></i> Banseg</button>
+                {% endif %}
+                {% if usuario_pode_excluir %}
                 <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
                 <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
                 {% endif %}
@@ -634,7 +633,7 @@
     </div>
     {% endif %}
 
-    {% if usuario_gestor %}
+    {% if usuario_gestor_banseg %}
     <!-- POP-UP: escolher quais seguradoras (Base > Formulários > Seguradoras) vão pro card Banseg. -->
     <div class="modal fade" id="modalBanseg" tabindex="-1" aria-labelledby="modalBansegLabel"
          data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
