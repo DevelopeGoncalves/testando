@@ -79,6 +79,8 @@ urlpatterns = [
     path('producao/vendas/', views_vendas.producao_vendas, name='producao_vendas'),
     
     path('base/formularios/tipo-pessoa/', views.tipo_pessoa_lista, name='tipo_pessoa_lista'),
+    path('base/formularios/status-emissoes/', views.lista_status_emissao, name='lista_status_emissao'),
+    path('base/formularios/retorno-cliente-emissoes/', views.lista_retorno_emissao, name='lista_retorno_emissao'),
 
     # 10.1 Base Novo (Indicação de Seguridade) - card de Produção / Vendas
     path('producao/vendas/base-novo/', views_vendas.lista_base_novo, name='lista_base_novo'),

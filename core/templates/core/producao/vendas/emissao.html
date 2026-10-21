@@ -292,7 +292,9 @@
                                       data-data="{{ a.data_registro|date:'Y-m-d\TH:i:s' }}"
                                       data-atendente="{{ a.atendente|default:'' }}"
                                       data-obs="{{ a.observacao|default:'' }}"
-                                      data-status="{{ a.status }}"
+                                      data-status="{{ a.status_exibicao }}"
+                                      data-regra="{{ a.regra }}"
+                                      data-retorno="{{ a.retorno_cliente_texto }}"
                                       data-enviada="{{ a.apolice_enviada|yesno:'1,0' }}"
                                       data-envio="{{ a.data_envio_cliente|date:'Y-m-d' }}"
                                       data-emissao="{{ a.data_emissao|date:'Y-m-d' }}"
@@ -343,10 +345,10 @@
                             <td class="text-center">{{ i.status_fechamento|default:'Em aberto' }}</td>
                             <td class="text-center">{{ i.responsavel_ultima_ligacao|default:'-' }}</td>
                             <td class="text-center">
-                                {% if i.status_emissao == 'Emitida' %}<span class="badge bg-success">{{ i.status_emissao }}</span>
-                                {% elif i.status_emissao == 'Recusada' %}<span class="badge bg-danger">{{ i.status_emissao }}</span>
-                                {% elif i.status_emissao == 'Cancelado' %}<span class="badge bg-dark">{{ i.status_emissao }}</span>
-                                {% elif i.status_emissao == 'Pendência' %}<span class="badge bg-warning text-dark">{{ i.status_emissao }}</span>
+                                {% if i.status_emissao_regra == 'emitida' %}<span class="badge bg-success">{{ i.status_emissao }}</span>
+                                {% elif i.status_emissao_regra == 'recusada' %}<span class="badge bg-danger">{{ i.status_emissao }}</span>
+                                {% elif i.status_emissao_regra == 'cancelado' %}<span class="badge bg-dark">{{ i.status_emissao }}</span>
+                                {% elif i.status_emissao_regra == 'pendencia' %}<span class="badge bg-warning text-dark">{{ i.status_emissao }}</span>
                                 {% else %}<span class="badge bg-secondary">{{ i.status_emissao }}</span>{% endif %}
                             </td>
                             <td class="text-center">{{ i.acompanhamentos.0.numero_apolice|default:'-' }}</td>
@@ -591,15 +593,13 @@
                             <label class="fw-bold small mb-1">Status *</label>
                             <select id="acomp-status" class="form-select">
                                 <option value="">Selecione...</option>
-                                {% for valor, rotulo in status_emissao_choices %}<option value="{{ valor }}">{{ forloop.counter }} - {{ rotulo }}</option>{% endfor %}
+                                {% for st in status_emissao_opcoes %}<option value="{{ st.id }}">{{ forloop.counter }} - {{ st.nome }}</option>{% endfor %}
                             </select>
+                            {{ status_emissao_opcoes|json_script:"dados-status-emissao" }}
                         </div>
                         <div class="col-md-6" id="acomp-col-enviada">
                             <label class="fw-bold small mb-1" id="acomp-enviada-label">Retorno ao cliente</label>
-                            <select id="acomp-enviada" class="form-select">
-                                <option value="0">2 - Não</option>
-                                <option value="1">1 - Sim</option>
-                            </select>
+                            <select id="acomp-enviada" class="form-select"></select>
                         </div>
                         <div class="col-md-6 d-none" id="acomp-col-envio">
                             <label class="fw-bold small mb-1">Data de envio ao cliente *</label>
@@ -1132,8 +1132,8 @@
     // ---------- Acompanhamento da emissão ----------
     const URL_SALVAR_ACOMPANHAMENTO = "{% url 'salvar_acompanhamento_emissao' %}";
     const CLASSE_STATUS_EMISSAO = {
-        'Aguardando emissão': 'bg-secondary', 'Pendência': 'bg-warning text-dark',
-        'Recusada': 'bg-danger', 'Emitida': 'bg-success', 'Cancelado': 'bg-dark'
+        'aguardando': 'bg-secondary', 'pendencia': 'bg-warning text-dark',
+        'recusada': 'bg-danger', 'emitida': 'bg-success', 'cancelado': 'bg-dark'
     };
 
     function formatarDataIso(iso) {
@@ -1153,7 +1153,7 @@
         itens.forEach(function(item) {
             var d = item.dataset;
             var extra = '';
-            if (d.status === 'Emitida') {
+            if (d.regra === 'emitida') {
                 extra += '<div class="col-md-3"><strong>Data de emissão:</strong> ' + (escHtml(formatarDataIso(d.emissao)) || '-') + '</div>'
                        + '<div class="col-md-3"><strong>Nº da apólice:</strong> ' + (escHtml(d.apolice) || '-') + '</div>';
             }
@@ -1164,10 +1164,10 @@
               + '<div class="card mb-2 border-0 shadow-sm bg-light">'
               +   '<div class="card-header py-2 d-flex justify-content-between align-items-center">'
               +     '<span><i class="fas fa-calendar-alt"></i> ' + escHtml(formatarDataHora(d.data)) + ' &nbsp;-&nbsp; <strong>' + (escHtml(d.atendente) || '-') + '</strong></span>'
-              +     '<span class="badge ' + (CLASSE_STATUS_EMISSAO[d.status] || 'bg-secondary') + '">' + escHtml(d.status) + '</span>'
+              +     '<span class="badge ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '">' + escHtml(d.status) + '</span>'
               +   '</div>'
               +   '<div class="card-body py-2" style="font-size:0.9rem;"><div class="row g-2">'
-              +     (STATUS_SEM_CAMPO_ENVIADA.indexOf(d.status) === -1 ? '<div class="col-md-3"><strong>Retorno ao cliente:</strong> ' + (d.enviada === '1' ? escHtml(textoRetornoSim(d.status)) : 'Não') + '</div>' : '')
+              +     (d.retorno ? '<div class="col-md-3"><strong>Retorno ao cliente:</strong> ' + escHtml(d.retorno) + '</div>' : '')
               +     (d.enviada === '1' ? '<div class="col-md-3"><strong>Data de envio:</strong> ' + (escHtml(formatarDataIso(d.envio)) || '-') + '</div>' : '')
               +     extra
               +     '<div class="col-12"><strong>Observação:</strong> <span style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</span></div>'
@@ -1177,30 +1177,55 @@
         div.innerHTML = html;
     }
 
-    const STATUS_SEM_CAMPO_ENVIADA = ['Aguardando emissão', 'Pendência'];
-    // Coluna/campo fixo "Retorno ao cliente": a resposta é Sim ou Não; só na Emitida o "Sim" vira
-    // "Apólice/endosso enviada ao cliente". (Mantenha igual ao models.py: TEXTO_RETORNO_SIM_EMITIDA.)
-    const TEXTO_RETORNO_SIM_POR_STATUS = { 'Emitida': 'Apólice/endosso enviada ao cliente' };
-    function textoRetornoSim(status) { return TEXTO_RETORNO_SIM_POR_STATUS[status] || 'Sim'; }
+    // ---- Opções do pop-up: vêm de Base > Formulários > Status das emissões e Retorno ao cliente
+    // das emissões (só os ATIVOS). A "regra" é a chave interna que liga o status às regras do
+    // sistema (emitida pede nº da apólice; recusada/cancelado aceitam anexo).
+    const OPCOES_STATUS = (function () {
+        var el = document.getElementById('dados-status-emissao');
+        return el ? JSON.parse(el.textContent) : [];
+    })();
+    const REGRAS_COM_ANEXO = ['recusada', 'cancelado'];
+
+    function statusEscolhido() {
+        var id = $('#acomp-status').val();
+        return OPCOES_STATUS.find(function (s) { return String(s.id) === String(id); }) || null;
+    }
+    function retornoEscolhido(st) {
+        var id = $('#acomp-enviada').val();
+        return st ? (st.retornos.find(function (r) { return String(r.id) === String(id); }) || null) : null;
+    }
+
+    var statusDoRetornoMontado = null;
+    function montarOpcoesRetorno(st) {
+        var sel = $('#acomp-enviada').empty();
+        st.retornos.forEach(function (r, i) {
+            sel.append($('<option>').val(r.id).text((i + 1) + ' - ' + r.texto));
+        });
+        // Começa no retorno "cliente não avisado" (ex.: Não), como era antes.
+        var padrao = st.retornos.find(function (r) { return !r.avisado; }) || st.retornos[0];
+        sel.val(padrao.id);
+    }
 
     function alternarCamposAcompanhamento() {
-        var status = $('#acomp-status').val();
-        var mostraEnviada = STATUS_SEM_CAMPO_ENVIADA.indexOf(status) === -1;
-        $('#acomp-col-enviada').toggleClass('d-none', !mostraEnviada);
-        if (mostraEnviada) {
-            $('#acomp-enviada option[value="1"]').text('1 - ' + textoRetornoSim(status));
+        var st = statusEscolhido();
+        var temRetorno = !!(st && st.retornos.length);
+        $('#acomp-col-enviada').toggleClass('d-none', !temRetorno);
+        if (temRetorno) {
+            if (statusDoRetornoMontado !== st.id) { montarOpcoesRetorno(st); statusDoRetornoMontado = st.id; }
         } else {
-            $('#acomp-enviada').val('0');
+            $('#acomp-enviada').empty();
+            statusDoRetornoMontado = null;
         }
-        $('#acomp-col-envio').toggleClass('d-none', $('#acomp-enviada').val() !== '1');
-        $('.acomp-col-emitida').toggleClass('d-none', status !== 'Emitida');
-        $('.acomp-col-anexo').toggleClass('d-none', STATUS_COM_ANEXO.indexOf(status) === -1);
+        var ret = retornoEscolhido(st);
+        $('#acomp-col-envio').toggleClass('d-none', !(ret && ret.avisado));
+        $('.acomp-col-emitida').toggleClass('d-none', !(st && st.regra === 'emitida'));
+        $('.acomp-col-anexo').toggleClass('d-none', !(st && REGRAS_COM_ANEXO.indexOf(st.regra) !== -1));
     }
     $(document).on('change', '#acomp-enviada, #acomp-status', alternarCamposAcompanhamento);
 
     function limparFormAcompanhamento() {
         $('#acomp-status').val('');
-        $('#acomp-enviada').val('0');
+        statusDoRetornoMontado = null;
         $('#acomp-data-envio, #acomp-data-emissao, #acomp-numero-apolice, #acomp-obs, #acomp-anexo').val('');
         alternarCamposAcompanhamento();
         var agora = new Date();
@@ -1208,7 +1233,6 @@
         $('#acomp-data').val(p(agora.getDate()) + '/' + p(agora.getMonth() + 1) + '/' + agora.getFullYear() + ' ' + p(agora.getHours()) + ':' + p(agora.getMinutes()));
     }
 
-    const STATUS_COM_ANEXO = ['Recusada', 'Cancelado'];
     const ANEXO_EXTENSOES = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const ANEXO_TAMANHO_MAX = 10 * 1024 * 1024;
 
@@ -1222,23 +1246,24 @@
     }
 
     function salvarAcompanhamento() {
-        var status = $('#acomp-status').val();
-        if (!status) { avisoElegante('Selecione o status.', 'Campo obrigatório'); return; }
-        var enviada = $('#acomp-enviada').val() === '1';
-        if (enviada && !$('#acomp-data-envio').val()) { avisoElegante('Informe a data de envio da apólice ao cliente.', 'Campo obrigatório'); return; }
-        if (status === 'Emitida' && (!$('#acomp-data-emissao').val() || !$('#acomp-numero-apolice').val().trim())) {
-            avisoElegante('Para o status Emitida, informe a data de emissão e o número da apólice.', 'Campos obrigatórios'); return;
+        var st = statusEscolhido();
+        if (!st) { avisoElegante('Selecione o status.', 'Campo obrigatório'); return; }
+        var ret = retornoEscolhido(st);
+        if (st.retornos.length && !ret) { avisoElegante('Selecione o retorno ao cliente.', 'Campo obrigatório'); return; }
+        if (ret && ret.avisado && !$('#acomp-data-envio').val()) { avisoElegante('Informe a data de envio ao cliente.', 'Campo obrigatório'); return; }
+        if (st.regra === 'emitida' && (!$('#acomp-data-emissao').val() || !$('#acomp-numero-apolice').val().trim())) {
+            avisoElegante('Para o status ' + st.nome + ', informe a data de emissão e o número da apólice.', 'Campos obrigatórios'); return;
         }
         var dados = new FormData();
         dados.append('origem', $('#origem_hidden').val() || 'novo');
         dados.append('registro_id', $('#base_novo_id_hidden').val());
-        dados.append('status', status);
-        dados.append('apolice_enviada', enviada ? '1' : '0');
+        dados.append('status_id', st.id);
+        if (ret) dados.append('retorno_id', ret.id);
         dados.append('data_envio_cliente', $('#acomp-data-envio').val());
         dados.append('data_emissao', $('#acomp-data-emissao').val());
         dados.append('numero_apolice', $('#acomp-numero-apolice').val());
         dados.append('observacao', $('#acomp-obs').val());
-        var arquivo = STATUS_COM_ANEXO.indexOf(status) !== -1 ? document.getElementById('acomp-anexo').files[0] : null;
+        var arquivo = REGRAS_COM_ANEXO.indexOf(st.regra) !== -1 ? document.getElementById('acomp-anexo').files[0] : null;
         if (arquivo) {
             var ext = (arquivo.name.match(/\.[^.]+$/) || [''])[0].toLowerCase();
             if (ANEXO_EXTENSOES.indexOf(ext) === -1) { avisoElegante('O anexo precisa ser um PDF ou uma imagem (JPG, PNG, GIF ou WEBP).', 'Anexo inválido'); return; }

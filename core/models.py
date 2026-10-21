@@ -1,4 +1,6 @@
 import os
+import re
+import unicodedata
 import uuid
 
 from django.conf import settings
@@ -485,27 +487,74 @@ def caminho_anexo_emissao(instance, filename):
     return f'{instance.origem}/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{extensao}'
 
 
+class StatusEmissao(models.Model):
+    """Base > Formulários > Status das emissões: as opções do campo "Status" do pop-up
+    "Registrar acompanhamento da Emissão". Inativo = some da lista de opções (e volta se
+    desmarcar). O acompanhamento aponta pra cá por relacionamento (FK)."""
+    # "regra" é a chave interna que liga o status às regras do sistema (Emitida pede nº da
+    # apólice, Recusada/Cancelado aceitam anexo, saem da Emissão quando o cliente é avisado).
+    # É preenchida no cadastro padrão, não aparece na tela e sobrevive a renomear o status.
+    REGRA_AGUARDANDO = 'aguardando'
+    REGRA_PENDENCIA = 'pendencia'
+    REGRA_RECUSADA = 'recusada'
+    REGRA_EMITIDA = 'emitida'
+    REGRA_CANCELADO = 'cancelado'
+    REGRAS_FINALIZADAS = (REGRA_EMITIDA, REGRA_RECUSADA, REGRA_CANCELADO)
+    REGRAS_COM_ANEXO = (REGRA_RECUSADA, REGRA_CANCELADO)
+
+    status = models.CharField("Status", max_length=50)
+    inativo = models.BooleanField("Inativo", default=False)
+    observacoes = models.CharField("Observações", max_length=100, blank=True, null=True)
+    regra = models.CharField("Regra do sistema", max_length=20, blank=True, default='', editable=False)
+
+    def __str__(self):
+        return self.status
+
+    class Meta:
+        verbose_name = "Status da Emissão"
+        verbose_name_plural = "Status das Emissões"
+        ordering = ['id']
+
+
+class RetornoClienteEmissao(models.Model):
+    """Base > Formulários > Retorno ao cliente das emissões: as respostas possíveis do campo
+    "Retorno ao cliente" de cada Status (ex.: Recusada -> Não / Sim; Emitida -> Não /
+    Apólice/endosso enviada ao cliente). Cada retorno pertence a um status (relacionamento)."""
+    status = models.ForeignKey(StatusEmissao, on_delete=models.CASCADE, related_name='retornos', verbose_name="Status")
+    retorno = models.CharField("Retorno", max_length=80)
+    inativo = models.BooleanField("Inativo", default=False)
+    observacoes = models.CharField("Observações", max_length=100, blank=True, null=True)
+
+    @property
+    def avisado(self):
+        """O cliente foi avisado com esse retorno? Qualquer resposta que não comece com "Não"
+        conta como avisado (é isso que libera a venda a sair do card Emissão)."""
+        texto = unicodedata.normalize('NFKD', self.retorno or '').encode('ascii', 'ignore').decode().strip().upper()
+        return not re.match(r'^NAO\b', texto)
+
+    def __str__(self):
+        return f"{self.status} - {self.retorno}"
+
+    class Meta:
+        verbose_name = "Retorno ao cliente da Emissão"
+        verbose_name_plural = "Retornos ao cliente das Emissões"
+        ordering = ['status_id', 'id']
+
+
 class AcompanhamentoEmissao(models.Model):
+    # Nomes do cadastro padrão (e dos acompanhamentos antigos, de antes das tabelas de status).
     STATUS_AGUARDANDO = 'Aguardando emissão'
     STATUS_PENDENCIA = 'Pendência'
     STATUS_RECUSADA = 'Recusada'
     STATUS_EMITIDA = 'Emitida'
     STATUS_CANCELADO = 'Cancelado'
-    STATUS_CHOICES = [
-        (STATUS_AGUARDANDO, 'Aguardando emissão'),
-        (STATUS_PENDENCIA, 'Pendência'),
-        (STATUS_RECUSADA, 'Recusada'),
-        (STATUS_EMITIDA, 'Emitida'),
-        (STATUS_CANCELADO, 'Cancelado'),
-    ]
-    # Status que pedem o anexo (PDF ou imagem) do motivo.
-    STATUS_COM_ANEXO = (STATUS_RECUSADA, STATUS_CANCELADO)
-    # Texto da resposta "sim" da coluna "Retorno ao cliente": na Emitida é "Apólice/endosso enviada
-    # ao cliente"; na Recusada e no Cancelado é só "Sim". A resposta "não" é sempre "Não".
-    # (Aguardando/Pendência não têm essa pergunta.) Mantenha igual ao TEXTO_RETORNO_SIM_POR_STATUS
-    # dos templates da Emissão.
-    TEXTO_RETORNO_SIM_EMITIDA = 'Apólice/endosso enviada ao cliente'
-    STATUS_COM_RETORNO = (STATUS_EMITIDA, STATUS_RECUSADA, STATUS_CANCELADO)
+    REGRA_POR_NOME_ANTIGO = {
+        STATUS_AGUARDANDO: StatusEmissao.REGRA_AGUARDANDO,
+        STATUS_PENDENCIA: StatusEmissao.REGRA_PENDENCIA,
+        STATUS_RECUSADA: StatusEmissao.REGRA_RECUSADA,
+        STATUS_EMITIDA: StatusEmissao.REGRA_EMITIDA,
+        STATUS_CANCELADO: StatusEmissao.REGRA_CANCELADO,
+    }
     ORIGENS = [('novo', 'Novo'), ('renovacao', 'Renovação'), ('endosso', 'Endosso')]
 
     origem = models.CharField("Origem", max_length=10, choices=ORIGENS)
@@ -513,30 +562,51 @@ class AcompanhamentoEmissao(models.Model):
     data_registro = models.DateTimeField("Data do registro", default=timezone.now)
     atendente = models.CharField("Atendente", max_length=150, blank=True, null=True)
     observacao = models.TextField("Observação", blank=True, null=True)
-    status = models.CharField("Status", max_length=20, choices=STATUS_CHOICES, default=STATUS_AGUARDANDO)
+    # Nome do status no momento do registro (cópia). O vínculo de verdade é o status_ref.
+    status = models.CharField("Status", max_length=50, default=STATUS_AGUARDANDO)
+    status_ref = models.ForeignKey(StatusEmissao, on_delete=models.PROTECT, null=True, blank=True,
+                                   related_name='acompanhamentos', verbose_name="Status (cadastro)")
+    retorno_ref = models.ForeignKey(RetornoClienteEmissao, on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name='acompanhamentos', verbose_name="Retorno ao cliente (cadastro)")
+    # Guarda se o retorno avisou o cliente (copia de retorno_ref.avisado): é o que a regra
+    # "sai da Emissão só com o cliente avisado" lê. Nome antigo, por isso não bate com a tela.
     apolice_enviada = models.BooleanField("Apólice enviada ao cliente", default=False)
     data_envio_cliente = models.DateField("Data de envio ao cliente", null=True, blank=True)
-    # Só preenchidos quando o status é "Emitida"
+    # Só preenchidos quando a regra do status é "emitida"
     data_emissao = models.DateField("Data de emissão", null=True, blank=True)
     numero_apolice = models.CharField("Número da apólice", max_length=50, blank=True, null=True)
-    # Só para Recusada/Cancelado: PDF ou imagem com o motivo (opcional).
+    # Só para as regras recusada/cancelado: PDF ou imagem com o motivo (opcional).
     anexo = models.FileField("Anexo (PDF ou imagem)", upload_to=caminho_anexo_emissao,
                              storage=storage_anexos_emissao, max_length=255, blank=True, null=True)
     anexo_nome = models.CharField("Nome original do anexo", max_length=255, blank=True, null=True)
 
     @property
+    def regra(self):
+        """Regra do status: vem do cadastro (status_ref); nos acompanhamentos antigos, do nome."""
+        if self.status_ref_id:
+            return self.status_ref.regra
+        return self.REGRA_POR_NOME_ANTIGO.get(self.status, '')
+
+    @property
+    def status_exibicao(self):
+        """Nome do status como está hoje no cadastro (se foi renomeado, aparece o novo)."""
+        return self.status_ref.status if self.status_ref_id else self.status
+
+    @property
     def retorno_cliente_texto(self):
-        """Coluna "Retorno ao cliente" (guardada no campo apolice_enviada): 'Sim' / 'Não' na
-        Recusada e no Cancelado; 'Apólice/endosso enviada ao cliente' / 'Não' na Emitida.
-        Vazio nos status que não têm essa pergunta."""
-        if self.status not in self.STATUS_COM_RETORNO:
+        """Coluna "Retorno ao cliente": o texto do retorno escolhido (ex.: 'Sim', 'Não',
+        'Apólice/endosso enviada ao cliente'). Vazio quando o status não tem a pergunta."""
+        if self.retorno_ref_id:
+            return self.retorno_ref.retorno
+        # Acompanhamento antigo (sem retorno_ref): monta pelo status e pelo sim/não gravado.
+        if self.regra not in (StatusEmissao.REGRA_EMITIDA, StatusEmissao.REGRA_RECUSADA, StatusEmissao.REGRA_CANCELADO):
             return ''
         if not self.apolice_enviada:
             return 'Não'
-        return self.TEXTO_RETORNO_SIM_EMITIDA if self.status == self.STATUS_EMITIDA else 'Sim'
+        return 'Apólice/endosso enviada ao cliente' if self.regra == StatusEmissao.REGRA_EMITIDA else 'Sim'
 
     def __str__(self):
-        return f"Emissão {self.origem}:{self.registro_id} - {self.status}"
+        return f"Emissão {self.origem}:{self.registro_id} - {self.status_exibicao}"
 
     class Meta:
         verbose_name = "Acompanhamento de Emissão"
@@ -868,6 +938,8 @@ class PerfilUsuario(models.Model):
     base_form_clientes = models.IntegerField('Base_Form_Clientes', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_form_estados_anbima = models.IntegerField('Base_Form_EstadosAnbima', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_form_fundos_anbima = models.IntegerField('Base_Form_FundosAnbima', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_status_emissao = models.IntegerField('Base_Form_StatusEmissao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
+    base_form_retorno_emissao = models.IntegerField('Base_Form_RetornoEmissao', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
 
     base_proc_unidade = models.IntegerField('Base_Proc_Unidade', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])
     base_proc_colaboradores = models.IntegerField('Base_Proc_Colaboradores', default=0, validators=[MinValueValidator(0), MaxValueValidator(3)])

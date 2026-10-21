@@ -1,5 +1,5 @@
 from django import forms
-from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima
+from .models import Unidade, Produto, MetaMensal, Agrupamento, Ramo, Colaborador, Contratado, Seguradora, TipoDocumento, Cliente, Apolice, Indicacao, IndicacaoRenovacao, IndicacaoEndosso, EstadoAnbima, FundoAnbima, StatusEmissao, RetornoClienteEmissao
 from .validadores import documento_valido_por_tipo_pessoa, tipos_pessoa_selecionaveis  # validador cpf alex
 
 
@@ -208,6 +208,46 @@ class ContratadoForm(BootstrapMixin, forms.ModelForm):
             if Contratado.objects.filter(cpf_cnpj=doc).exclude(id=self.instance.id).exists():
                 raise forms.ValidationError("Este CPF/CNPJ já está cadastrado para outro Contratado.")
         return doc
+
+class StatusEmissaoForm(BootstrapMixin, forms.ModelForm):
+    """Base > Formulários > Status das emissões (opções do campo Status da Emissão)."""
+    class Meta:
+        model = StatusEmissao
+        fields = ['status', 'inativo', 'observacoes']
+        widgets = {
+            'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 100 caracteres...'}),
+        }
+
+    def clean_status(self):
+        nome = (self.cleaned_data.get('status') or '').strip()
+        if StatusEmissao.objects.filter(status__iexact=nome).exclude(id=self.instance.id).exists():
+            raise forms.ValidationError("Este Status já está cadastrado.")
+        return nome
+
+
+class RetornoClienteEmissaoForm(BootstrapMixin, forms.ModelForm):
+    """Base > Formulários > Retorno ao cliente das emissões (respostas de cada Status)."""
+    class Meta:
+        model = RetornoClienteEmissao
+        fields = ['status', 'retorno', 'inativo', 'observacoes']
+        widgets = {
+            'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 100 caracteres...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['status'].queryset = StatusEmissao.objects.all().order_by('id')
+        self.fields['status'].empty_label = '-- Selecione --'
+
+    def clean(self):
+        dados = super().clean()
+        status, retorno = dados.get('status'), (dados.get('retorno') or '').strip()
+        if status and retorno:
+            dados['retorno'] = retorno
+            if RetornoClienteEmissao.objects.filter(status=status, retorno__iexact=retorno).exclude(id=self.instance.id).exists():
+                self.add_error('retorno', "Este Retorno já está cadastrado para esse Status.")
+        return dados
+
 
 class SeguradoraForm(BootstrapMixin, forms.ModelForm):
     class Meta:
@@ -515,6 +555,8 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
     base_form_clientes = criar_campo_permissao("↳ Form - Clientes")
     base_form_estados_anbima = criar_campo_permissao("↳ Form - Estados ANBIMA")
     base_form_fundos_anbima = criar_campo_permissao("↳ Form - Fundos ANBIMA")
+    base_form_status_emissao = criar_campo_permissao("↳ Form - Status das emissões")
+    base_form_retorno_emissao = criar_campo_permissao("↳ Form - Retorno ao cliente das emissões")
 
     base_proc_unidade = criar_campo_permissao("↳ Proc - Unidade")
     base_proc_colaboradores = criar_campo_permissao("↳ Proc - Colaboradores")

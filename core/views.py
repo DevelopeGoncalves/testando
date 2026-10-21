@@ -11,8 +11,9 @@ from .models import (
     ParametrizacaoHabitacional, ParametrizacaoBaseNovo, Indicacao, LigacaoIndicacao,
     IndicacaoExcluida, EstadoAnbima, FundoAnbima, ParametrizacaoOdonto,
     CompatibilidadeRamoOdonto, IndicacaoRenovacao, IndicacaoEndosso,
+    StatusEmissao, RetornoClienteEmissao,
 )
-from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, EstadoAnbimaForm, FundoAnbimaForm
+from .forms import UnidadeForm, NovoUsuarioForm, ProdutoForm, MetaMensalForm, AgrupamentoForm, RamoForm, ColaboradorForm, ContratadoForm, SeguradoraForm, TipoDocumentoForm, ClienteForm, ApoliceForm, EstadoAnbimaForm, FundoAnbimaForm, StatusEmissaoForm, RetornoClienteEmissaoForm
 from .anbima import processar_planilha_anbima
 from .odonto import ler_relatorio_odonto, preparar_linhas_odonto, _sem_acento as _texto_comparavel
 # Cadastro/atualizacao automatica do cliente na importacao (a chave e o CPF/CNPJ)
@@ -24,6 +25,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from django.contrib import messages
 from django.db import transaction, IntegrityError, connection
+from django.db.models import ProtectedError
 from django.db.models import Q, Sum, Prefetch
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
@@ -325,6 +327,13 @@ def excluir_em_massa(request):
             elif tipo == 'seguradora': 
                 Seguradora.objects.filter(id__in=ids).delete()
                 rota_destino = 'lista_seguradoras'
+            elif tipo in ('status_emissao', 'retorno_emissao'):
+                modelo = StatusEmissao if tipo == 'status_emissao' else RetornoClienteEmissao
+                rota_destino = 'lista_status_emissao' if tipo == 'status_emissao' else 'lista_retorno_emissao'
+                try:
+                    modelo.objects.filter(id__in=ids).delete()
+                except ProtectedError:
+                    messages.error(request, 'Não foi possível excluir: esse cadastro já foi usado em acompanhamentos da Emissão. Marque como Inativo para ele sair da lista de opções.')
             elif tipo == 'tipodoc':
                 TipoDocumento.objects.filter(id__in=ids).delete()
                 rota_destino = 'lista_tiposdoc'
@@ -514,6 +523,64 @@ def lista_seguradoras(request):
         form = SeguradoraForm()
     items = Seguradora.objects.all().order_by('seguradora')
     return render(request, 'core/base/formularios/seguradoras.html', {'seguradoras': items, 'form_seguradora': form})
+
+def _nivel_base_form(user, campo):
+    """Nível (0-3) do usuário num card de Base > Formulários. Superusuário = 3."""
+    if user.is_superuser:
+        return 3
+    perfil = getattr(user, 'perfil', None)
+    return int(getattr(perfil, campo, 0) or 0) if perfil else 0
+
+
+def _lista_cadastro_emissao(request, campo, form_class, model, rota, template, contexto_form, itens):
+    """Base comum dos cards "Status das emissões" e "Retorno ao cliente das emissões".
+    Ver 1 = leitor, criar >= 2 (Editor), editar um existente >= 3 (Gestor)."""
+    user = request.user
+    nivel = _nivel_base_form(user, campo)
+    if nivel == 0:
+        messages.error(request, 'Acesso Negado.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        item_id = request.POST.get('item_id')
+        if nivel < (3 if item_id else 2):
+            messages.error(request, 'Acesso Negado.')
+            return redirect(rota)
+        instancia = get_object_or_404(model, id=item_id) if item_id else None
+        form = form_class(request.POST, instance=instancia)
+        if form.is_valid():
+            form.save()
+            return redirect(rota)
+    else:
+        form = form_class()
+    return render(request, template, {contexto_form: form, 'itens': itens})
+
+
+@login_required
+def lista_status_emissao(request):
+    """Base > Formulários > Status das emissões (opções do campo Status da Emissão)."""
+    from .emissao_padroes import garantir_padroes_emissao
+    if not StatusEmissao.objects.exists():
+        garantir_padroes_emissao()
+    return _lista_cadastro_emissao(
+        request, 'base_form_status_emissao', StatusEmissaoForm, StatusEmissao, 'lista_status_emissao',
+        'core/base/formularios/status_emissao.html', 'form_status',
+        StatusEmissao.objects.all().order_by('id'),
+    )
+
+
+@login_required
+def lista_retorno_emissao(request):
+    """Base > Formulários > Retorno ao cliente das emissões (respostas de cada Status)."""
+    from .emissao_padroes import garantir_padroes_emissao
+    if not StatusEmissao.objects.exists():
+        garantir_padroes_emissao()
+    return _lista_cadastro_emissao(
+        request, 'base_form_retorno_emissao', RetornoClienteEmissaoForm, RetornoClienteEmissao,
+        'lista_retorno_emissao', 'core/base/formularios/retorno_emissao.html', 'form_retorno',
+        RetornoClienteEmissao.objects.select_related('status').order_by('status_id', 'id'),
+    )
+
 
 @login_required
 def lista_tiposdoc(request):
@@ -2960,7 +3027,7 @@ PERMISSOES_CAMPOS = [
     'base_form_seguradoras', 'base_form_tiposdocumento', 'base_form_ramos',
     'base_form_produtos', 'base_form_agrupamentos', 'base_form_metas',
     'base_form_tipopessoa', 'base_form_clientes', 'base_form_estados_anbima',
-    'base_form_fundos_anbima', 'base_proc_unidade',
+    'base_form_fundos_anbima', 'base_form_status_emissao', 'base_form_retorno_emissao', 'base_proc_unidade',
     'base_proc_colaboradores', 'base_proc_ramos', 'base_rel',
     
     # PRODUÇÃO

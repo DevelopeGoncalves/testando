@@ -317,7 +317,7 @@
         <ul class="sidebar-nav">
 
             <!-- Base -->
-            {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 or request.user.perfil.base_proc_unidade > 0 or request.user.perfil.base_proc_colaboradores > 0 or request.user.perfil.base_proc_ramos > 0 or request.user.perfil.base_rel > 0 %}
+            {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 or request.user.perfil.base_form_status_emissao > 0 or request.user.perfil.base_form_retorno_emissao > 0 or request.user.perfil.base_proc_unidade > 0 or request.user.perfil.base_proc_colaboradores > 0 or request.user.perfil.base_proc_ramos > 0 or request.user.perfil.base_rel > 0 %}
             <li class="nav-item" id="nav-base">
                 <a class="nav-link-custom" onclick="toggleSubmenu('submenuBase', this)">
                     <i class="fas fa-th-large icon-main" style="color: var(--brand-green) !important;"></i><span>Base</span>
@@ -326,7 +326,7 @@
 
                 <ul id="submenuBase" class="submenu">
 
-                    {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 %}
+                    {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 or request.user.perfil.base_form_colaboradores > 0 or request.user.perfil.base_form_contratados > 0 or request.user.perfil.base_form_seguradoras > 0 or request.user.perfil.base_form_tiposdocumento > 0 or request.user.perfil.base_form_ramos > 0 or request.user.perfil.base_form_produtos > 0 or request.user.perfil.base_form_agrupamentos > 0 or request.user.perfil.base_form_metas > 0 or request.user.perfil.base_form_tipopessoa > 0 or request.user.perfil.base_form_clientes > 0 or request.user.perfil.base_form_status_emissao > 0 or request.user.perfil.base_form_retorno_emissao > 0 %}
                         <li><a href="{% url 'base_formularios' %}"><i class="far fa-circle" style="color: var(--brand-green) !important;"></i>Formulários</a></li>
                     {% endif %}
                     

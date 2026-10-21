@@ -21,7 +21,9 @@ from .forms import IndicacaoForm, IndicacaoRenovacaoForm, IndicacaoEndossoForm
 from .models import (
     Unidade, Colaborador, Seguradora, Indicacao, LigacaoIndicacao,
     IndicacaoRenovacao, LigacaoRenovacao, IndicacaoEndosso, LigacaoEndosso, AcompanhamentoEmissao,
+    StatusEmissao, RetornoClienteEmissao,
 )
+from .emissao_padroes import garantir_padroes_emissao
 from .odonto import _sem_acento as _texto_comparavel
 from .validadores import verificar_documento_por_tipo  # validador cpf alex
 
@@ -782,28 +784,28 @@ ORIGENS_EMISSAO = {
     'endosso': (IndicacaoEndosso, LigacaoEndosso, IndicacaoEndossoForm),
 }
 
-# alex: status do acompanhamento que "finalizam" a venda - ela sai da Emissão (continua na Base Emissão)
-# assim que, além do status, o cliente também já foi avisado (ver status_emissao_cliente_ciente).
-STATUS_EMISSAO_FINALIZADOS = (
-    AcompanhamentoEmissao.STATUS_EMITIDA,
-    AcompanhamentoEmissao.STATUS_RECUSADA,
-    AcompanhamentoEmissao.STATUS_CANCELADO,
-)
+# alex: status que "finalizam" a venda (regras emitida/recusada/cancelado do cadastro Base > Formulários
+# > Status das emissões) - ela sai da Emissão (continua na Base Emissão) assim que, além do status,
+# o cliente também já foi avisado (ver status_emissao_cliente_ciente).
+REGRAS_EMISSAO_FINALIZADAS = StatusEmissao.REGRAS_FINALIZADAS
 
 def _anexar_acompanhamentos(registros, origem):
     """Pendura em cada registro a lista 'acompanhamentos' (mais recente primeiro), o
-    'status_emissao' atual (o status do último acompanhamento; 'Aguardando emissão' se não houver)
-    e 'status_emissao_cliente_ciente' (campo 'apolice_enviada' do último acompanhamento -
-    reaproveitado como "Apólice/endosso enviada" na Emitida e "Cliente ciente" na Recusada/Cancelado)."""
+    'status_emissao' atual (nome do status do último acompanhamento; 'Aguardando emissão' se não
+    houver), a 'status_emissao_regra' (chave interna do status, que manda nas regras) e o
+    'status_emissao_cliente_ciente' (o retorno do último acompanhamento avisou o cliente? - gravado
+    no campo 'apolice_enviada')."""
     ids = [r.id for r in registros]
     por_registro = defaultdict(list)
     if ids:
-        for a in AcompanhamentoEmissao.objects.filter(origem=origem, registro_id__in=ids):
+        consulta = AcompanhamentoEmissao.objects.filter(origem=origem, registro_id__in=ids).select_related('status_ref', 'retorno_ref')
+        for a in consulta:
             por_registro[a.registro_id].append(a)
     for r in registros:
         lista = sorted(por_registro.get(r.id, []), key=lambda a: (a.data_registro, a.id), reverse=True)
         r.acompanhamentos = lista
-        r.status_emissao = lista[0].status if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
+        r.status_emissao = lista[0].status_exibicao if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
+        r.status_emissao_regra = lista[0].regra if lista else StatusEmissao.REGRA_AGUARDANDO
         r.status_emissao_cliente_ciente = bool(lista[0].apolice_enviada) if lista else False
 
 def _nome_parece_banseg(seguradora):
@@ -871,6 +873,19 @@ def _vendas_fechadas(model_indicacao, model_ligacao, origem):
     _anexar_acompanhamentos(registros, origem)
     return registros
 
+def _opcoes_status_emissao():
+    """Status ativos (com os retornos ativos de cada um) pro pop-up de acompanhamento. Se as
+    tabelas ainda estão vazias (primeira vez depois do migrate), cria o cadastro padrão."""
+    if not StatusEmissao.objects.exists():
+        garantir_padroes_emissao()
+    retornos_por_status = defaultdict(list)
+    for r in RetornoClienteEmissao.objects.filter(inativo=False).order_by('id'):
+        retornos_por_status[r.status_id].append({'id': r.id, 'texto': r.retorno, 'avisado': r.avisado})
+    return [
+        {'id': st.id, 'nome': st.status, 'regra': st.regra, 'retornos': retornos_por_status.get(st.id, [])}
+        for st in StatusEmissao.objects.filter(inativo=False).order_by('id')
+    ]
+
 def _render_emissao(request, base):
     """Monta a tela da Emissão (base=False) ou da Base Emissão (base=True). As duas mostram as
     vendas fechadas; a Base Emissão registra TUDO, a Emissão só as que ainda não foram finalizadas
@@ -904,7 +919,7 @@ def _render_emissao(request, base):
         # (campo "Apólice/endosso enviada" na Emitida, "Cliente ciente..." na Recusada/Cancelado).
         indicacoes = [
             i for i in indicacoes
-            if not (i.status_emissao in STATUS_EMISSAO_FINALIZADOS and i.status_emissao_cliente_ciente)
+            if not (i.status_emissao_regra in REGRAS_EMISSAO_FINALIZADAS and i.status_emissao_cliente_ciente)
         ]
 
     # alex: card "Emissão" vira 2 botões (Banseg / Outras cias) de acordo com a
@@ -937,7 +952,9 @@ def _render_emissao(request, base):
         'seguradoras': Seguradora.objects.all().order_by('seguradora'),
         'modo_emissao': True,
         'modo_base_emissao': base,
-        'status_emissao_choices': AcompanhamentoEmissao.STATUS_CHOICES,
+        # Opções do pop-up "Registrar acompanhamento da Emissão" (só os ATIVOS), vindas de
+        # Base > Formulários > Status das emissões e Retorno ao cliente das emissões.
+        'status_emissao_opcoes': _opcoes_status_emissao(),
         # Permissões de cada card usam o próprio campo (Emissão x Base Emissão).
         'usuario_gestor': _usuario_e_gestor(request.user, campo),
         'usuario_pode_editar': _usuario_pode_editar_dados(request.user, campo),
@@ -995,9 +1012,20 @@ def salvar_acompanhamento_emissao(request):
     if not ORIGENS_EMISSAO[origem][0].objects.filter(id=registro_id).exists():
         return JsonResponse({'ok': False, 'erro': 'Registro não encontrado.'}, status=404)
 
-    status = request.POST.get('status') or ''
-    if status not in dict(AcompanhamentoEmissao.STATUS_CHOICES):
+    # Status e Retorno vêm dos cadastros de Base > Formulários (só os ATIVOS valem).
+    status_id = request.POST.get('status_id') or ''
+    status = StatusEmissao.objects.filter(id=status_id, inativo=False).first() if status_id.isdigit() else None
+    if not status:
         return JsonResponse({'ok': False, 'erro': 'Selecione o status.'}, status=400)
+
+    retornos_ativos = list(status.retornos.filter(inativo=False))
+    retorno = None
+    if retornos_ativos:
+        retorno_id = request.POST.get('retorno_id') or ''
+        retorno = next((r for r in retornos_ativos if str(r.id) == retorno_id), None)
+        if not retorno:
+            return JsonResponse({'ok': False, 'erro': 'Selecione o retorno ao cliente.'}, status=400)
+    cliente_avisado = bool(retorno and retorno.avisado)
 
     def _data(nome):
         valor = (request.POST.get(nome) or '').strip()
@@ -1008,13 +1036,12 @@ def salvar_acompanhamento_emissao(request):
         except ValueError:
             return None
 
-    apolice_enviada = request.POST.get('apolice_enviada') == '1'
-    data_envio = _data('data_envio_cliente') if apolice_enviada else None
-    if apolice_enviada and not data_envio:
-        return JsonResponse({'ok': False, 'erro': 'Informe a data de envio da apólice ao cliente.'}, status=400)
+    data_envio = _data('data_envio_cliente') if cliente_avisado else None
+    if cliente_avisado and not data_envio:
+        return JsonResponse({'ok': False, 'erro': 'Informe a data de envio ao cliente.'}, status=400)
 
     data_emissao, numero_apolice = None, ''
-    if status == AcompanhamentoEmissao.STATUS_EMITIDA:
+    if status.regra == StatusEmissao.REGRA_EMITIDA:
         data_emissao = _data('data_emissao')
         numero_apolice = (request.POST.get('numero_apolice') or '').strip()
         if not data_emissao:
@@ -1022,8 +1049,8 @@ def salvar_acompanhamento_emissao(request):
         if not numero_apolice:
             return JsonResponse({'ok': False, 'erro': 'Informe o número da apólice.'}, status=400)
 
-    # Anexo (PDF ou imagem): so vale para Recusada/Cancelado e e opcional.
-    anexo = request.FILES.get('anexo') if status in AcompanhamentoEmissao.STATUS_COM_ANEXO else None
+    # Anexo (PDF ou imagem): so vale para as regras recusada/cancelado e e opcional.
+    anexo = request.FILES.get('anexo') if status.regra in StatusEmissao.REGRAS_COM_ANEXO else None
     anexo_nome = ''
     if anexo:
         erro_anexo = _validar_anexo_emissao(anexo)
@@ -1036,8 +1063,10 @@ def salvar_acompanhamento_emissao(request):
         registro_id=int(registro_id),
         atendente=(user.get_full_name() or user.username),
         observacao=(request.POST.get('observacao') or '').strip(),
-        status=status,
-        apolice_enviada=apolice_enviada,
+        status=status.status,
+        status_ref=status,
+        retorno_ref=retorno,
+        apolice_enviada=cliente_avisado,
         data_envio_cliente=data_envio,
         data_emissao=data_emissao,
         numero_apolice=numero_apolice,

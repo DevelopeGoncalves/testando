@@ -23,14 +23,14 @@ from django.utils.http import parse_etags, quote_etag
 from .models import (
     AcompanhamentoEmissao, Colaborador, Indicacao, IndicacaoEndosso, IndicacaoRenovacao,
     LigacaoEndosso, LigacaoIndicacao, LigacaoRenovacao, MotivoNaoVenda, Produto, Ramo,
-    Seguradora, TipoDocumento, TipoPessoa, Unidade,
+    RetornoClienteEmissao, Seguradora, StatusEmissao, TipoDocumento, TipoPessoa, Unidade,
 )
 
 CAMPOS_FORA_DA_ASSINATURA = {'atendimento_por', 'atendimento_em'}
 
 TABELAS_DE_APOIO = [
     Seguradora, Ramo, TipoDocumento, TipoPessoa, Colaborador, Unidade, Produto,
-    MotivoNaoVenda, AcompanhamentoEmissao,
+    MotivoNaoVenda, AcompanhamentoEmissao, StatusEmissao, RetornoClienteEmissao,
 ]
 
 TABELAS_NOVO = [Indicacao, LigacaoIndicacao]
