@@ -350,10 +350,7 @@
                                 {% else %}<span class="badge bg-secondary">{{ i.status_emissao }}</span>{% endif %}
                             </td>
                             <td class="text-center">{{ i.acompanhamentos.0.numero_apolice|default:'-' }}</td>
-                            <td class="text-center">
-                                {% if i.acompanhamentos.0.apolice_enviada %}<span class="badge bg-success">Sim</span>
-                                {% else %}<span class="badge bg-secondary">Não</span>{% endif %}
-                            </td>
+                            <td class="text-center">{{ i.acompanhamentos.0.apolice_enviada_texto|default:'-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -1170,7 +1167,7 @@
               +     '<span class="badge ' + (CLASSE_STATUS_EMISSAO[d.status] || 'bg-secondary') + '">' + escHtml(d.status) + '</span>'
               +   '</div>'
               +   '<div class="card-body py-2" style="font-size:0.9rem;"><div class="row g-2">'
-              +     '<div class="col-md-3"><strong>Apólice enviada ao cliente:</strong> ' + (d.enviada === '1' ? 'Sim' : 'Não') + '</div>'
+              +     (STATUS_SEM_CAMPO_ENVIADA.indexOf(d.status) === -1 ? '<div class="col-md-3"><strong>' + escHtml(LABEL_ENVIADA_POR_STATUS[d.status] || 'Apólice enviada ao cliente') + ':</strong> ' + (d.enviada === '1' ? 'Sim' : 'Não') + '</div>' : '')
               +     (d.enviada === '1' ? '<div class="col-md-3"><strong>Data de envio:</strong> ' + (escHtml(formatarDataIso(d.envio)) || '-') + '</div>' : '')
               +     extra
               +     '<div class="col-12"><strong>Observação:</strong> <span style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</span></div>'

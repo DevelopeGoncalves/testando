@@ -500,6 +500,13 @@ class AcompanhamentoEmissao(models.Model):
     ]
     # Status que pedem o anexo (PDF ou imagem) do motivo.
     STATUS_COM_ANEXO = (STATUS_RECUSADA, STATUS_CANCELADO)
+    # Frase da pergunta "Apólice enviada ao cliente" em cada status (Aguardando/Pendência não
+    # têm essa pergunta). Mantenha igual ao LABEL_ENVIADA_POR_STATUS dos templates da Emissão.
+    FRASES_APOLICE_ENVIADA = {
+        STATUS_CANCELADO: 'Cliente ciente do cancelamento',
+        STATUS_RECUSADA: 'Cliente ciente?',
+        STATUS_EMITIDA: 'Apólice/endosso enviada ao cliente',
+    }
     ORIGENS = [('novo', 'Novo'), ('renovacao', 'Renovação'), ('endosso', 'Endosso')]
 
     origem = models.CharField("Origem", max_length=10, choices=ORIGENS)
@@ -517,6 +524,15 @@ class AcompanhamentoEmissao(models.Model):
     anexo = models.FileField("Anexo (PDF ou imagem)", upload_to=caminho_anexo_emissao,
                              storage=storage_anexos_emissao, max_length=255, blank=True, null=True)
     anexo_nome = models.CharField("Nome original do anexo", max_length=255, blank=True, null=True)
+
+    @property
+    def apolice_enviada_texto(self):
+        """Ex.: 'Sim - Cliente ciente do cancelamento' / 'Não - Apólice/endosso enviada ao cliente'.
+        Vazio nos status que não têm essa pergunta."""
+        frase = self.FRASES_APOLICE_ENVIADA.get(self.status)
+        if not frase:
+            return ''
+        return f"{'Sim' if self.apolice_enviada else 'Não'} - {frase}"
 
     def __str__(self):
         return f"Emissão {self.origem}:{self.registro_id} - {self.status}"

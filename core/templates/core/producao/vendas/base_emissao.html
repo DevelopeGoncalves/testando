@@ -196,6 +196,7 @@
                             <th class="text-center">Último atendente</th> <!-- 25 -->
                             <th class="text-center">Status emissão</th> <!-- 26 -->
                             <th class="text-center">Apólice</th> <!-- 27 -->
+                            <th class="text-center">Apólice enviada ao cliente</th> <!-- 28 -->
                         </tr>
                     </thead>
                     <tbody>
@@ -321,6 +322,8 @@
                                 {% else %}<span class="badge bg-secondary">{{ i.status_emissao }}</span>{% endif %}
                             </td>
                             <td class="text-center">{{ i.acompanhamentos.0.numero_apolice|default:'-' }}</td>
+                            {# Sim/Não + a frase do status (ex.: "Sim - Cliente ciente do cancelamento") #}
+                            <td class="text-center">{{ i.acompanhamentos.0.apolice_enviada_texto|default:'-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -879,9 +882,9 @@
         });
 
         // Ordem: Origem, Cadastrado em, Último atendente, Responsável, Em uso por, Produto, Indicador,
-        // Agência, CPF do cliente, Nome do cliente, Seguradora, Status emissão, Status.
-        // ("Apólice" fica oculta.)
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 18, 27, 25]);
+        // Agência, CPF do cliente, Nome do cliente, Seguradora, Status emissão, Apólice enviada ao
+        // cliente, Status. ("Apólice" fica oculta.)
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 18, 27, 29, 25]);
 
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);
@@ -1066,7 +1069,7 @@
               +     '<span class="badge ' + (CLASSE_STATUS_EMISSAO[d.status] || 'bg-secondary') + '">' + escHtml(d.status) + '</span>'
               +   '</div>'
               +   '<div class="card-body py-2" style="font-size:0.9rem;"><div class="row g-2">'
-              +     '<div class="col-md-3"><strong>Apólice enviada ao cliente:</strong> ' + (d.enviada === '1' ? 'Sim' : 'Não') + '</div>'
+              +     (STATUS_SEM_CAMPO_ENVIADA.indexOf(d.status) === -1 ? '<div class="col-md-3"><strong>' + escHtml(LABEL_ENVIADA_POR_STATUS[d.status] || 'Apólice enviada ao cliente') + ':</strong> ' + (d.enviada === '1' ? 'Sim' : 'Não') + '</div>' : '')
               +     (d.enviada === '1' ? '<div class="col-md-3"><strong>Data de envio:</strong> ' + (escHtml(formatarDataIso(d.envio)) || '-') + '</div>' : '')
               +     extra
               +     '<div class="col-12"><strong>Observação:</strong> <span style="white-space: pre-line;">' + (escHtml(d.obs) || '-') + '</span></div>'
