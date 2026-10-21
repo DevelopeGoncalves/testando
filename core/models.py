@@ -500,13 +500,12 @@ class AcompanhamentoEmissao(models.Model):
     ]
     # Status que pedem o anexo (PDF ou imagem) do motivo.
     STATUS_COM_ANEXO = (STATUS_RECUSADA, STATUS_CANCELADO)
-    # Frase da pergunta "Apólice enviada ao cliente" em cada status (Aguardando/Pendência não
-    # têm essa pergunta). Mantenha igual ao LABEL_ENVIADA_POR_STATUS dos templates da Emissão.
-    FRASES_APOLICE_ENVIADA = {
-        STATUS_CANCELADO: 'Cliente ciente do cancelamento',
-        STATUS_RECUSADA: 'Cliente ciente?',
-        STATUS_EMITIDA: 'Apólice/endosso enviada ao cliente',
-    }
+    # Texto da resposta "sim" da coluna "Retorno ao cliente": na Emitida é "Apólice/endosso enviada
+    # ao cliente"; na Recusada e no Cancelado é só "Sim". A resposta "não" é sempre "Não".
+    # (Aguardando/Pendência não têm essa pergunta.) Mantenha igual ao TEXTO_RETORNO_SIM_POR_STATUS
+    # dos templates da Emissão.
+    TEXTO_RETORNO_SIM_EMITIDA = 'Apólice/endosso enviada ao cliente'
+    STATUS_COM_RETORNO = (STATUS_EMITIDA, STATUS_RECUSADA, STATUS_CANCELADO)
     ORIGENS = [('novo', 'Novo'), ('renovacao', 'Renovação'), ('endosso', 'Endosso')]
 
     origem = models.CharField("Origem", max_length=10, choices=ORIGENS)
@@ -526,13 +525,15 @@ class AcompanhamentoEmissao(models.Model):
     anexo_nome = models.CharField("Nome original do anexo", max_length=255, blank=True, null=True)
 
     @property
-    def apolice_enviada_texto(self):
-        """Ex.: 'Sim - Cliente ciente do cancelamento' / 'Não - Apólice/endosso enviada ao cliente'.
+    def retorno_cliente_texto(self):
+        """Coluna "Retorno ao cliente" (guardada no campo apolice_enviada): 'Sim' / 'Não' na
+        Recusada e no Cancelado; 'Apólice/endosso enviada ao cliente' / 'Não' na Emitida.
         Vazio nos status que não têm essa pergunta."""
-        frase = self.FRASES_APOLICE_ENVIADA.get(self.status)
-        if not frase:
+        if self.status not in self.STATUS_COM_RETORNO:
             return ''
-        return f"{'Sim' if self.apolice_enviada else 'Não'} - {frase}"
+        if not self.apolice_enviada:
+            return 'Não'
+        return self.TEXTO_RETORNO_SIM_EMITIDA if self.status == self.STATUS_EMITIDA else 'Sim'
 
     def __str__(self):
         return f"Emissão {self.origem}:{self.registro_id} - {self.status}"
