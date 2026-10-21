@@ -41,7 +41,7 @@
         color: #333;
     }  
 
-    .item-lista:hover {
+    .item-lista:hover, .item-lista.selecionado {
         background-color: #0d6efd;
         color: white;
     }
@@ -113,7 +113,7 @@
             <div class="card p-3 mb-4 shadow-sm" style="border-left: 4px solid #0d6efd;">
 
 
-                <h5 class="mb-3 text-primary"><i class="fa-solid fa-briefcase"></i> Período de Estágio</h5>
+                <h5 class="mb-3 text-primary"><i class="fa-solid fa-briefcase"  style="color: #0d6efd"></i> Período de Estágio</h5>
 
                 <form method="POST" action="{% url 'ferias_estagiarios' %}">
                     {% csrf_token %}
@@ -152,7 +152,7 @@
             {% if request.user.is_superuser or request.user.perfil.admin_feriasestagiarios > 1 %}
             <div id="caixa-ferias" class="card p-3 mb-4 shadow-sm d-none" style="border-left: 4px solid #198754;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="m-0 text-success"><i class="fa-solid fa-plane-departure"></i> Lançar Férias</h5>
+                    <h5 class="m-0 text-success"><i class="fa-solid fa-plane-departure" style="color: #198754" ></i> Lançar Férias</h5>
                     <small class="text-muted fst-italic" style="padding-right: 10 px;" title="A quantidade de dias realmente disponíveis variam de acordo conforme a data de retorno das férias">
                         Dias disponíveis até hoje: <span id="dias-disponiveis-calc">0</span>
                     </small>
@@ -244,7 +244,7 @@
 {% endblock %}
 
 {% block scripts %}
-<<script>
+<script>
 
     let ultimoCampoFocado = null;
 
@@ -320,8 +320,7 @@
                     $('#pesquisa-nome').val(encontrado.nome);
                 }
                 
-                $('.matricula-escondida').val(encontrado.matricula);
-                $('#painel-formularios').removeClass('d-none');
+                $('.matricula-escondida').val(encontrado.matricula);$('#painel-formularios').removeClass('d-none');
     
                 if (encontrado.data_inicio !== '' && encontrado.data_fim !== '') {
                     
@@ -358,8 +357,7 @@
             } else if (valor === '') {
                 $('#pesquisa-matricula').val('');
                 $('#pesquisa-nome').val('');
-                $('.matricula-escondida').val('');
-                $('#painel-formularios').addClass('d-none');
+                $('.matricula-escondida').val('');$('#painel-formularios').addClass('d-none');
                 $('#painel-historico').addClass('d-none');
             }
         }
@@ -405,10 +403,10 @@
         });
     
         function renderizarHistorico(listaFerias) {
-            let $container = $('#lista-ferias-historico');
+            let $container =$('#lista-ferias-historico');
             $container.empty();
     
-            let $btnExcluir = $('#btn-excluir-selecionadas');
+            let $btnExcluir =$('#btn-excluir-selecionadas');
             $btnExcluir.prop('disabled', true).html('<i class="fa-solid fa-trash"></i> Excluir').removeClass('btn-danger').addClass('btn-outline-danger');
             $btnExcluir.data('confirmado', false);
     
@@ -454,18 +452,27 @@
     
         function abrirLista(inputId, dropdownId, chavePropriedade) {
             let valorDigitado = $('#' + inputId).val().toLowerCase().trim();
-            let $dropdown = $('#' + dropdownId);
+            let $dropdown =$('#' + dropdownId);
             
-            $dropdown.empty(); 
+            // GARANTE QUE QUALQUER OUTRA LISTA SEJA FECHADA
+            $('.lista-suspensa').not($dropdown).addClass('d-none');$dropdown.empty(); 
     
             let filtrados = estagiarios.filter(e => e[chavePropriedade].toLowerCase().includes(valorDigitado));
     
             if (filtrados.length > 0) {
-                filtrados.forEach(e => {
+                filtrados.forEach((e, index) => {
                     let textoOpcao = e[chavePropriedade]; 
-                    let $item = $('<div>').addClass('item-lista').text(textoOpcao);
+                    let $item =$('<div>').addClass('item-lista').text(textoOpcao);
                     
-                    $item.on('click', function() {
+                    if (index === 0) {
+                        $item.addClass('selecionado');
+                    }
+
+                    $item.on('mouseenter', function() {
+                        $dropdown.children('.item-lista').removeClass('selecionado');$(this).addClass('selecionado');
+                    });
+                    
+                    $item.on('click', function(event) {
                         event.stopPropagation();
                         preencherCampos(chavePropriedade, textoOpcao); 
                         $dropdown.addClass('d-none'); 
@@ -473,9 +480,9 @@
     
                     $dropdown.append($item);
                 });
+                
                 $dropdown.removeClass('d-none'); 
-            } else {
-                $dropdown.addClass('d-none'); 
+                $dropdown.scrollTop(0); } else {$dropdown.addClass('d-none'); 
             }
         }
 
@@ -488,10 +495,61 @@
             abrirLista('pesquisa-nome', 'dropdown-nome', 'nome');
             if ($(this).val() === '') { preencherCampos('nome', ''); }
         });
+
+        // =========================================================
+        // SELEÇÃO COM SETAS, ENTER OU TAB
+        // =========================================================
+        $('#pesquisa-matricula, #pesquisa-nome').on('keydown', function(e) {
+            let isMatricula = $(this).attr('id') === 'pesquisa-matricula';
+            let dropdownId = isMatricula ? 'dropdown-matricula' : 'dropdown-nome';
+            let chave = isMatricula ? 'matricula' : 'nome';
+            let $dropdown =$('#' + dropdownId);
+            
+            if (!$dropdown.hasClass('d-none') &&$dropdown.children('.item-lista').length > 0) {
+                let $itens =$dropdown.children('.item-lista');
+                let indexSelecionado = $itens.index($itens.filter('.selecionado'));
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault(); 
+                    if (indexSelecionado < $itens.length - 1) {$itens.removeClass('selecionado');
+                        let $proximo =$itens.eq(indexSelecionado + 1).addClass('selecionado');
+                        
+                        let scrollAtual = $dropdown.scrollTop();
+                        let itemTopo = $proximo.position().top;
+                        let itemAltura = $proximo.outerHeight();
+                        let dropdownAltura = $dropdown.height();
+                        
+                        if (itemTopo + itemAltura > dropdownAltura) {
+                            $dropdown.scrollTop(scrollAtual + itemTopo + itemAltura - dropdownAltura);
+                        }
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault(); 
+                    if (indexSelecionado > 0) {
+                        $itens.removeClass('selecionado');
+                        let $anterior =$itens.eq(indexSelecionado - 1).addClass('selecionado');
+                        
+                        let scrollAtual = $dropdown.scrollTop();
+                        let itemTopo = $anterior.position().top;
+                        
+                        if (itemTopo < 0) {
+                            $dropdown.scrollTop(scrollAtual + itemTopo);
+                        }
+                    }
+                } else if (e.key === 'Enter' || e.key === 'Tab') {
+                    if (e.key === 'Enter') e.preventDefault(); 
+                    
+                    let $selecionado = indexSelecionado !== -1 ? $itens.eq(indexSelecionado) :$itens.first();
+                    let textoOpcao = $selecionado.text();
+                    
+                    preencherCampos(chave, textoOpcao); 
+                    $dropdown.addClass('d-none');
+                }
+            }
+        });
     
         $(document).on('click', function(e) {
-            if (!$(e.target).closest('.input-container').length) {
-                $('.lista-suspensa').addClass('d-none');
+            if (!$(e.target).closest('.input-container').length) {$('.lista-suspensa').addClass('d-none');
             }
         });
     
@@ -550,14 +608,13 @@
     
         $(document).on('change', '.checkbox-ferias', function() {
             let selecionados = $('.checkbox-ferias:checked').length;
-            let $btnExcluir = $('#btn-excluir-selecionadas');
+            let $btnExcluir =$('#btn-excluir-selecionadas');
             
             if (selecionados > 0) {
                 $btnExcluir.prop('disabled', false);
     
             } else {
-                $btnExcluir.prop('disabled', true);
-                $btnExcluir.html('<i class="fa-solid fa-trash"></i> Excluir')
+                $btnExcluir.prop('disabled', true);$btnExcluir.html('<i class="fa-solid fa-trash"></i> Excluir')
                            .removeClass('btn-danger')
                            .addClass('btn-outline-danger')
                            .data('confirmado', false);
@@ -580,13 +637,12 @@
         });
     
         $('#btn-excluir-selecionadas').on('click', function() {
-            let $btn = $(this);
+            let $btn =$(this);
             let confirmado = $btn.data('confirmado');
     
             if (!confirmado) {
                 $btn.html('<i class="fa-solid fa-triangle-exclamation"></i> Tem certeza?');
-                $btn.removeClass('btn-outline-danger').addClass('btn-danger');
-                $btn.data('confirmado', true);
+                $btn.removeClass('btn-outline-danger').addClass('btn-danger');$btn.data('confirmado', true);
             } else {
                 let idsParaExcluir = [];
                 $('.checkbox-ferias:checked').each(function() {
@@ -767,7 +823,7 @@
                 }
                 
                 let nomeSessao = secoes.join(' e '); 
-                mostrarPopUpAlteracoesInternas(tipoParaFoco); // Aqui era só trocar a função
+                mostrarPopUpAlteracoesInternas(tipoParaFoco); 
             }
         });
 
@@ -861,9 +917,17 @@
                 }
 
                 $('.lista-suspensa').addClass('d-none');
+                
+                let campoPesquisaFocado = $('#pesquisa-matricula').is(':focus') || $('#pesquisa-nome').is(':focus');
                 let matriculaAtual = $('.matricula-escondida').first().val();
                 
-                if (matriculaAtual) {
+                if (campoPesquisaFocado || !matriculaAtual) {
+                    // Se o foco estiver no campo de pesquisa ou nenhuma matrícula estiver selecionada, limpa tudo
+                    preencherCampos('matricula', ''); 
+                    $('#pesquisa-matricula').val('');
+                    $('#pesquisa-nome').val('');
+                } else {
+                    // Comportamento original: reseta apenas os dados não salvos da matrícula atual (sem limpar a pesquisa)
                     preencherCampos('matricula', matriculaAtual);
                     $('#inicio_ferias').val('');
                     $('#quantidade_dias').val('');
@@ -871,18 +935,13 @@
                     $('#fim_ferias_calc_mais_un').val('');
                     $('#btn-atualizar-periodo, #btn-voltar-periodo').addClass('btn-apagadinho');
                     $('#btn-registrar-ferias, #btn-limpar-ferias').addClass('btn-apagadinho');
-                    
-                } else {
-                    preencherCampos('matricula', '');
-                    $('#pesquisa-matricula').val('');
-                    $('#pesquisa-nome').val('');
                 }
                 
                 dadosNaoSalvos = false; 
             }
         });
     
-    });
+    }); // <--- O FECHAMENTO DO BLOCO '$(document).ready' QUE FALTAVA VOLTOU AQUI!
     
     // =========================================================
     // FUNÇÕES DE POP-UP
@@ -893,10 +952,10 @@
     
         let modalHtml = `
             <div id="modal-bloqueio-ferias" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px);">
-                <div class="card p-4 shadow-lg text-center" style="max-width: 450px; border-radius: 15px; border-top: 5px solid #ffc107; transform: scale(0.9); transition: transform 0.2s ease-in-out;">
-                    <h4 class="mb-3" style="color: #ffc107;"><i class="fa-solid fa-triangle-exclamation fs-1"></i></h4>
+                <div class="card p-4 shadow-lg text-center" style="max-width: 450px; border-radius: 15px; border-top: 5px solid #ffc107 !important; transform: scale(0.9); transition: transform 0.2s ease-in-out;">
+                    <h4 class="mb-3" style="color: #ffc107 !important;"><i class="fa-solid fa-triangle-exclamation fs-1" style="color: #ffc107 !important;"></i></h4>
                     <p class="mb-4 text-secondary" style="font-size: 1rem; line-height: 1.5;">${mensagem}</p>
-                    <button type="button" class="btn w-100 rounded-pill fw-bold text-white" style="background-color: #ffc107; border-color: #ffc107;" onclick="$('#modal-bloqueio-ferias').fadeOut(200, function(){ $(this).remove(); });">Entendi</button>
+                    <button type="button" class="btn w-100 rounded-pill fw-bold text-white" style="background-color: #ffc107 !important; border-color: #ffc107 !important;" onclick="$('#modal-bloqueio-ferias').fadeOut(200, function(){ $(this).remove(); });">Entendi</button>
                 </div>
             </div>
         `;
@@ -913,13 +972,13 @@
     
         let modalHtml = `
             <div id="modal-confirmacao-saida" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px);">
-                <div class="card p-4 shadow-lg text-center" style="max-width: 450px; border-radius: 15px; border-top: 5px solid #ffc107; transform: scale(0.9); transition: transform 0.2s ease-in-out;">
-                    <h4 class="mb-3" style="color: #ffc107;"><i class="fa-solid fa-triangle-exclamation fs-1"></i></h4>
+                <div class="card p-4 shadow-lg text-center" style="max-width: 450px; border-radius: 15px; border-top: 5px solid #ffc107 !important; transform: scale(0.9); transition: transform 0.2s ease-in-out;">
+                    <h4 class="mb-3" style="color: #ffc107 !important;"><i class="fa-solid fa-triangle-exclamation fs-1" style="color: #ffc107 !important;"></i></h4>
                     <p class="mb-4 text-secondary" style="font-size: 1rem; line-height: 1.5;">
                         Você inseriu dados em <strong>${nomeSessao}</strong>, mas ainda não salvou.<br><br>Deseja sair sem salvar?
                     </p>
                     <div class="d-flex justify-content-center gap-3 w-100">
-                        <button type="button" id="btn-cancelar-saida" class="btn w-50 rounded-pill fw-bold text-white" style="background-color: #ffc107; border-color: #ffc107;">
+                        <button type="button" id="btn-cancelar-saida" class="btn w-50 rounded-pill fw-bold text-white" style="background-color: #ffc107 !important; border-color: #ffc107 !important;">
                             Não
                         </button>
                         
@@ -964,12 +1023,12 @@
     
         let modalHtml = `
             <div id="modal-alteracoes-internas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px);">
-                <div class="card p-4 shadow-lg text-center" style="max-width: 450px; border-radius: 15px; border-top: 5px solid #ffc107; transform: scale(0.9); transition: transform 0.2s ease-in-out;">
-                    <h4 class="mb-3" style="color: #ffc107;"><i class="fa-solid fa-triangle-exclamation fs-1"></i></h4>
+                <div class="card p-4 shadow-lg text-center" style="max-width: 450px; border-radius: 15px; border-top: 5px solid #ffc107 !important; transform: scale(0.9); transition: transform 0.2s ease-in-out;">
+                    <h4 class="mb-3" style="color: #ffc107 !important;"><i class="fa-solid fa-triangle-exclamation fs-1" style="color: #ffc107 !important;"></i></h4>
                     <p class="mb-4 text-secondary" style="font-size: 1rem; line-height: 1.5;">
                         Você inseriu dados em <strong>${nomeSessao}</strong>, mas ainda não salvou.<br><br>Por favor, salve ou limpe os campos antes de continuar.
                     </p>
-                    <button type="button" id="btn-entendi-internas" class="btn w-100 rounded-pill fw-bold text-white" style="background-color: #ffc107; border-color: #ffc107;">
+                    <button type="button" id="btn-entendi-internas" class="btn w-100 rounded-pill fw-bold text-white" style="background-color: #ffc107 !important; border-color: #ffc107 !important;">
                         Entendi
                     </button>
                 </div>
