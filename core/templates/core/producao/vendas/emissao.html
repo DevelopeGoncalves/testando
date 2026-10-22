@@ -12,9 +12,14 @@
 
 {% block content %}
 <style>
-    /* Histórico de Ligações da Emissão: cabeçalhos zebrados (azul / verde). */
-    .card-header.lig-azul { background-color: #0525e1; color: #ffffff; }
-    .card-header.lig-verde { background-color: #60c336; color: #1b1b1b; }
+    /* Histórico de Ligações da Emissão: cabeçalho zebrado na diagonal (azul / verde), como fita de sinalização. */
+    .card-header.lig-zebrado {
+        background: repeating-linear-gradient(-60deg, #0525e1 0, #0525e1 22px, #60c336 22px, #60c336 44px);
+        color: #ffffff;
+    }
+    .card-header.lig-zebrado .lig-rotulo {
+        background-color: #0525e1; color: #ffffff; padding: 2px 10px; border-radius: 4px;
+    }
     /* Pop-up "Registrar acompanhamento" (mesmo visual do pop-up de ligacao do card Novo) */
     #modalAcompanhamento .modal-body { padding-bottom: 40px; }
     #modalBanseg .btn-acao-ligacao {
@@ -1067,9 +1072,9 @@
             let premio = d.premioTotal ? ('R$ ' + formatarValorBRL(d.premioTotal)) : '-';
             html += ''
               + '<div class="card mb-3 bg-light border-0 shadow-sm">'
-              +   '<div class="card-header ' + (numero % 2 === 1 ? 'lig-azul' : 'lig-verde') + ' py-2 d-flex justify-content-between align-items-center">'
-              +     '<span><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ' + (escHtml(formatarDataHora(d.data)) || '-') + '</span></span>'
-              +     '<span class="badge ' + (numero % 2 === 1 ? 'bg-success' : 'bg-white text-success border border-success') + '"><i class="fas fa-check"></i> Finalizada</span>'
+              +   '<div class="card-header lig-zebrado py-2 d-flex justify-content-between align-items-center">'
+              +     '<span class="lig-rotulo"><i class="fas fa-phone-alt"></i> ' + numero + 'ª Ligação <span class="ms-2" style="font-size:0.85em;"> - &nbsp; ' + (escHtml(formatarDataHora(d.data)) || '-') + '</span></span>'
+              +     '<span class="badge bg-white text-success border border-success"><i class="fas fa-check"></i> Finalizada</span>'
               +   '</div>'
               +   '<div class="card-body py-2" style="font-size:0.9rem;">'
               +     '<div class="row g-2">'
