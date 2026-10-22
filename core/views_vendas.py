@@ -873,6 +873,11 @@ def _vendas_fechadas(model_indicacao, model_ligacao, origem):
     _anexar_acompanhamentos(registros, origem)
     return registros
 
+def _pode_alterar_status_emissao(user):
+    """Alterar o status de um acompanhamento já registrado: só Gestor (nível 3) da Emissão ou da
+    Base Emissão, ou superusuário. Editor e Leitor só registram acompanhamentos novos."""
+    return _usuario_e_gestor(user, 'prod_vendas_emissao') or _usuario_e_gestor(user, 'prod_vendas_baseemissao')
+
 def _opcoes_status_emissao():
     """Status ativos (com os retornos ativos de cada um) pro pop-up de acompanhamento. Se as
     tabelas ainda estão vazias (primeira vez depois do migrate), cria o cadastro padrão."""
@@ -941,6 +946,8 @@ def _render_emissao(request, base):
         # Botão do Banseg (ao lado da lixeira): só Gestor. A lista traz todas as seguradoras,
         # já marcadas as que vão pro Banseg.
         'usuario_gestor_banseg': _gestor_banseg(request.user),
+        # Selo do status no histórico de acompanhamentos vira botão de editar (só Gestor/superusuário).
+        'usuario_pode_alterar_status': _pode_alterar_status_emissao(request.user),
         'seguradoras_banseg': [
             {'id': sg.id, 'nome': sg.seguradora or sg.cod_seguradora or f'Seguradora {sg.id}', 'marcada': _eh_seguradora_banseg(sg)}
             for sg in Seguradora.objects.all().order_by('seguradora')
@@ -998,7 +1005,9 @@ def salvar_banseg_emissao(request):
 
 @login_required
 def salvar_acompanhamento_emissao(request):
-    """Registra um novo acompanhamento da emissão (data e atendente são automáticos)."""
+    """Registra um novo acompanhamento da emissão (data e atendente são automáticos). Com
+    'acompanhamento_id' no POST, ALTERA um acompanhamento já registrado (status, retorno, datas,
+    observação, anexo) - isso só Gestor/superusuário pode, e fica na Auditoria."""
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     user = request.user
@@ -1011,6 +1020,18 @@ def salvar_acompanhamento_emissao(request):
         return JsonResponse({'ok': False, 'erro': 'Registro inválido.'}, status=400)
     if not ORIGENS_EMISSAO[origem][0].objects.filter(id=registro_id).exists():
         return JsonResponse({'ok': False, 'erro': 'Registro não encontrado.'}, status=404)
+
+    # Alterar um acompanhamento que já existe (em vez de registrar um novo): só Gestor/superusuário.
+    editando = None
+    acompanhamento_id = request.POST.get('acompanhamento_id') or ''
+    if acompanhamento_id:
+        if not _pode_alterar_status_emissao(user):
+            return JsonResponse({'ok': False, 'erro': 'Apenas Gestor ou superusuário podem alterar o status de um acompanhamento.'}, status=403)
+        if acompanhamento_id.isdigit():
+            editando = AcompanhamentoEmissao.objects.select_related('status_ref', 'retorno_ref').filter(
+                id=acompanhamento_id, origem=origem, registro_id=int(registro_id)).first()
+        if not editando:
+            return JsonResponse({'ok': False, 'erro': 'Acompanhamento não encontrado.'}, status=404)
 
     # Status e Retorno vêm dos cadastros de Base > Formulários (só os ATIVOS valem).
     status_id = request.POST.get('status_id') or ''
@@ -1057,6 +1078,28 @@ def salvar_acompanhamento_emissao(request):
         if erro_anexo:
             return JsonResponse({'ok': False, 'erro': erro_anexo}, status=400)
         anexo_nome = os.path.basename(anexo.name.replace('\\', '/'))[:255]
+
+    if editando:
+        antes = f'{editando.status_exibicao} / {editando.retorno_cliente_texto or "-"}'
+        editando.observacao = (request.POST.get('observacao') or '').strip()
+        editando.status = status.status
+        editando.status_ref = status
+        editando.retorno_ref = retorno
+        editando.apolice_enviada = cliente_avisado
+        editando.data_envio_cliente = data_envio
+        editando.data_emissao = data_emissao
+        editando.numero_apolice = numero_apolice
+        if anexo:
+            if editando.anexo:
+                editando.anexo.delete(save=False)  # troca o arquivo: não deixa o antigo sobrando no disco
+            editando.anexo = anexo
+            editando.anexo_nome = anexo_nome
+        editando.save()
+        registrar_auditoria_backend(
+            usuario=user, acao='Alterou',
+            detalhe=f'Acompanhamento da Emissão #{editando.id} ({origem}:{registro_id}): {antes} -> {status.status} / {retorno.retorno if retorno else "-"}',
+        )
+        return JsonResponse({'ok': True})
 
     acompanhamento = AcompanhamentoEmissao(
         origem=origem,
