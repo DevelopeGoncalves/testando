@@ -27,9 +27,13 @@
         background: repeating-linear-gradient(-60deg, #0525e1 0, #0525e1 var(--zebra-listra), #60c336 var(--zebra-listra), #60c336 calc(var(--zebra-listra) * 2));
         color: #ffffff;
         padding-top: 0.2rem !important; padding-bottom: 0.2rem !important;
+        border: 0 !important;                 /* sem a linha/margem do cabeçalho padrão */
+        background-clip: border-box;
+        background-origin: border-box;
     }
     .card-header.lig-zebrado .lig-rotulo {
-        background-color: #0525e1; color: #ffffff; padding: 1px 8px; border-radius: 4px;
+        background-color: #ffffff; color: #198754; font-weight: 600;
+        border: 1px solid #198754; padding: 1px 10px; border-radius: 0.375rem;
     }
     /* Pop-up "Registrar acompanhamento" (mesmo visual do pop-up de ligacao do card Novo) */
     #modalAcompanhamento .modal-body { padding-bottom: 40px; }
