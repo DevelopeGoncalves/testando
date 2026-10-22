@@ -12,13 +12,24 @@
 
 {% block content %}
 <style>
-    /* Histórico de Ligações da Emissão: cabeçalho zebrado na diagonal (azul / verde), como fita de sinalização. */
+    /* Histórico de Ligações da Emissão: cabeçalho zebrado na diagonal (azul / verde).
+       TAMANHO DO CARD ZEBRADO - mexa só nestes 3 valores:
+         --zebra-altura : altura mínima do cabeçalho (padrão antigo = 0 / automático, ~38px)
+         --zebra-listra : largura de cada listra (o par azul+verde ocupa o dobro)
+         --zebra-fonte  : tamanho da letra (padrão = 1rem)
+       Para VOLTAR AO PADRÃO: --zebra-altura: 0px; --zebra-listra: 22px; --zebra-fonte: 1rem; */
     .card-header.lig-zebrado {
-        background: repeating-linear-gradient(-60deg, #0525e1 0, #0525e1 22px, #60c336 22px, #60c336 44px);
+        --zebra-altura: 0px;
+        --zebra-listra: 22px;
+        --zebra-fonte: 1rem;
+        min-height: var(--zebra-altura);
+        font-size: var(--zebra-fonte);
+        background: repeating-linear-gradient(-60deg, #0525e1 0, #0525e1 var(--zebra-listra), #60c336 var(--zebra-listra), #60c336 calc(var(--zebra-listra) * 2));
         color: #ffffff;
+        padding-top: 0.2rem !important; padding-bottom: 0.2rem !important;
     }
     .card-header.lig-zebrado .lig-rotulo {
-        background-color: #0525e1; color: #ffffff; padding: 2px 10px; border-radius: 4px;
+        background-color: #0525e1; color: #ffffff; padding: 1px 8px; border-radius: 4px;
     }
     /* Pop-up "Registrar acompanhamento" (mesmo visual do pop-up de ligacao do card Novo) */
     #modalAcompanhamento .modal-body { padding-bottom: 40px; }
