@@ -1270,13 +1270,14 @@
     const ANEXO_EXTENSOES = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const ANEXO_TAMANHO_MAX = 10 * 1024 * 1024;
 
-    // Status marcados com Bloqueio (Base > Formulários > Status das emissões) não aparecem na lista;
-    // ao alterar um acompanhamento, só o status que ele já tem continua na lista.
-    function ajustarOpcoesStatus(idAtual) {
+    // Status marcados com Bloqueio (Base > Formulários > Status das emissões) só somem da lista ao
+    // alterar um acompanhamento que NÃO é o último (e o status que ele já tem continua na lista).
+    // Registrar um acompanhamento novo, ou alterar o último, mostra a lista completa.
+    function ajustarOpcoesStatus(idAtual, esconderBloqueados) {
         var n = 0;
         $('#acomp-status option[data-nome]').each(function () {
             var $o = $(this);
-            var mostrar = !$o.attr('data-bloqueio') || String($o.val()) === String(idAtual || '');
+            var mostrar = !esconderBloqueados || !$o.attr('data-bloqueio') || String($o.val()) === String(idAtual || '');
             $o.prop('hidden', !mostrar).prop('disabled', !mostrar);
             if (mostrar) { n++; $o.text(n + ' - ' + $o.attr('data-nome')); }
         });
@@ -1297,7 +1298,7 @@
         var d = item.dataset;
         limparFormAcompanhamento();
         prepararModalAcompanhamento(d.id);
-        ajustarOpcoesStatus(d.statusId);
+        ajustarOpcoesStatus(d.statusId, idx > 0);  // idx 0 = acompanhamento mais recente (o último)
         $('#acomp-data').val(formatarDataHora(d.data));
         $('#acomp-atendente').val(d.atendente);
         $('#acomp-status').val(d.statusId);
@@ -1313,7 +1314,7 @@
     function abrirModalAcompanhamento() {
         limparFormAcompanhamento();
         prepararModalAcompanhamento(null);
-        ajustarOpcoesStatus(null);
+        ajustarOpcoesStatus(null, false);
         if (acompAtendenteOriginal !== null) $('#acomp-atendente').val(acompAtendenteOriginal);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAcompanhamento')).show();
     }

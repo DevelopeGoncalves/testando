@@ -1036,10 +1036,12 @@ def salvar_acompanhamento_emissao(request):
     # Status e Retorno vêm dos cadastros de Base > Formulários (só os ATIVOS valem).
     status_id = request.POST.get('status_id') or ''
     status = StatusEmissao.objects.filter(id=status_id, inativo=False).first() if status_id.isdigit() else None
-    # Status com Bloqueio não pode ser escolhido no pop-up; ao alterar um acompanhamento que já
-    # está nele, o próprio status dele continua valendo.
-    if status and status.bloqueio and not (editando and editando.status_ref_id == status.id):
-        status = None
+    # Status com Bloqueio só fica de fora ao alterar um acompanhamento que NÃO é o último (o
+    # próprio status dele continua valendo). Novo acompanhamento e o último veem a lista completa.
+    if status and status.bloqueio and editando and editando.status_ref_id != status.id:
+        ultimo = AcompanhamentoEmissao.objects.filter(origem=origem, registro_id=int(registro_id)).order_by('-data_registro', '-id').first()
+        if ultimo and ultimo.id != editando.id:
+            status = None
     if not status:
         return JsonResponse({'ok': False, 'erro': 'Selecione o status.'}, status=400)
 
