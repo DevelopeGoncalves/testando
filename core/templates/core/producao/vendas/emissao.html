@@ -313,7 +313,6 @@
                                 {% for a in i.acompanhamentos %}
                                 <span class="extra-item-acomp"
                                       data-id="{{ a.id }}"
-                                      data-bloqueado="{{ a.bloqueado|yesno:'1,0' }}"
                                       data-status-id="{{ a.status_ref_id|default:'' }}"
                                       data-retorno-id="{{ a.retorno_ref_id|default:'' }}"
                                       data-data="{{ a.data_registro|date:'Y-m-d\TH:i:s' }}"
@@ -620,7 +619,7 @@
                             <label class="fw-bold small mb-1">Status *</label>
                             <select id="acomp-status" class="form-select">
                                 <option value="">Selecione...</option>
-                                {% for st in status_emissao_opcoes %}<option value="{{ st.id }}">{{ forloop.counter }} - {{ st.nome }}</option>{% endfor %}
+                                {% for st in status_emissao_opcoes %}<option value="{{ st.id }}" data-nome="{{ st.nome }}"{% if st.bloqueio %} data-bloqueio="1"{% endif %}>{{ forloop.counter }} - {{ st.nome }}</option>{% endfor %}
                             </select>
                             {{ status_emissao_opcoes|json_script:"dados-status-emissao" }}
                         </div>
@@ -1197,9 +1196,7 @@
               + '<div class="card mb-2 border-0 shadow-sm bg-light">'
               +   '<div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">'
               +     '<span><i class="fas fa-calendar-alt"></i> ' + escHtml(formatarDataHora(d.data)) + ' &nbsp;-&nbsp; <strong>' + (escHtml(d.atendente) || '-') + '</strong></span>'
-              +     (PODE_ALTERAR_STATUS && d.bloqueado === '1'
-              ?       '<span class="badge border-0 ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '" style="opacity:.55; cursor:not-allowed;" title="Bloqueado: só o último acompanhamento pode ser alterado."><i class="fas fa-lock me-1"></i>' + escHtml(d.status) + '</span>'
-              : PODE_ALTERAR_STATUS
+              +     (PODE_ALTERAR_STATUS
               ?       '<button type="button" class="badge border-0 ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '" style="cursor:pointer;" title="Alterar o status deste acompanhamento" onclick="abrirModalAlterarAcompanhamento(' + idxAcomp + ')"><i class="fas fa-pen me-1"></i>' + escHtml(d.status) + '</button>'
               :       '<span class="badge ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '">' + escHtml(d.status) + '</span>')
               +   '</div>'
@@ -1273,6 +1270,18 @@
     const ANEXO_EXTENSOES = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const ANEXO_TAMANHO_MAX = 10 * 1024 * 1024;
 
+    // Status marcados com Bloqueio (Base > Formulários > Status das emissões) não aparecem na lista;
+    // ao alterar um acompanhamento, só o status que ele já tem continua na lista.
+    function ajustarOpcoesStatus(idAtual) {
+        var n = 0;
+        $('#acomp-status option[data-nome]').each(function () {
+            var $o = $(this);
+            var mostrar = !$o.attr('data-bloqueio') || String($o.val()) === String(idAtual || '');
+            $o.prop('hidden', !mostrar).prop('disabled', !mostrar);
+            if (mostrar) { n++; $o.text(n + ' - ' + $o.attr('data-nome')); }
+        });
+    }
+
     function prepararModalAcompanhamento(editandoId) {
         var campoAtendente = document.getElementById('acomp-atendente');
         if (acompAtendenteOriginal === null && campoAtendente) acompAtendenteOriginal = campoAtendente.value;
@@ -1284,10 +1293,11 @@
 
     function abrirModalAlterarAcompanhamento(idx) {
         var item = acompItensFicha[idx];
-        if (!item || !PODE_ALTERAR_STATUS || item.dataset.bloqueado === '1') return;
+        if (!item || !PODE_ALTERAR_STATUS) return;
         var d = item.dataset;
         limparFormAcompanhamento();
         prepararModalAcompanhamento(d.id);
+        ajustarOpcoesStatus(d.statusId);
         $('#acomp-data').val(formatarDataHora(d.data));
         $('#acomp-atendente').val(d.atendente);
         $('#acomp-status').val(d.statusId);
@@ -1303,6 +1313,7 @@
     function abrirModalAcompanhamento() {
         limparFormAcompanhamento();
         prepararModalAcompanhamento(null);
+        ajustarOpcoesStatus(null);
         if (acompAtendenteOriginal !== null) $('#acomp-atendente').val(acompAtendenteOriginal);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAcompanhamento')).show();
     }

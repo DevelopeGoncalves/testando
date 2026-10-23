@@ -789,17 +789,6 @@ ORIGENS_EMISSAO = {
 # o cliente também já foi avisado (ver status_emissao_cliente_ciente).
 REGRAS_EMISSAO_FINALIZADAS = StatusEmissao.REGRAS_FINALIZADAS
 
-def _acompanhamento_bloqueado(lista, acompanhamento):
-    """Acompanhamento travado: não é o último (lista vem do mais recente pro mais antigo) e o
-    status dele, ou o do último, está marcado com Bloqueio em Base > Formulários > Status das
-    emissões. O último acompanhamento nunca fica travado."""
-    if not lista or lista[0].id == acompanhamento.id:
-        return False
-    def marcado(a):
-        return bool(a.status_ref_id and a.status_ref.bloqueio)
-    return marcado(lista[0]) or marcado(acompanhamento)
-
-
 def _anexar_acompanhamentos(registros, origem):
     """Pendura em cada registro a lista 'acompanhamentos' (mais recente primeiro), o
     'status_emissao' atual (nome do status do último acompanhamento; 'Aguardando emissão' se não
@@ -814,8 +803,6 @@ def _anexar_acompanhamentos(registros, origem):
             por_registro[a.registro_id].append(a)
     for r in registros:
         lista = sorted(por_registro.get(r.id, []), key=lambda a: (a.data_registro, a.id), reverse=True)
-        for a in lista:
-            a.bloqueado = _acompanhamento_bloqueado(lista, a)
         r.acompanhamentos = lista
         r.status_emissao = lista[0].status_exibicao if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
         r.status_emissao_regra = lista[0].regra if lista else StatusEmissao.REGRA_AGUARDANDO
@@ -900,7 +887,7 @@ def _opcoes_status_emissao():
     for r in RetornoClienteEmissao.objects.filter(inativo=False).order_by('id'):
         retornos_por_status[r.status_id].append({'id': r.id, 'texto': r.retorno, 'avisado': r.avisado})
     return [
-        {'id': st.id, 'nome': st.status, 'regra': st.regra, 'retornos': retornos_por_status.get(st.id, [])}
+        {'id': st.id, 'nome': st.status, 'regra': st.regra, 'bloqueio': st.bloqueio, 'retornos': retornos_por_status.get(st.id, [])}
         for st in StatusEmissao.objects.filter(inativo=False).order_by('id')
     ]
 
@@ -1045,14 +1032,14 @@ def salvar_acompanhamento_emissao(request):
                 id=acompanhamento_id, origem=origem, registro_id=int(registro_id)).first()
         if not editando:
             return JsonResponse({'ok': False, 'erro': 'Acompanhamento não encontrado.'}, status=404)
-        todos = sorted(AcompanhamentoEmissao.objects.filter(origem=origem, registro_id=int(registro_id)).select_related('status_ref'),
-                       key=lambda a: (a.data_registro, a.id), reverse=True)
-        if _acompanhamento_bloqueado(todos, editando):
-            return JsonResponse({'ok': False, 'erro': 'Este acompanhamento está bloqueado: só o último pode ser alterado.'}, status=403)
 
     # Status e Retorno vêm dos cadastros de Base > Formulários (só os ATIVOS valem).
     status_id = request.POST.get('status_id') or ''
     status = StatusEmissao.objects.filter(id=status_id, inativo=False).first() if status_id.isdigit() else None
+    # Status com Bloqueio não pode ser escolhido no pop-up; ao alterar um acompanhamento que já
+    # está nele, o próprio status dele continua valendo.
+    if status and status.bloqueio and not (editando and editando.status_ref_id == status.id):
+        status = None
     if not status:
         return JsonResponse({'ok': False, 'erro': 'Selecione o status.'}, status=400)
 

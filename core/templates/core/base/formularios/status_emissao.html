@@ -93,7 +93,7 @@
                     {% csrf_token %} 
                     <input type="hidden" name="item_id" id="item_id_hidden" value="{{ request.POST.item_id|default:'' }}">
 
-                    <p class="text-muted small mb-3">Esses são os valores do campo <b>Status</b> do pop-up "Registrar acompanhamento da Emissão". Marcando <b>Inativo</b>, o status sai da lista de opções (desmarque para ele aparecer de novo). Marcando <b>Bloqueio</b>, quando um acompanhamento da emissão estiver com este status, os acompanhamentos anteriores (que não são o último) ficam travados para alteração; só o último continua editável.</p>
+                    <p class="text-muted small mb-3">Esses são os valores do campo <b>Status</b> do pop-up "Registrar acompanhamento da Emissão". Marcando <b>Inativo</b>, o status sai da lista de opções (desmarque para ele aparecer de novo). Marcando <b>Bloqueio</b>, o status também deixa de aparecer na lista de opções do pop-up (os acompanhamentos que já estão nele continuam abrindo e aparecendo normalmente).</p>
                     <div class="row">
                         {{ form_status.as_p }}
                     </div>
