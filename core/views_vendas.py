@@ -789,6 +789,17 @@ ORIGENS_EMISSAO = {
 # o cliente também já foi avisado (ver status_emissao_cliente_ciente).
 REGRAS_EMISSAO_FINALIZADAS = StatusEmissao.REGRAS_FINALIZADAS
 
+def _acompanhamento_bloqueado(lista, acompanhamento):
+    """Acompanhamento travado: não é o último (lista vem do mais recente pro mais antigo) e o
+    status dele, ou o do último, está marcado com Bloqueio em Base > Formulários > Status das
+    emissões. O último acompanhamento nunca fica travado."""
+    if not lista or lista[0].id == acompanhamento.id:
+        return False
+    def marcado(a):
+        return bool(a.status_ref_id and a.status_ref.bloqueio)
+    return marcado(lista[0]) or marcado(acompanhamento)
+
+
 def _anexar_acompanhamentos(registros, origem):
     """Pendura em cada registro a lista 'acompanhamentos' (mais recente primeiro), o
     'status_emissao' atual (nome do status do último acompanhamento; 'Aguardando emissão' se não
@@ -803,6 +814,8 @@ def _anexar_acompanhamentos(registros, origem):
             por_registro[a.registro_id].append(a)
     for r in registros:
         lista = sorted(por_registro.get(r.id, []), key=lambda a: (a.data_registro, a.id), reverse=True)
+        for a in lista:
+            a.bloqueado = _acompanhamento_bloqueado(lista, a)
         r.acompanhamentos = lista
         r.status_emissao = lista[0].status_exibicao if lista else AcompanhamentoEmissao.STATUS_AGUARDANDO
         r.status_emissao_regra = lista[0].regra if lista else StatusEmissao.REGRA_AGUARDANDO
@@ -1032,6 +1045,10 @@ def salvar_acompanhamento_emissao(request):
                 id=acompanhamento_id, origem=origem, registro_id=int(registro_id)).first()
         if not editando:
             return JsonResponse({'ok': False, 'erro': 'Acompanhamento não encontrado.'}, status=404)
+        todos = sorted(AcompanhamentoEmissao.objects.filter(origem=origem, registro_id=int(registro_id)).select_related('status_ref'),
+                       key=lambda a: (a.data_registro, a.id), reverse=True)
+        if _acompanhamento_bloqueado(todos, editando):
+            return JsonResponse({'ok': False, 'erro': 'Este acompanhamento está bloqueado: só o último pode ser alterado.'}, status=403)
 
     # Status e Retorno vêm dos cadastros de Base > Formulários (só os ATIVOS valem).
     status_id = request.POST.get('status_id') or ''

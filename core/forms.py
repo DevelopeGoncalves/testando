@@ -213,7 +213,7 @@ class StatusEmissaoForm(BootstrapMixin, forms.ModelForm):
     """Base > Formulários > Status das emissões (opções do campo Status da Emissão)."""
     class Meta:
         model = StatusEmissao
-        fields = ['status', 'inativo', 'observacoes']
+        fields = ['status', 'inativo', 'bloqueio', 'observacoes']
         widgets = {
             'observacoes': forms.TextInput(attrs={'placeholder': 'Máximo de 100 caracteres...'}),
         }

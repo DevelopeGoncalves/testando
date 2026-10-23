@@ -1499,6 +1499,20 @@
         }
 
         sincronizarSelectVendas(bloco);
+
+        // alex: ligação que não é a última -> trava Vendas e Motivo Não Venda (o valor continua
+        // sendo enviado: o submit reabilita os campos antes de salvar).
+        if (bloco.classList.contains('lig-trava-venda')) {
+            let selVendas = bloco.querySelector('[data-vendas-select]');
+            [selVendas, campoMotivo, campoCentral, campoAgencia].forEach(function(c) {
+                if (!c) return;
+                c.disabled = true;
+                if (c === selVendas || c === campoMotivo) c.title = 'Só a última ligação pode alterar este campo.';
+            });
+        } else {
+            let selVendas = bloco.querySelector('[data-vendas-select]');
+            [selVendas, campoMotivo].forEach(function(c) { if (c) c.removeAttribute('title'); });
+        }
     }
 
     function aplicarSelecaoVendas(selectEl) {
@@ -1978,6 +1992,9 @@
         ligacaoEmEdicao = bloco;
         $('#ligacao-1').show();
         blocosSnapshot = blocos.length;
+        // alex: só a ÚLTIMA ligação pode mudar "Vendas" e "Motivo Não Venda"; nas anteriores
+        // esses 2 campos ficam travados (o resto da ligação continua editável).
+        bloco.classList.toggle('lig-trava-venda', numero < blocos.length);
         bloco.classList.remove('ligacao-salva');
         atualizarEstadoLigacoes();
         ativarBloqueioSaida();

@@ -285,6 +285,7 @@
                                 {% for a in i.acompanhamentos %}
                                 <span class="extra-item-acomp"
                                       data-id="{{ a.id }}"
+                                      data-bloqueado="{{ a.bloqueado|yesno:'1,0' }}"
                                       data-status-id="{{ a.status_ref_id|default:'' }}"
                                       data-retorno-id="{{ a.retorno_ref_id|default:'' }}"
                                       data-data="{{ a.data_registro|date:'Y-m-d\TH:i:s' }}"
@@ -1098,7 +1099,9 @@
               + '<div class="card mb-2 border-0 shadow-sm bg-light">'
               +   '<div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">'
               +     '<span><i class="fas fa-calendar-alt"></i> ' + escHtml(formatarDataHora(d.data)) + ' &nbsp;-&nbsp; <strong>' + (escHtml(d.atendente) || '-') + '</strong></span>'
-              +     (PODE_ALTERAR_STATUS
+              +     (PODE_ALTERAR_STATUS && d.bloqueado === '1'
+              ?       '<span class="badge border-0 ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '" style="opacity:.55; cursor:not-allowed;" title="Bloqueado: só o último acompanhamento pode ser alterado."><i class="fas fa-lock me-1"></i>' + escHtml(d.status) + '</span>'
+              : PODE_ALTERAR_STATUS
               ?       '<button type="button" class="badge border-0 ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '" style="cursor:pointer;" title="Alterar o status deste acompanhamento" onclick="abrirModalAlterarAcompanhamento(' + idxAcomp + ')"><i class="fas fa-pen me-1"></i>' + escHtml(d.status) + '</button>'
 
               :       '<span class="badge ' + (CLASSE_STATUS_EMISSAO[d.regra] || 'bg-secondary') + '">' + escHtml(d.status) + '</span>')
@@ -1184,7 +1187,7 @@
 
     function abrirModalAlterarAcompanhamento(idx) {
         var item = acompItensFicha[idx];
-        if (!item || !PODE_ALTERAR_STATUS) return;
+        if (!item || !PODE_ALTERAR_STATUS || item.dataset.bloqueado === '1') return;
         var d = item.dataset;
         limparFormAcompanhamento();
         prepararModalAcompanhamento(d.id);

@@ -47,6 +47,7 @@
                             <th class="text-center">ID</th>
                             <th class="text-start">Status</th>
                             <th class="text-center">Inativo</th>
+                            <th class="text-center">Bloqueio</th>
                             <th class="text-start">Observação</th>
                         </tr>
                     </thead>
@@ -59,6 +60,7 @@
                             data-id="{{ i.id }}"
                             data-status="{{ i.status|default:'' }}"
                             data-inativo="{{ i.inativo|yesno:'true,false' }}"
+                            data-bloqueio="{{ i.bloqueio|yesno:'true,false' }}"
                             data-obs="{{ i.observacoes|default:'' }}">
                             <td class="text-center" onclick="event.stopPropagation()">
                                 <input type="checkbox" name="ids_excluir" value="{{ i.id }}" class="chk-delete chk-row">
@@ -66,6 +68,7 @@
                             <td class="text-center">{{ i.id }}</td>
                             <td class="text-start">{{ i.status }}</td>
                             <td class="text-center">{{ i.inativo|yesno:'Sim,Não' }}</td>
+                            <td class="text-center">{{ i.bloqueio|yesno:'Sim,Não' }}</td>
                             <td class="text-start">{{ i.observacoes|default:'-' }}</td>
                         </tr>
                         {% endfor %}
@@ -90,7 +93,7 @@
                     {% csrf_token %} 
                     <input type="hidden" name="item_id" id="item_id_hidden" value="{{ request.POST.item_id|default:'' }}">
 
-                    <p class="text-muted small mb-3">Esses são os valores do campo <b>Status</b> do pop-up "Registrar acompanhamento da Emissão". Marcando <b>Inativo</b>, o status sai da lista de opções (desmarque para ele aparecer de novo).</p>
+                    <p class="text-muted small mb-3">Esses são os valores do campo <b>Status</b> do pop-up "Registrar acompanhamento da Emissão". Marcando <b>Inativo</b>, o status sai da lista de opções (desmarque para ele aparecer de novo). Marcando <b>Bloqueio</b>, quando um acompanhamento da emissão estiver com este status, os acompanhamentos anteriores (que não são o último) ficam travados para alteração; só o último continua editável.</p>
                     <div class="row">
                         {{ form_status.as_p }}
                     </div>
@@ -137,6 +140,7 @@
         $('#item_id_hidden').val(id);
         $('#id_status').val(row.getAttribute('data-status'));
         $('#id_inativo').prop('checked', row.getAttribute('data-inativo') === 'true');
+        $('#id_bloqueio').prop('checked', row.getAttribute('data-bloqueio') === 'true');
         $('#id_observacoes').val(row.getAttribute('data-obs'));
 
         $('#titulo-form').text("Editar Status da emissão #" + id);

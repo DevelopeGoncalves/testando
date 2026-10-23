@@ -504,6 +504,9 @@ class StatusEmissao(models.Model):
 
     status = models.CharField("Status", max_length=50)
     inativo = models.BooleanField("Inativo", default=False)
+    # Bloqueio: com o status marcado, os acompanhamentos que NÃO são o último ficam travados
+    # (só o último acompanhamento da emissão pode ser alterado por completo).
+    bloqueio = models.BooleanField("Bloqueio", default=False)
     observacoes = models.CharField("Observações", max_length=100, blank=True, null=True)
     regra = models.CharField("Regra do sistema", max_length=20, blank=True, default='', editable=False)
 
