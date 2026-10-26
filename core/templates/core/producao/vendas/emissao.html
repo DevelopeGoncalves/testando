@@ -49,6 +49,46 @@
         border-color: var(--cor-botao-ligacao);
     }
     #modalBanseg .lista-seguradoras-banseg { max-height: 50vh; overflow-y: auto; }
+    /* ===== CORES DOS BOTÕES "Cancelar" E "Salvar" DO POP-UP DE ACOMPANHAMENTO =====
+       Mude só os valores das variáveis --acomp-... abaixo, salve e atualize (Ctrl+F5).
+       Cores: #rrggbb (ex.: #ffffff branco, #000000 preto) ou nome (white, green...).
+       Atenção: a Emissão (emissao.html) e a Base Emissão (base_emissao.html) têm cada uma o seu bloco igual. */
+    #modalAcompanhamento {
+        /* ---- botão CANCELAR ---- */
+        --acomp-cancelar-fundo: #ffffff;          /* fundo */
+        --acomp-cancelar-letra: #065534;          /* letra, ícone e borda */
+        --acomp-cancelar-fundo-hover: #065534;    /* fundo ao passar o mouse */
+        --acomp-cancelar-letra-hover: #ffffff;    /* letra ao passar o mouse */
+
+        /* ---- botão SALVAR ---- */
+        --acomp-salvar-fundo: #ffffff;
+        --acomp-salvar-letra: #065534;
+        --acomp-salvar-fundo-hover: #065534;
+        --acomp-salvar-letra-hover: #ffffff;
+    }
+
+    /* (daqui pra baixo não precisa mexer) */
+    #modalAcompanhamento .btn-acomp-cancelar {
+        background-color: var(--acomp-cancelar-fundo) !important;
+        color: var(--acomp-cancelar-letra) !important;
+        border: 1px solid var(--acomp-cancelar-letra) !important;
+    }
+    #modalAcompanhamento .btn-acomp-cancelar i { color: inherit !important; }
+    #modalAcompanhamento .btn-acomp-cancelar:hover {
+        background-color: var(--acomp-cancelar-fundo-hover) !important;
+        color: var(--acomp-cancelar-letra-hover) !important;
+    }
+    #modalAcompanhamento .btn-acomp-salvar {
+        background-color: var(--acomp-salvar-fundo) !important;
+        color: var(--acomp-salvar-letra) !important;
+        border: 1px solid var(--acomp-salvar-letra) !important;
+    }
+    #modalAcompanhamento .btn-acomp-salvar i { color: inherit !important; }
+    #modalAcompanhamento .btn-acomp-salvar:hover:not(:disabled) {
+        background-color: var(--acomp-salvar-fundo-hover) !important;
+        color: var(--acomp-salvar-letra-hover) !important;
+    }
+    #modalAcompanhamento .btn-acomp-salvar:disabled { opacity: .6; }
     /* Evita o "flash" da tabela crua */
     #tabela-base-novo { visibility: hidden; }
     #tabela-base-novo.dt-pronta { visibility: visible; }
@@ -588,7 +628,6 @@
     {% if usuario_pode_editar %}
     <!-- POP-UP para registrar o acompanhamento da emissão (fora do <form> da ficha, pra o Enter
          dentro dele não salvar a ficha por engano). -->
-    {% include "core/producao/vendas/_estilo_botoes_acompanhamento.html" %}
     <div class="modal fade" id="modalAcompanhamento" tabindex="-1" aria-labelledby="modalAcompanhamentoLabel"
          data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
