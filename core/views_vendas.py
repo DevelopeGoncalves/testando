@@ -1086,12 +1086,13 @@ def salvar_acompanhamento_emissao(request):
 
     # Anexo (PDF ou imagem): so vale para as regras recusada/cancelado e e opcional.
     anexo = request.FILES.get('anexo') if status.regra in StatusEmissao.REGRAS_COM_ANEXO else None
-    anexo_nome = ''
+    # Só ao alterar um acompanhamento (Gestor): apagar o anexo que já existe, sem trocar por outro.
+    remover_anexo = bool(editando and request.POST.get('remover_anexo') == '1'
+                         and status.regra in StatusEmissao.REGRAS_COM_ANEXO)
     if anexo:
         erro_anexo = _validar_anexo_emissao(anexo)
         if erro_anexo:
             return JsonResponse({'ok': False, 'erro': erro_anexo}, status=400)
-        anexo_nome = os.path.basename(anexo.name.replace('\\', '/'))[:255]
 
     if editando:
         antes = f'{editando.status_exibicao} / {editando.retorno_cliente_texto or "-"}'
@@ -1104,11 +1105,16 @@ def salvar_acompanhamento_emissao(request):
         editando.data_emissao = data_emissao
         editando.numero_apolice = numero_apolice
         editando.numero_endosso = numero_endosso
-        if anexo:
+        # Anexo: arquivo novo SUBSTITUI o atual (o antigo é apagado da pasta, qualquer que seja o
+        # tipo: imagem -> PDF também vale); "apagar" remove o arquivo da pasta e limpa o campo.
+        if anexo or remover_anexo:
             if editando.anexo:
-                editando.anexo.delete(save=False)  # troca o arquivo: não deixa o antigo sobrando no disco
-            editando.anexo = anexo
-            editando.anexo_nome = anexo_nome
+                editando.anexo.delete(save=False)
+            editando.anexo = None
+            editando.anexo_nome = ''
+        if anexo:
+            editando.anexo.save(anexo.name, anexo, save=False)  # grava como ANX-<id>.<ext>
+            editando.anexo_nome = os.path.basename(editando.anexo.name)
         editando.save()
         registrar_auditoria_backend(
             usuario=user, acao='Alterou',
@@ -1130,10 +1136,12 @@ def salvar_acompanhamento_emissao(request):
         numero_apolice=numero_apolice,
         numero_endosso=numero_endosso,
     )
-    if anexo:
-        acompanhamento.anexo = anexo
-        acompanhamento.anexo_nome = anexo_nome
     acompanhamento.save()
+    if anexo:
+        # Só agora existe o ID do acompanhamento, que dá o nome do arquivo (ANX-<id>.<ext>).
+        acompanhamento.anexo.save(anexo.name, anexo, save=False)
+        acompanhamento.anexo_nome = os.path.basename(acompanhamento.anexo.name)
+        acompanhamento.save(update_fields=['anexo', 'anexo_nome'])
     return JsonResponse({'ok': True})
 
 

@@ -482,9 +482,10 @@ def storage_anexos_emissao():
 
 
 def caminho_anexo_emissao(instance, filename):
-    # Nome gravado em disco e sempre gerado aqui (nunca o que veio do usuario).
+    # Nome gravado em disco = ID do próprio sistema (ANX-<id do acompanhamento>.<extensão>), nunca
+    # o nome que veio do usuário. É o mesmo nome que aparece no card, pra achar o arquivo na pasta.
     extensao = os.path.splitext(filename)[1].lower()
-    return f'{instance.origem}/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{extensao}'
+    return f'ANX-{instance.id:06d}{extensao}'
 
 
 class StatusEmissao(models.Model):

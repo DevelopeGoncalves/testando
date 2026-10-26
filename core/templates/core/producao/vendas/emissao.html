@@ -650,7 +650,20 @@
                             <input type="text" id="acomp-numero-endosso" class="form-control" maxlength="50" autocomplete="off">
                         </div>
                         <div class="col-12 d-none acomp-col-anexo">
-                            <label class="fw-bold small mb-1"><i class="fas fa-paperclip"></i> Anexo (PDF ou imagem)</label>
+                            <!-- ao ALTERAR um acompanhamento que já tem anexo: mostra o atual e deixa apagar ou substituir -->
+                            <div id="acomp-anexo-atual" class="d-none mb-2">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 border rounded bg-light">
+                                    <span><i class="fas fa-paperclip"></i> Anexo atual:
+                                        <a id="acomp-anexo-atual-link" href="#" target="_blank" rel="noopener"></a>
+                                        <span id="acomp-anexo-apagar-aviso" class="text-danger fw-bold ms-2 d-none">será apagado ao salvar</span>
+                                    </span>
+                                    <span>
+                                        <button type="button" id="btn-apagar-anexo" class="btn btn-sm btn-outline-danger" onclick="marcarApagarAnexo(true)"><i class="fas fa-trash-alt"></i> Apagar anexo</button>
+                                        <button type="button" id="btn-desfazer-apagar-anexo" class="btn btn-sm btn-outline-secondary d-none" onclick="marcarApagarAnexo(false)"><i class="fas fa-undo"></i> Desfazer</button>
+                                    </span>
+                                </div>
+                            </div>
+                            <label class="fw-bold small mb-1" id="acomp-anexo-label"><i class="fas fa-paperclip"></i> Anexo (PDF ou imagem)</label>
                             <input type="file" id="acomp-anexo" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/*">
                             <small class="text-muted">Opcional. PDF, JPG, PNG, GIF ou WEBP, até 10 MB.</small>
                         </div>
@@ -1278,7 +1291,27 @@
     }
     $(document).on('change', '#acomp-enviada, #acomp-status', alternarCamposAcompanhamento);
 
+    // Anexo já existente (só ao alterar um acompanhamento): apagar ou substituir.
+    var acompAnexoAtualNome = '';
+    var acompApagarAnexo = false;
+
+    function marcarApagarAnexo(apagar) {
+        acompApagarAnexo = !!apagar;
+        $('#acomp-anexo-apagar-aviso').toggleClass('d-none', !apagar);
+        $('#btn-apagar-anexo').toggleClass('d-none', !!apagar);
+        $('#btn-desfazer-apagar-anexo').toggleClass('d-none', !apagar);
+    }
+
+    function mostrarAnexoAtual(url, nome) {
+        acompAnexoAtualNome = nome || '';
+        marcarApagarAnexo(false);
+        $('#acomp-anexo-atual').toggleClass('d-none', !url);
+        $('#acomp-anexo-atual-link').attr('href', url || '#').text(nome || 'Abrir anexo');
+        $('#acomp-anexo-label').html('<i class="fas fa-paperclip"></i> ' + (url ? 'Substituir anexo (PDF ou imagem)' : 'Anexo (PDF ou imagem)'));
+    }
+
     function limparFormAcompanhamento() {
+        mostrarAnexoAtual('', '');
         $('#acomp-status').val('');
         statusDoRetornoMontado = null;
         $('#acomp-data-envio, #acomp-data-emissao, #acomp-numero-apolice, #acomp-numero-endosso, #acomp-obs, #acomp-anexo').val('');
@@ -1330,6 +1363,7 @@
         $('#acomp-numero-apolice').val(d.apolice);
         $('#acomp-numero-endosso').val(d.numeroEndosso);
         $('#acomp-obs').val(d.obs);
+        mostrarAnexoAtual(d.anexoUrl, d.anexoNome);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAcompanhamento')).show();
     }
 
@@ -1376,24 +1410,41 @@
             if (arquivo.size > ANEXO_TAMANHO_MAX) { avisoElegante('O anexo é maior que 10 MB. Envie um arquivo menor.', 'Anexo muito grande'); return; }
             dados.append('anexo', arquivo);
         }
-        $('#btn-salvar-acompanhamento').prop('disabled', true);
-        $.ajax({
-            url: URL_SALVAR_ACOMPANHAMENTO, method: 'POST',
-            headers: { 'X-CSRFToken': csrfAtendimento() },
-            data: dados, processData: false, contentType: false
-        }).always(function() {
-            $('#btn-salvar-acompanhamento').prop('disabled', false);
-        }).done(function(resp) {
-            if (resp && resp.ok) {
-                // Recarrega a lista: a Emissão tira da tela quem foi finalizado (Emitida/Recusada/Cancelado)
-                // e já teve o cliente avisado (campo enviada/ciente marcado Sim).
-                window.location.reload();
-            } else {
-                avisoElegante((resp && resp.erro) || 'Não foi possível registrar o acompanhamento.', 'Erro');
-            }
-        }).fail(function(xhr) {
-            avisoElegante((xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível registrar o acompanhamento.', 'Erro');
-        });
+        var temAnexoAtual = !!acompEditandoId && !!acompAnexoAtualNome && $('#acomp-anexo-atual').length && !$('#acomp-anexo-atual').hasClass('d-none');
+        var apagarAnexo = temAnexoAtual && acompApagarAnexo && !arquivo && REGRAS_COM_ANEXO.indexOf(st.regra) !== -1;
+        if (apagarAnexo) dados.append('remover_anexo', '1');
+
+        function enviar() {
+            $('#btn-salvar-acompanhamento').prop('disabled', true);
+            $.ajax({
+                url: URL_SALVAR_ACOMPANHAMENTO, method: 'POST',
+                headers: { 'X-CSRFToken': csrfAtendimento() },
+                data: dados, processData: false, contentType: false
+            }).always(function() {
+                $('#btn-salvar-acompanhamento').prop('disabled', false);
+            }).done(function(resp) {
+                if (resp && resp.ok) {
+                    // Recarrega a lista: a Emissão tira da tela quem foi finalizado (Emitida/Recusada/Cancelado)
+                    // e já teve o cliente avisado (campo enviada/ciente marcado Sim).
+                    window.location.reload();
+                } else {
+                    avisoElegante((resp && resp.erro) || 'Não foi possível registrar o acompanhamento.', 'Erro');
+                }
+            }).fail(function(xhr) {
+                avisoElegante((xhr.responseJSON && xhr.responseJSON.erro) || 'Não foi possível registrar o acompanhamento.', 'Erro');
+            });
+        }
+
+        // Alterar um acompanhamento que já tem anexo: sempre pede confirmação antes de mexer no arquivo.
+        if (temAnexoAtual && arquivo) {
+            confirmarElegante('Este acompanhamento já tem o anexo ' + acompAnexoAtualNome + '. Deseja mesmo substituir pelo arquivo escolhido? O anexo atual será apagado da pasta do servidor.', enviar,
+                { titulo: 'Alterar anexo', textoConfirmar: 'Sim, alterar', corBotao: 'warning' });
+        } else if (apagarAnexo) {
+            confirmarElegante('Deseja mesmo apagar o anexo ' + acompAnexoAtualNome + '? O arquivo será removido da pasta do servidor e não poderá ser recuperado.', enviar,
+                { titulo: 'Apagar anexo', textoConfirmar: 'Sim, apagar', corBotao: 'danger' });
+        } else {
+            enviar();
+        }
     }
 
     function formatarValorBRL(valor) {

@@ -3,9 +3,9 @@ from core.auditoria import registrar_auditoria_backend
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from decimal import Decimal
-from .models import Cliente, RegistroProducao, FinanceiroHabitacional
+from .models import AcompanhamentoEmissao, Cliente, RegistroProducao, FinanceiroHabitacional
 from .clientes_sync import propagar_para_registros, propagar_para_indicacoes
 
 @receiver(user_logged_in)
@@ -39,3 +39,11 @@ def criar_financeiro_habitacional(sender, instance, created, **kwargs):
                     'data_processamento': None
                 }
             )
+
+
+# Anexo do acompanhamento da Emissão: se o acompanhamento for excluído, apaga também o arquivo
+# da pasta anexos_emissao/ (pra não acumular lixo no servidor).
+@receiver(post_delete, sender=AcompanhamentoEmissao)
+def apagar_arquivo_do_anexo(sender, instance, **kwargs):
+    if instance.anexo:
+        instance.anexo.delete(save=False)
