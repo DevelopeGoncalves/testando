@@ -1008,9 +1008,16 @@
         return false;
     };
 
-    window.exportarCSV = function(nomeArquivo) {
+    // colunasExtras (opcional): [{ titulo: 'Nome da coluna', valor: function(tr) { return 'texto'; } }]
+    // - colunas que só existem na planilha exportada (não aparecem na tela), calculadas a
+    // partir da linha (tr) da tabela.
+    window.exportarCSV = function(nomeArquivo, colunasExtras) {
         if(!tableInstance) return;
-        var data = tableInstance.rows({ search: 'applied' }).data().toArray();
+        colunasExtras = colunasExtras || [];
+        var linhas = [];
+        tableInstance.rows({ search: 'applied' }).every(function() {
+            linhas.push({ dados: this.data(), no: this.node() });
+        });
         var csvContent = "\uFEFF"; 
         // Exporta apenas as colunas VISÍVEIS, na mesma ordem da tela: o CSV sai igual ao que
         // está na tela - inclusive com Indicador e Agência já concatenados - e sem as colunas
@@ -1025,8 +1032,10 @@
             headers.push('"' + txt.replace(/"/g, '""') + '"');
             colsExport.push(this.index());
         });
+        colunasExtras.forEach(function(extra) { headers.push('"' + extra.titulo.replace(/"/g, '""') + '"'); });
         csvContent += headers.join(";") + "\n";
-        data.forEach(function(row) {
+        linhas.forEach(function(linha) {
+            var row = linha.dados;
             var rowData = colsExport.map(function(colIdx) {
                 var raw = row[colIdx];
                 // Colunas com data-order (ex.: Ligações/Próxima ligação) chegam como objeto
@@ -1034,6 +1043,11 @@
                 if (raw && typeof raw === 'object') raw = (raw.display != null ? raw.display : (raw['@data-order'] || ''));
                 var cleanText = raw ? raw.toString().replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().replace(/"/g, '""') : "";
                 return '"' + cleanText + '"';
+            });
+            colunasExtras.forEach(function(extra) {
+                var v = '';
+                try { v = extra.valor(linha.no) || ''; } catch (e) { v = ''; }
+                rowData.push('"' + String(v).replace(/"/g, '""') + '"');
             });
             csvContent += rowData.join(";") + "\n";
         });

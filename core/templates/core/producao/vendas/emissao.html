@@ -325,6 +325,7 @@
                                       data-envio="{{ a.data_envio_cliente|date:'Y-m-d' }}"
                                       data-emissao="{{ a.data_emissao|date:'Y-m-d' }}"
                                       data-apolice="{{ a.numero_apolice|default:'' }}"
+                                      data-numero-endosso="{{ a.numero_endosso|default:'' }}"
                                       data-anexo-url="{% if a.anexo %}{% url 'anexo_acompanhamento_emissao' a.id %}{% endif %}"
                                       data-anexo-nome="{{ a.anexo_nome|default:'' }}"></span>
                                 {% endfor %}
@@ -389,7 +390,11 @@
 
     <div id="form-base-novo" style="display:none;">
         <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 mt-2">
-            <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+            <div class="d-flex align-items-center">
+                <h4 class="m-0 text-primary" id="titulo-form-base-novo"><i class="fas fa-edit"></i> Editar Ficha do Registo</h4>
+                <!-- de onde veio o registro (Novo, Renovação ou Endosso) -->
+                <span id="badge-origem-ficha" class="badge ms-3 d-none"></span>
+            </div>
             <!-- somento o responsavel pode indicar a demanda -->
             <div class="d-flex align-items-center">
                 <span class="me-2 fw-bold text-dark">Responsável:</span>
@@ -638,6 +643,11 @@
                         <div class="col-md-6 d-none acomp-col-emitida">
                             <label class="fw-bold small mb-1">Número da apólice *</label>
                             <input type="text" id="acomp-numero-apolice" class="form-control" maxlength="50" autocomplete="off">
+                        </div>
+                        <!-- só aparece quando a venda vem do Endosso e o retorno ao cliente é "Sim"/"enviada" -->
+                        <div class="col-md-6 d-none" id="acomp-col-endosso">
+                            <label class="fw-bold small mb-1" id="acomp-endosso-label">Endosso</label>
+                            <input type="text" id="acomp-numero-endosso" class="form-control" maxlength="50" autocomplete="off">
                         </div>
                         <div class="col-12 d-none acomp-col-anexo">
                             <label class="fw-bold small mb-1"><i class="fas fa-paperclip"></i> Anexo (PDF ou imagem)</label>
@@ -1189,6 +1199,9 @@
                 extra += '<div class="col-md-3"><strong>Data de emissão:</strong> ' + (escHtml(formatarDataIso(d.emissao)) || '-') + '</div>'
                        + '<div class="col-md-3"><strong>Nº da apólice:</strong> ' + (escHtml(d.apolice) || '-') + '</div>';
             }
+            if (d.numeroEndosso) {
+                extra += '<div class="col-md-3"><strong>Endosso:</strong> ' + escHtml(d.numeroEndosso) + '</div>';
+            }
             if (d.anexoUrl) {
                 extra += '<div class="col-12"><strong>Anexo:</strong> <a href="' + escHtml(d.anexoUrl) + '" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> ' + (escHtml(d.anexoNome) || 'Abrir anexo') + '</a></div>';
             }
@@ -1253,6 +1266,14 @@
         var ret = retornoEscolhido(st);
         $('#acomp-col-envio').toggleClass('d-none', !(ret && ret.avisado));
         $('.acomp-col-emitida').toggleClass('d-none', !(st && st.regra === 'emitida'));
+        // Endosso: só se a venda vem do card Endosso e o cliente foi avisado (retorno "Sim"/"enviada").
+        var pedeEndosso = ($('#origem_hidden').val() === 'endosso') && !!(ret && ret.avisado);
+        $('#acomp-col-endosso').toggleClass('d-none', !pedeEndosso);
+        $('#acomp-endosso-label').text(pedeEndosso && st.regra === 'emitida' ? 'Endosso *' : 'Endosso');
+        // No Endosso a apólice já existe no card: puxa pra Emitida (a pessoa ainda pode corrigir).
+        if (st && st.regra === 'emitida' && $('#origem_hidden').val() === 'endosso' && !$('#acomp-numero-apolice').val()) {
+            $('#acomp-numero-apolice').val($('#id_numero_contrato').val() || '');
+        }
         $('.acomp-col-anexo').toggleClass('d-none', !(st && REGRAS_COM_ANEXO.indexOf(st.regra) !== -1));
     }
     $(document).on('change', '#acomp-enviada, #acomp-status', alternarCamposAcompanhamento);
@@ -1260,7 +1281,7 @@
     function limparFormAcompanhamento() {
         $('#acomp-status').val('');
         statusDoRetornoMontado = null;
-        $('#acomp-data-envio, #acomp-data-emissao, #acomp-numero-apolice, #acomp-obs, #acomp-anexo').val('');
+        $('#acomp-data-envio, #acomp-data-emissao, #acomp-numero-apolice, #acomp-numero-endosso, #acomp-obs, #acomp-anexo').val('');
         alternarCamposAcompanhamento();
         var agora = new Date();
         var p = function(n) { return String(n).padStart(2, '0'); };
@@ -1307,6 +1328,7 @@
         $('#acomp-data-envio').val(d.envio);
         $('#acomp-data-emissao').val(d.emissao);
         $('#acomp-numero-apolice').val(d.apolice);
+        $('#acomp-numero-endosso').val(d.numeroEndosso);
         $('#acomp-obs').val(d.obs);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAcompanhamento')).show();
     }
@@ -1332,6 +1354,10 @@
         if (st.regra === 'emitida' && (!$('#acomp-data-emissao').val() || !$('#acomp-numero-apolice').val().trim())) {
             avisoElegante('Para o status ' + st.nome + ', informe a data de emissão e o número da apólice.', 'Campos obrigatórios'); return;
         }
+        var pedeEndosso = ($('#origem_hidden').val() === 'endosso') && !!(ret && ret.avisado);
+        if (pedeEndosso && st.regra === 'emitida' && !$('#acomp-numero-endosso').val().trim()) {
+            avisoElegante('Informe o número do endosso.', 'Campo obrigatório'); return;
+        }
         var dados = new FormData();
         dados.append('origem', $('#origem_hidden').val() || 'novo');
         dados.append('registro_id', $('#base_novo_id_hidden').val());
@@ -1341,6 +1367,7 @@
         dados.append('data_envio_cliente', $('#acomp-data-envio').val());
         dados.append('data_emissao', $('#acomp-data-emissao').val());
         dados.append('numero_apolice', $('#acomp-numero-apolice').val());
+        if (pedeEndosso) dados.append('numero_endosso', $('#acomp-numero-endosso').val());
         dados.append('observacao', $('#acomp-obs').val());
         var arquivo = REGRAS_COM_ANEXO.indexOf(st.regra) !== -1 ? document.getElementById('acomp-anexo').files[0] : null;
         if (arquivo) {
@@ -1395,6 +1422,14 @@
         }
     }
 
+    function mostrarOrigemFicha(origem) {
+        var nomes = { novo: 'Novo', renovacao: 'Renovação', endosso: 'Endosso' };
+        var classes = { novo: 'bg-info text-white', renovacao: 'bg-warning text-dark', endosso: 'bg-secondary' };
+        $('#badge-origem-ficha')
+            .attr('class', 'badge ms-3 ' + (classes[origem] || classes.novo))
+            .text(nomes[origem] || nomes.novo);
+    }
+
     function editarIndicacao(row) {
         var id = row.getAttribute('data-id');
         var origem = row.getAttribute('data-origem') || 'novo';
@@ -1408,6 +1443,7 @@
 
         $('#base_novo_id_hidden').val(id);
         $('#origem_hidden').val(origem);
+        mostrarOrigemFicha(origem);
         $('#base_novo_id_display').val(id);  // alex: mostra o ID do registro (somente leitura)
         // alex: mostra o responsável já indicado para essa demanda (ou "Em aberto").
         mostrarResponsavelDemanda(row.getAttribute('data-responsavel-demanda-nome'));

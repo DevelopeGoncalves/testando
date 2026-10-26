@@ -23,7 +23,7 @@
                 <!-- alex: lixeira logo depois do Exportar. Excluir só no Base Novo/Emissão e SÓ para Gestor. -->
                 <button class="btn btn-danger me-1" onclick="confirmarExclusao('form-delete-base-novo')"><i class="fas fa-trash-alt"></i></button>
                 <!-- alex: Exportar SOMENTE para Gestor. Leitor e Editor não exportam. -->
-                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv')"><i class="fas fa-file-csv"></i> Exportar</button>
+                <button class="btn btn-success me-1" onclick="exportarCSV('base_novo.csv', COLUNAS_EXTRAS_EXPORTACAO)"><i class="fas fa-file-csv"></i> Exportar</button>
                 {% endif %}
 
                 {% if usuario_pode_editar %}
@@ -1983,6 +1983,17 @@
     }
 
     var ligacaoEmEdicao = null;
+
+    // Colunas que só existem na planilha exportada (não aparecem na tela).
+    // "Prêmio total da última ligação": a ligação mais recente é a primeira da lista da linha.
+    const COLUNAS_EXTRAS_EXPORTACAO = [{
+        titulo: 'Prêmio total da última ligação',
+        valor: function (tr) {
+            var ultima = tr.querySelector('.dados-ligacoes-extras .extra-item-ligacao');
+            var premio = ultima ? ultima.dataset.premioTotal : '';
+            return premio ? formatarValorBRL(premio) : '';
+        }
+    }];
 
     function editarLigacaoHistorico(numero) {
         if (!PODE_REGISTRAR_LIGACAO || !modalLigacao) return;

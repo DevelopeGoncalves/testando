@@ -578,6 +578,8 @@ class AcompanhamentoEmissao(models.Model):
     # Só preenchidos quando a regra do status é "emitida"
     data_emissao = models.DateField("Data de emissão", null=True, blank=True)
     numero_apolice = models.CharField("Número da apólice", max_length=50, blank=True, null=True)
+    # Só quando a venda vem do card Endosso e o cliente foi avisado (retorno "Sim"/"enviada").
+    numero_endosso = models.CharField("Número do endosso", max_length=50, blank=True, null=True)
     # Só para as regras recusada/cancelado: PDF ou imagem com o motivo (opcional).
     anexo = models.FileField("Anexo (PDF ou imagem)", upload_to=caminho_anexo_emissao,
                              storage=storage_anexos_emissao, max_length=255, blank=True, null=True)

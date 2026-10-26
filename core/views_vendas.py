@@ -1076,6 +1076,14 @@ def salvar_acompanhamento_emissao(request):
         if not numero_apolice:
             return JsonResponse({'ok': False, 'erro': 'Informe o número da apólice.'}, status=400)
 
+    # Número do endosso: só quando a venda vem do Endosso e o cliente foi avisado ("Sim"/"enviada").
+    # Obrigatório na Emitida; nas outras regras é opcional.
+    numero_endosso = ''
+    if origem == 'endosso' and cliente_avisado:
+        numero_endosso = (request.POST.get('numero_endosso') or '').strip()[:50]
+        if status.regra == StatusEmissao.REGRA_EMITIDA and not numero_endosso:
+            return JsonResponse({'ok': False, 'erro': 'Informe o número do endosso.'}, status=400)
+
     # Anexo (PDF ou imagem): so vale para as regras recusada/cancelado e e opcional.
     anexo = request.FILES.get('anexo') if status.regra in StatusEmissao.REGRAS_COM_ANEXO else None
     anexo_nome = ''
@@ -1095,6 +1103,7 @@ def salvar_acompanhamento_emissao(request):
         editando.data_envio_cliente = data_envio
         editando.data_emissao = data_emissao
         editando.numero_apolice = numero_apolice
+        editando.numero_endosso = numero_endosso
         if anexo:
             if editando.anexo:
                 editando.anexo.delete(save=False)  # troca o arquivo: não deixa o antigo sobrando no disco
@@ -1119,6 +1128,7 @@ def salvar_acompanhamento_emissao(request):
         data_envio_cliente=data_envio,
         data_emissao=data_emissao,
         numero_apolice=numero_apolice,
+        numero_endosso=numero_endosso,
     )
     if anexo:
         acompanhamento.anexo = anexo
