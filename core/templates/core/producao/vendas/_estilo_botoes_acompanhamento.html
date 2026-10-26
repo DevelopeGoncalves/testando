@@ -1,0 +1,44 @@
+{# ===========================================================================================
+   CORES DOS BOTÕES "Cancelar" E "Salvar" DO POP-UP DE ACOMPANHAMENTO DA EMISSÃO
+   Este arquivo vale para a Emissão E para a Base Emissão (as duas telas usam ele).
+   Mude só os valores abaixo, salve e atualize a página (Ctrl+F5): as duas telas mudam juntas.
+   Formato das cores: #rrggbb (ex.: #ffffff = branco, #000000 = preto) ou o nome (white, green...).
+   =========================================================================================== #}
+<style>
+    #modalAcompanhamento {
+        /* ---- botão CANCELAR ---- */
+        --acomp-cancelar-fundo: #ffffff;          /* fundo */
+        --acomp-cancelar-letra: #065534;          /* letra, ícone e borda */
+        --acomp-cancelar-fundo-hover: #065534;    /* fundo ao passar o mouse */
+        --acomp-cancelar-letra-hover: #ffffff;    /* letra ao passar o mouse */
+
+        /* ---- botão SALVAR ---- */
+        --acomp-salvar-fundo: #ffffff;
+        --acomp-salvar-letra: #065534;
+        --acomp-salvar-fundo-hover: #065534;
+        --acomp-salvar-letra-hover: #ffffff;
+    }
+
+    /* (daqui pra baixo não precisa mexer) */
+    #modalAcompanhamento .btn-acomp-cancelar {
+        background-color: var(--acomp-cancelar-fundo) !important;
+        color: var(--acomp-cancelar-letra) !important;
+        border: 1px solid var(--acomp-cancelar-letra) !important;
+    }
+    #modalAcompanhamento .btn-acomp-cancelar i { color: inherit !important; }
+    #modalAcompanhamento .btn-acomp-cancelar:hover {
+        background-color: var(--acomp-cancelar-fundo-hover) !important;
+        color: var(--acomp-cancelar-letra-hover) !important;
+    }
+    #modalAcompanhamento .btn-acomp-salvar {
+        background-color: var(--acomp-salvar-fundo) !important;
+        color: var(--acomp-salvar-letra) !important;
+        border: 1px solid var(--acomp-salvar-letra) !important;
+    }
+    #modalAcompanhamento .btn-acomp-salvar i { color: inherit !important; }
+    #modalAcompanhamento .btn-acomp-salvar:hover:not(:disabled) {
+        background-color: var(--acomp-salvar-fundo-hover) !important;
+        color: var(--acomp-salvar-letra-hover) !important;
+    }
+    #modalAcompanhamento .btn-acomp-salvar:disabled { opacity: .6; }
+</style>

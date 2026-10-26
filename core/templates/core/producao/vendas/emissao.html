@@ -49,17 +49,6 @@
         border-color: var(--cor-botao-ligacao);
     }
     #modalBanseg .lista-seguradoras-banseg { max-height: 50vh; overflow-y: auto; }
-    #modalAcompanhamento .btn-acao-ligacao {
-        --cor-botao-ligacao: #065534;
-        color: var(--cor-botao-ligacao);
-        background-color: #ffffff;
-        border: 1px solid var(--cor-botao-ligacao);
-    }
-    #modalAcompanhamento .btn-acao-ligacao:hover {
-        color: #ffffff;
-        background-color: var(--cor-botao-ligacao);
-        border-color: var(--cor-botao-ligacao);
-    }
     /* Evita o "flash" da tabela crua */
     #tabela-base-novo { visibility: hidden; }
     #tabela-base-novo.dt-pronta { visibility: visible; }
@@ -599,6 +588,7 @@
     {% if usuario_pode_editar %}
     <!-- POP-UP para registrar o acompanhamento da emissão (fora do <form> da ficha, pra o Enter
          dentro dele não salvar a ficha por engano). -->
+    {% include "core/producao/vendas/_estilo_botoes_acompanhamento.html" %}
     <div class="modal fade" id="modalAcompanhamento" tabindex="-1" aria-labelledby="modalAcompanhamentoLabel"
          data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -606,8 +596,8 @@
                 <div class="modal-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="modal-title m-0" id="modalAcompanhamentoLabel"><i class="fas fa-clipboard-check"></i> Registrar Acompanhamento da Emissão</h5>
                     <div>
-                        <button type="button" class="btn btn-sm btn-acao-ligacao fw-bold me-2" onclick="fecharModalAcompanhamento()"><i class="fas fa-times"></i> Cancelar</button>
-                        <button type="button" id="btn-salvar-acompanhamento" class="btn btn-sm btn-acao-ligacao fw-bold px-4" onclick="salvarAcompanhamento()"><i class="fa-regular fa-floppy-disk"></i> Salvar</button>
+                        <button type="button" class="btn btn-sm btn-acomp-cancelar fw-bold me-2" onclick="fecharModalAcompanhamento()"><i class="fas fa-times"></i> Cancelar</button>
+                        <button type="button" id="btn-salvar-acompanhamento" class="btn btn-sm btn-acomp-salvar fw-bold px-4" onclick="salvarAcompanhamento()"><i class="fa-regular fa-floppy-disk"></i> Salvar</button>
                     </div>
                 </div>
                 <div class="modal-body">
