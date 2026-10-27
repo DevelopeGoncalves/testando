@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from core import views, views_vendas
+from core import views, views_vendas, views_usuarios
 from django.contrib.auth import views as auth_views
 
 
@@ -146,16 +146,16 @@ urlpatterns = [
     path('financeiro/formularios', views.financeiro_formularios, name='financeiro_formularios'),
     path('financeiro/relatorios', views.financeiro_relatorios, name='financeiro_relatorios'),
 
-    path('administracao/usuarios/', views.listar_usuarios, name='listar_usuarios'),
-    path('administracao/usuarios/novo/', views.form_usuario, name='form_usuario_criar'),
-    path('administracao/usuarios/editar/<int:id>/', views.form_usuario, name='form_usuario_editar'),
-    path('administracao/usuarios/excluir/', views.excluir_usuarios, name='excluir_usuarios'),
+    path('administracao/usuarios/', views_usuarios.listar_usuarios, name='listar_usuarios'),
+    path('administracao/usuarios/novo/', views_usuarios.form_usuario, name='form_usuario_criar'),
+    path('administracao/usuarios/editar/<int:id>/', views_usuarios.form_usuario, name='form_usuario_editar'),
+    path('administracao/usuarios/excluir/', views_usuarios.excluir_usuarios, name='excluir_usuarios'),
 
     path('financeiro/processamentos/habitacional', views.financeiro_habitacional, name='financeiro_habitacional'),
     path('financeiro/habitacional/exportar-txt/', views.exportar_txt_habitacional, name='exportar_txt_habitacional'),
     path('financeiro/habitacional/processar/', views.processar_mensal_habitacional, name='processar_mensal_habitacional'),
 
-    path('ping-online/', views.ping_online, name='ping_online'),
-    path('desconectar_usuarios/', views.desconectar_usuarios, name='desconectar_usuarios'),
+    path('ping-online/', views_usuarios.ping_online, name='ping_online'),
+    path('desconectar_usuarios/', views_usuarios.desconectar_usuarios, name='desconectar_usuarios'),
 ]
 
