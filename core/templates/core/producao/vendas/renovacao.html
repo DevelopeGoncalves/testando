@@ -1,4 +1,5 @@
 {% extends 'core/layout.html' %}
+{% load formatos %}
 
 {% block title %}Vendas - Renovação{% endblock %}
 
@@ -131,7 +132,7 @@
                                       data-seguradora="{{ l.seguradora_id|default:'' }}"
                                       data-seguradora-nome="{{ l.seguradora.seguradora|default:'' }}"
                                       data-comissao="{{ l.comissao|floatformat:'2u'|default:'' }}"
-                                      data-cadastrado-por="{{ l.cadastrado_por|default:'' }}"></span>
+                                      data-cadastrado-por="{{ l.cadastrado_por|atendente_fmt }}"></span>
                                 {% endfor %}
                             </td>
 
@@ -682,7 +683,7 @@
 {% block scripts %}
 <script>
     let contadorLigacoes = 1;
-    const USUARIO_ATUAL_NOME = "{{ request.user.get_full_name|default:request.user.username|escapejs }}";
+    const USUARIO_ATUAL_NOME = "{{ request.user|atendente_usuario|escapejs }}";
     // alex: Renovação e Base Renovação (não Emissão) E só para quem pode editar (Editor/Gestor).
     // Leitor não registra/edita ligação nem trava o registro (apenas leitura).
     const PODE_REGISTRAR_LIGACAO = {% if usuario_pode_editar %}true{% else %}false{% endif %};
