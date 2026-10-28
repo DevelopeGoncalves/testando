@@ -521,8 +521,8 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
             'placeholder': 'Buscar...'
         })
     )
-    login = forms.CharField(label="Usuário", max_length=150)
-    
+    # O login do usuário é a própria matrícula (só números); não existe mais campo "Usuário" separado.
+
     password = forms.CharField(
         label="Senha", 
         widget=forms.PasswordInput, 
@@ -613,6 +613,12 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
     # --- AUDITORIA ---
     aud = criar_campo_permissao("Acessar Aba Auditoria")
 
+    def clean_matricula(self):
+        matricula = (self.cleaned_data.get('matricula') or '').strip()
+        if not matricula.isdigit():
+            raise forms.ValidationError("A matrícula deve conter somente números.")
+        return matricula
+
     def clean(self):
         cleaned_data = super().clean()
         senha = cleaned_data.get("password")
@@ -623,7 +629,7 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
             
         # Como usamos required=False nos campos numéricos, garantimos que campos vazios se tornem 0
         for campo in cleaned_data:
-            if campo not in ['matricula', 'login', 'password', 'confirmar_senha', 'is_active']:
+            if campo not in ['matricula', 'password', 'confirmar_senha', 'is_active']:
                 if cleaned_data.get(campo) is None:
                     cleaned_data[campo] = 0
 

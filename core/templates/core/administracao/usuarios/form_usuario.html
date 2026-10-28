@@ -149,8 +149,8 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">{{ form.login.label }}</label>
-                            {{ form.login }}
+                            <label class="form-label">Login do usuário</label>
+                            <div class="form-control bg-light text-muted" style="height:auto;">O login é a própria matrícula (somente números), escolhida entre os colaboradores cadastrados.</div>
                         </div>
                         
                         <div class="col-md-4 mb-3">
@@ -403,7 +403,7 @@
             <div class="modal-body p-4">
                 <label class="form-label text-muted">Selecionar o usuário base</label>
                 <div class="input-container">
-                    <input type="text" id="input-busca-espelho" class="form-control" placeholder="Digite o login ou matrícula..." autocomplete="off">
+                    <input type="text" id="input-busca-espelho" class="form-control" placeholder="Digite a matrícula..." autocomplete="off">
                     <div id="dropdown-espelho" class="lista-suspensa d-none"></div>
                 </div>
                 <input type="hidden" id="hidden-perms-espelho" value="">

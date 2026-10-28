@@ -14,6 +14,13 @@ from .auditoria import registrar_auditoria_backend
 from .forms import NovoUsuarioForm
 from .models import Colaborador, PerfilUsuario
 
+def preencher_nome_pelo_colaborador(usuario, colaborador):
+    """Como o login agora é a matrícula, guarda o nome do colaborador no usuário (só se ainda
+    estiver vazio) - assim "Cadastrado por"/"Atendente" mostram o nome e não o número."""
+    if colaborador and colaborador.colaborador and not (usuario.first_name or usuario.last_name):
+        usuario.first_name = colaborador.colaborador[:150]
+
+
 # Aba Administração > Usuários: lista, cadastro/edição, exclusão, "online" e desconectar.
 # (As views de Vendas ficam em views_vendas.py; esta aba segue a mesma organização.)
 
@@ -99,17 +106,34 @@ def form_usuario(request, id=None):
     if request.method == 'POST':
         form = NovoUsuarioForm(request.POST)
         if form.is_valid():
-            login = form.cleaned_data['login']
             matricula = form.cleaned_data['matricula']
             senha = form.cleaned_data['password']
+            # O login do usuário É a matrícula (só números).
+            login = matricula
 
+            # Só cadastra usuário quem está cadastrado em Base > Formulários > Colaboradores.
             colaborador_obj = Colaborador.objects.filter(matricula=matricula).first()
             if not colaborador_obj:
-                messages.error(request, f'Erro: A matrícula {matricula} não existe na base.')
+                messages.error(request, f'Erro: A matrícula {matricula} não está cadastrada em Colaboradores.')
+                return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
+
+            # Um colaborador só pode ter um usuário.
+            outro_perfil = PerfilUsuario.objects.filter(colaborador=colaborador_obj).select_related('usuario')
+            if usuario_edit:
+                outro_perfil = outro_perfil.exclude(usuario=usuario_edit)
+            outro_perfil = outro_perfil.first()
+            if outro_perfil:
+                messages.error(request, f'A matrícula {matricula} já tem usuário cadastrado ({outro_perfil.usuario.username}).')
                 return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
 
             if usuario_edit:
-                usuario_edit.username = login
+                # Superusuário não tem matrícula: o login dele não é trocado por aqui.
+                if not usuario_edit.is_superuser:
+                    if User.objects.filter(username=login).exclude(id=usuario_edit.id).exists():
+                        messages.error(request, 'Este login já está em uso no sistema.')
+                        return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
+                    usuario_edit.username = login
+                    preencher_nome_pelo_colaborador(usuario_edit, colaborador_obj)
                 if senha:
                     usuario_edit.set_password(senha)
                 
@@ -135,6 +159,8 @@ def form_usuario(request, id=None):
                     return render(request, 'core/administracao/usuarios/form_usuario.html', {'form': form, 'usuario_edit': usuario_edit, 'colaboradores': colaboradores})
 
                 user = User.objects.create_user(username=login, password=senha)
+                preencher_nome_pelo_colaborador(user, colaborador_obj)
+                user.save()
                 
                 permissoes_dit = {campo: form.cleaned_data[campo] for campo in PERMISSOES_CAMPOS}
                 
@@ -151,7 +177,6 @@ def form_usuario(request, id=None):
     else:
         if usuario_edit:
             dados_iniciais = {
-                'login': usuario_edit.username,
                 'matricula': perfil.colaborador.matricula if perfil and perfil.colaborador else '',
                 'is_active': usuario_edit.is_active,
             }

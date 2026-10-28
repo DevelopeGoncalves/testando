@@ -462,7 +462,7 @@
                 </div>
             </div>
             
-            <div><span class="me-3 small">{{ user.username }}</span><i class="fas fa-user-circle fa-lg" style="color: #919191 !important;"></i></div>
+            <div><span class="me-3 small">{{ user.get_full_name|default:user.username }}</span><i class="fas fa-user-circle fa-lg" style="color: #919191 !important;"></i></div>
         </nav>
         
         <div class="container-fluid px-4">
