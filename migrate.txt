@@ -2,3 +2,12 @@ python manage.py makemigrations
 python manage.py migrate
 python manage.py collectstatic
 sqlite3 db.sqlite3 < patch_anbima_producao.sql
+
+
+alex
+
+sincronizar as matriculas: python manage.py sincronizar_login_matricula
+
+corrigir atendentes: python manage.py corrigir_atendentes_antigos
+
+instalar biblioteca para gerador de cpf e CNPJ: pip install validate-docbr
