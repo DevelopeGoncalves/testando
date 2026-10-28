@@ -647,8 +647,56 @@
         $table.find('tbody tr').each(function () { reordLinha($(this)); });
     }
 
+    // --- Filtros/ordenação que sobrevivem ao recarregar a página ---
+    // Ao salvar uma ligação (ou qualquer ação que recarrega a tela) o filtro continuava só na memória
+    // e sumia. Agora fica guardado na aba do navegador (sessionStorage, por tela e por tabela) e só é
+    // apagado quando a pessoa clica em "Limpar Filtros".
+    var tabelaFiltrosId = null;
+    function chaveFiltrosTabela() {
+        return 'filtros_tabela:' + location.pathname + location.search + ':' + tabelaFiltrosId;
+    }
+    window.salvarFiltrosTabela = function () {
+        if (!tableInstance || !tabelaFiltrosId) return;
+        try {
+            var cols = {};
+            tableInstance.columns().every(function () {
+                var s = this.search();
+                if (s) cols[this.index()] = s;
+            });
+            var estado = { cols: cols, order: tableInstance.order() };
+            if (!Object.keys(cols).length && !(estado.order && estado.order.length)) {
+                sessionStorage.removeItem(chaveFiltrosTabela());
+            } else {
+                sessionStorage.setItem(chaveFiltrosTabela(), JSON.stringify(estado));
+            }
+        } catch (e) {}
+    };
+    function restaurarFiltrosTabela() {
+        if (!tableInstance || !tabelaFiltrosId) return;
+        try {
+            var bruto = sessionStorage.getItem(chaveFiltrosTabela());
+            if (!bruto) return;
+            var estado = JSON.parse(bruto);
+            var total = tableInstance.columns().count();
+            Object.keys(estado.cols || {}).forEach(function (idx) {
+                idx = parseInt(idx, 10);
+                if (idx >= total) return;
+                tableInstance.column(idx).search(estado.cols[idx], true, false);
+                if (estado.cols[idx] !== '^$') {
+                    $(tableInstance.column(idx).header()).find('.excel-header-btn').addClass('header-filtered');
+                }
+            });
+            if (estado.order && estado.order.length && estado.order[0][0] < total) {
+                tableInstance.order(estado.order);
+            }
+            tableInstance.draw();
+            verificarEstadoFiltros();
+        } catch (e) {}
+    }
+
     // tabelaId: id da tabela.
     function iniciarTabelaExcel(tabelaId, colunasVisiveisEmOrdem) {
+        tabelaFiltrosId = tabelaId;
         // Failsafe: revela a tabela mesmo que o DataTables falhe ao inicializar,
         setTimeout(function () { revelarTabela(tabelaId); }, 5000);
 
@@ -771,6 +819,8 @@
         });
         
 
+        restaurarFiltrosTabela();
+
         $(document).on('click', '.excel-dropdown-menu', function (e) { e.stopPropagation(); });
     }
 
@@ -822,6 +872,7 @@
     
     window.ordenarColuna = function(colIndex, dir) { 
         tableInstance.order([colIndex, dir]).draw(); 
+        salvarFiltrosTabela();
     };
 
     window.filtrarListaInterna = function(input, colIndex) {
@@ -886,6 +937,7 @@
         $('[data-bs-toggle="dropdown"]').dropdown('hide'); 
         currentFilterColumn = null; // Reseta para as listas atualizarem direito
         verificarEstadoFiltros();
+        salvarFiltrosTabela();
     };
     
     window.toggleDeleteAll = function(source) {
@@ -902,6 +954,8 @@
             
             // Esconde o botão novamente
             verificarEstadoFiltros();
+            // Só aqui o filtro guardado é apagado de vez.
+            try { sessionStorage.removeItem(chaveFiltrosTabela()); } catch (e) {}
         }
     };
 
