@@ -1018,9 +1018,9 @@
         });
 
         // Ordem: Origem, Cadastrado em, Último atendente, Responsável, Em uso por, Produto, Indicador,
-        // Agência, CPF do cliente, Nome do cliente, Seguradora, Status emissão.
-        // ("Apólice" e "Retorno ao cliente" ficam ocultas.)
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 18, 27]);
+        // Agência, CPF do cliente, Nome do cliente, Seguradora, Status emissão, Retorno ao cliente.
+        // ("Apólice" fica oculta.)
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 18, 27, 29]);
 
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);

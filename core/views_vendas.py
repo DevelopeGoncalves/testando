@@ -21,7 +21,7 @@ from .forms import IndicacaoForm, IndicacaoRenovacaoForm, IndicacaoEndossoForm
 from .models import (
     Unidade, Colaborador, Seguradora, Indicacao, LigacaoIndicacao,
     IndicacaoRenovacao, LigacaoRenovacao, IndicacaoEndosso, LigacaoEndosso, AcompanhamentoEmissao,
-    StatusEmissao, RetornoClienteEmissao,
+    StatusEmissao, RetornoClienteEmissao, PerfilUsuario,
 )
 from .emissao_padroes import garantir_padroes_emissao
 from .odonto import _sem_acento as _texto_comparavel
@@ -438,13 +438,43 @@ def _status_fechamento_indicacao(ind):
         return 'Não venda: ' + ult.motivo_nao_venda
     return 'Em aberto'
 
+_MAPA_ATENDENTES = {'quando': 0, 'dados': {}}
+
+def _mapa_atendentes():
+    """texto -> "matrícula - nome" dos usuários (pelo login/matrícula ou pelo nome completo).
+    Guardado por 30 s pra não consultar o banco a cada linha da lista."""
+    agora = timezone.now().timestamp()
+    if agora - _MAPA_ATENDENTES['quando'] > 30:
+        dados = {}
+        perfis = PerfilUsuario.objects.select_related('usuario', 'colaborador').filter(colaborador__isnull=False)
+        for p in perfis:
+            colab = p.colaborador
+            texto = f'{colab.matricula} - {colab.colaborador}' if colab.matricula else colab.colaborador
+            for nome in ((p.usuario.get_full_name() or '').strip(), (colab.colaborador or '').strip()):
+                if nome:
+                    dados.setdefault(nome.lower(), texto)
+        for p in perfis:  # login/matrícula tem prioridade sobre o nome
+            colab = p.colaborador
+            texto = f'{colab.matricula} - {colab.colaborador}' if colab.matricula else colab.colaborador
+            dados[p.usuario.username.lower()] = texto
+        _MAPA_ATENDENTES.update(quando=agora, dados=dados)
+    return _MAPA_ATENDENTES['dados']
+
+def _formatar_atendente(texto):
+    """Mostra quem atendeu como "matrícula - nome" (igual à coluna Responsável). Se não achar o
+    usuário (ex.: registro antigo com login que não existe mais), devolve o texto como está."""
+    texto = (texto or '').strip()
+    if not texto:
+        return ''
+    return _mapa_atendentes().get(texto.lower(), texto)
+
 def _responsavel_ultima_ligacao(ind):
-    """Quem registrou a ligação MAIS RECENTE (cadastrado_por da última ligação)."""
+    """Quem registrou a ligação MAIS RECENTE (cadastrado_por da última ligação), como "matrícula - nome"."""
     ligs = list(ind.ligacoes.all())
     if not ligs:
         return ''
     ult = max(ligs, key=lambda l: l.id or 0)
-    return ult.cadastrado_por or ''
+    return _formatar_atendente(ult.cadastrado_por)
 
 def _definir_responsavel_demanda(request, id, model_indicacao, campos_permissao):
     """somente o usuario pode tirar ou indicar o responsavel pela demanda '."""
