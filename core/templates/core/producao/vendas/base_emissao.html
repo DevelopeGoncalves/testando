@@ -960,10 +960,10 @@
             }
         });
 
-        // Ordem: Origem, Cadastrado em, Último atendente, Responsável, Em uso por, Produto, Indicador,
+        // Ordem: Origem, Cadastrado em, Responsável, Último atendente, Em uso por, Produto, Indicador,
         // Agência, CPF do cliente, Nome do cliente, Seguradora, Status emissão, Apólice enviada ao
         // cliente, Status. ("Apólice" fica oculta.)
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 26, 3, 4, 15, 6, 8, 13, 11, 18, 27, 29, 25]);
+        iniciarTabelaExcel('tabela-base-novo', [1, 2, 3, 26, 4, 15, 6, 8, 13, 11, 18, 27, 29, 25]);
 
         atualizarAtendimentos();
         setInterval(atualizarAtendimentos, 5000);

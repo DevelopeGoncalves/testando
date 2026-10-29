@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
 
@@ -892,6 +892,9 @@ def _opcoes_status_emissao():
         for st in StatusEmissao.objects.filter(inativo=False).order_by('id')
     ]
 
+# Início do período da Emissão (Banseg / Outras cias): o que foi cadastrado antes não aparece lá.
+EMISSAO_A_PARTIR_DE = date(2026, 9, 1)
+
 def _render_emissao(request, base):
     """Monta a tela da Emissão (base=False) ou da Base Emissão (base=True). As duas mostram as
     vendas fechadas; a Base Emissão registra TUDO, a Emissão só as que ainda não foram finalizadas
@@ -926,6 +929,12 @@ def _render_emissao(request, base):
         indicacoes = [
             i for i in indicacoes
             if not (i.status_emissao_regra in REGRAS_EMISSAO_FINALIZADAS and i.status_emissao_cliente_ciente)
+        ]
+        # A Emissão (Banseg e Outras cias) só mostra registros cadastrados a partir de setembro/2026
+        # (coluna "Cadastrado em"). Os mais antigos continuam na Base Emissão.
+        indicacoes = [
+            i for i in indicacoes
+            if not i.carimbo_data_hora or timezone.localtime(i.carimbo_data_hora).date() >= EMISSAO_A_PARTIR_DE
         ]
 
     # alex: card "Emissão" vira 2 botões (Banseg / Outras cias) de acordo com a

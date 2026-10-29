@@ -22,12 +22,6 @@
                     <i class="fas fa-filter"></i> Limpar Filtros
                 </button>
                 
-                {% if request.user.is_superuser%}
-                <form id="form-apagar-tudo-colaboradores" method="post" action="{% url 'deletar_tudo' 'colaborador' %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="button" class="btn btn-dark me-1" title="Apagar TODOS do sistema" onclick="confirmarBotaoSubmit(this, 'CUIDADO EXTREMO! Tem certeza que deseja APAGAR TODOS os colaboradores do banco de dados? Isso não tem volta!', { titulo: 'Apagar tudo', textoConfirmar: 'Sim, apagar tudo', corBotao: 'dark' })"><i class="fas fa-bomb"></i> Limpar Tudo</button>
-                </form>
-                {% endif %}
 
                 {% if request.user.is_superuser or request.user.perfil.base_form_colaboradores > 2 %}
                 <button class="btn btn-danger me-1" title="Apagar selecionados" onclick="confirmarExclusao('form-delete-colaboradores')"><i class="fas fa-trash-alt"></i> Excluir</button>
