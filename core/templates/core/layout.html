@@ -695,8 +695,12 @@
     }
 
     // tabelaId: id da tabela.
-    function iniciarTabelaExcel(tabelaId, colunasVisiveisEmOrdem) {
+    // opcoes (opcional): { ordenarPor: N, direcao: 'asc' | 'desc' } - coluna (mesma numeração do
+    // comentário das colunas) que já vem ordenada ao abrir a tela.
+    function iniciarTabelaExcel(tabelaId, colunasVisiveisEmOrdem, opcoes) {
         tabelaFiltrosId = tabelaId;
+        opcoes = opcoes || {};
+        var ordemInicial = [];
         // Failsafe: revela a tabela mesmo que o DataTables falhe ao inicializar,
         setTimeout(function () { revelarTabela(tabelaId); }, 5000);
 
@@ -731,6 +735,11 @@
 
             reordenarColunasDom(tabelaId, ordem);
 
+            if (opcoes.ordenarPor) {
+                var idxOrdenar = ordem.indexOf((opcoes.ordenarPor - 1) + numSistema);
+                if (idxOrdenar > -1) ordemInicial = [[idxOrdenar, opcoes.direcao || 'asc']];
+            }
+
             var ocultar = [];
             for (var h = numSistema + mostrarReais.length; h < totalCols; h++) ocultar.push(h);
             if (ocultar.length) columnDefs.push({ visible: false, targets: ocultar });
@@ -752,7 +761,7 @@
                 paginate: { first: 'Primeiro', last: 'Último', next: 'Próximo', previous: 'Anterior' }
             },
             ordering: true,
-            order: [],
+            order: ordemInicial,
             columnDefs: columnDefs,
 
             // --- Aumentar o numero de linha por pagina para 50 ---

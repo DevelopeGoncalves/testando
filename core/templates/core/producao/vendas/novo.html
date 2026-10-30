@@ -157,7 +157,8 @@
                             <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
-                            <td class="text-center" data-order="{{ i.proxima_ligacao|date:'Y-m-d\TH:i'|default:'' }}">
+                            {# Ordem da coluna (menor -> maior): "SEM LIGAÇÃO?" primeiro, depois as datas, e "sem próxima" no fim. #}
+                            <td class="text-center" data-order="{% if not i.ligacoes.all %}0000-00-00T00:00{% elif i.proxima_ligacao %}{{ i.proxima_ligacao|date:'Y-m-d\TH:i' }}{% else %}9999-12-31T23:59{% endif %}">
                                 {% if i.ligacoes.all %}
                                 <span class="badge {% if i.proxima_ligacao %}bg-info{% else %}bg-secondary{% endif %}" style="cursor:pointer;" title="Ver histórico de ligações"
                                       onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
@@ -165,7 +166,7 @@
                                     {% if i.proxima_ligacao %}{{ i.proxima_ligacao|date:'d/m/Y H:i' }}{% else %}sem próxima{% endif %}
                                 </span>
                                 {% else %}
-                                <span class="text-muted">-</span>
+                                <span class="badge badge-sem-ligacao">SEM LIGAÇÃO?</span>
                                 {% endif %}
                             </td>
                             <td class="text-start">{{ i.observacoes|default:'-' }}</td>
@@ -184,6 +185,15 @@
     </div>
 
     <style>
+        /* ===== Selo "SEM LIGAÇÃO?" da coluna Próxima ligação (registro que ainda não teve ligação) =====
+           Mude só as duas cores abaixo, salve e atualize a página (Ctrl+F5). */
+        .badge-sem-ligacao {
+            --sem-ligacao-fundo: #ffc107;   /* fundo (amarelo) */
+            --sem-ligacao-letra: #dc3545;   /* letra (vermelho) */
+            background-color: var(--sem-ligacao-fundo) !important;
+            color: var(--sem-ligacao-letra) !important;
+            font-weight: 700;
+        }
         /* Evita o "flash" da tabela crua */
         #tabela-base-novo { visibility: hidden; }
         #tabela-base-novo.dt-pronta { visibility: visible; }
@@ -1207,7 +1217,8 @@
             }
         });
 
-        iniciarTabelaExcel('tabela-base-novo', [1, 2, 25, 3, 14, 5, 7, 12, 10, 22]);
+        // Próxima ligação vem primeiro (no lugar de "Cadastrado em", que fica oculta) e já ordenada do menor pro maior.
+        iniciarTabelaExcel('tabela-base-novo', [22, 2, 25, 3, 14, 5, 7, 12, 10], { ordenarPor: 22, direcao: 'asc' });
 
 
         atualizarAtendimentos();
