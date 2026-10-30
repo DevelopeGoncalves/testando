@@ -303,6 +303,51 @@
         i:not(.ignorar-icone-global) {
             color: var(--brand-green);  
         }
+
+        
+        /* --- DROPDOWN HENRIQUE --- */
+        .user-dropdown-menu {
+            border: 1px solid var(--border-light) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08) !important;
+            padding: 8px 0;
+            min-width: 200px;
+            /* Animação suave de entrada */
+            animation: dropdownFade 0.2s ease-out forwards;
+            transform-origin: top right;
+        }
+
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-dropdown-menu .dropdown-item {
+            padding: 10px 20px;
+            font-weight: 500;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        .user-dropdown-menu .dropdown-item:hover {
+            background-color: #f8faff;
+            color: var(--brand-blue-card);
+        }
+
+        .user-dropdown-menu .dropdown-item:hover i {
+            color: var(--brand-blue-card) !important;
+        }
+
+        /* Efeito de hover no nome/ícone do usuário */
+        .user-dropdown-toggle {
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .user-dropdown-toggle:hover {
+            background-color: rgba(0,0,0,0.04);
+        }
     </style>
 </head>
 <body>
@@ -462,7 +507,26 @@
                 </div>
             </div>
             
-            <div><span class="me-3 small">{{ user.get_full_name|default:user.username }}</span><i class="fas fa-user-circle fa-lg" style="color: #919191 !important;"></i></div>
+            <div class="dropdown position-relative">
+                <div class="d-flex align-items-center user-dropdown-toggle" style="cursor: pointer;" data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static">
+                    <span class="me-3 small fw-semibold">{{ user.get_full_name|default:user.username }}</span>
+                    <i class="fas fa-user-circle fa-2x" style="color: #adb5bd !important;"></i>
+                </div>
+                
+                <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" style="top: 100%; right: 0; margin-top: 2px;">
+                    <li>
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalResetSenha">
+                            <i class="fas fa-key me-2" style="color: #919191;"></i> Alterar Senha
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'logout' %}" onclick="limparCacheMenu()">
+                            <i class="fas fa-sign-out-alt me-2" style="color: #919191;"></i> Sair
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </nav>
         
         <div class="container-fluid px-4">
@@ -522,6 +586,35 @@
                 <button type="button" class="btn border fw-bold px-4 bg-white text-secondary shadow-sm" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn fw-bold px-4 btn-warning" id="modalConfirmarGlobalBtnOk">Confirmar</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Resetar Senha do Usuário -->
+<div class="modal fade" id="modalResetSenha" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-top: 4px solid var(--brand-blue-card); border-radius: 8px;">
+            <div class="modal-header bg-white border-bottom-0">
+                <h5 class="modal-title"><i class="fas fa-lock me-1"></i> Alterar minha senha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'resetar_senha_usuario' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body py-3">
+                    <div class="mb-3 px-2">
+                        <label for="nova_senha" class="form-label small text-muted">Nova senha</label>
+                        <input type="password" class="form-control" id="nova_senha" name="nova_senha" required minlength="8">
+                    </div>
+                    <div class="mb-2 px-2">
+                        <label for="confirmar_senha" class="form-label small text-muted">Confirmar nova senha</label>
+                        <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" required minlength="8">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0 d-flex justify-content-between">
+                    <button type="button" class="btn fw-bold px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn fw-bold px-4">Salvar</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
