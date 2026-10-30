@@ -260,3 +260,39 @@ def desconectar_usuarios(request):
             messages.success(request, 'Sessão dos usuários selecionados foi encerrada.')
             
     return redirect('listar_usuarios')
+
+
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+
+@login_required
+def resetar_senha_usuario(request):
+    if request.method == 'POST':
+        nova_senha = request.POST.get('nova_senha', '').strip()
+        confirmar_senha = request.POST.get('confirmar_senha', '').strip()
+
+        if not nova_senha:
+            messages.error(request, 'A nova senha não pode ser vazia.')
+            return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+        if nova_senha != confirmar_senha:
+            messages.error(request, 'As senhas informadas não coincidem.')
+            return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+        user = request.user
+
+        try:
+
+            validate_password(nova_senha, user)
+            
+            user.set_password(nova_senha)
+            user.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Sua senha foi alterada com sucesso!')
+
+        except ValidationError as e:
+            for erro in e.messages:
+                messages.error(request, erro)
+
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
