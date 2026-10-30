@@ -157,8 +157,8 @@
                             <td class="text-center">{{ i.tipo_documento.tipo_documento|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_contrato|default:'-' }}</td>
                             <td class="text-center">{{ i.numero_endosso|default:'-' }}</td>
-                            {# Ordem da coluna (menor -> maior): "SEM LIGAÇÃO?" primeiro, depois as datas, e "sem próxima" no fim. #}
-                            <td class="text-center" data-order="{% if not i.ligacoes.all %}0000-00-00T00:00{% elif i.proxima_ligacao %}{{ i.proxima_ligacao|date:'Y-m-d\TH:i' }}{% else %}9999-12-31T23:59{% endif %}">
+                            {# Ordem da coluna (menor -> maior): "SEM LIGAÇÃO?" primeiro, depois "sem próxima", depois as datas da mais próxima pra mais distante. #}
+                            <td class="text-center" data-order="{% if not i.ligacoes.all %}0000-00-00T00:00{% elif i.proxima_ligacao %}{{ i.proxima_ligacao|date:'Y-m-d\TH:i' }}{% else %}0000-00-01T00:00{% endif %}">
                                 {% if i.ligacoes.all %}
                                 <span class="badge {% if i.proxima_ligacao %}bg-info{% else %}bg-secondary{% endif %}" style="cursor:pointer;" title="Ver histórico de ligações"
                                       onclick="event.stopPropagation(); abrirHistoricoLigacoes(this)"
