@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from core import views, views_vendas, views_usuarios
+from core import views, views_vendas, views_usuarios, views_base_formularios
 from django.contrib.auth import views as auth_views
 
 
@@ -16,7 +16,7 @@ urlpatterns = [
     path('importar/unidades/', views.importar_unidades, name='importar_unidades'),
 
     # 2. ROTA DO PAINEL DE CARDS
-    path('base/formularios/', views.base_formularios, name='base_formularios'),
+    path('base/formularios/', views_base_formularios.base_formularios, name='base_formularios'),
     
     # 3. ROTA DO PAINEL DE COLABORADORES
     path('importar/colaboradores/', views.importar_colaboradores, name='importar_colaboradores'),
@@ -26,14 +26,14 @@ urlpatterns = [
     
 
     # 5. ROTA DO PAINEL DE LISTAGENS
-    path('agrupamentos/', views.lista_agrupamentos, name='lista_agrupamentos'),
+    path('agrupamentos/', views_base_formularios.lista_agrupamentos, name='lista_agrupamentos'),
     
     # 6. ROTA DO PAINEL DE UNIDADES
-    path('unidades/', views.lista_unidades, name='lista_unidades'), 
+    path('unidades/', views_base_formularios.lista_unidades, name='lista_unidades'), 
     
-    path('produtos/', views.lista_produtos, name='lista_produtos'),
-    path('ramos/', views.lista_ramos, name='lista_ramos'),
-    path('metas/', views.lista_metas, name='lista_metas'),
+    path('produtos/', views_base_formularios.lista_produtos, name='lista_produtos'),
+    path('ramos/', views_base_formularios.lista_ramos, name='lista_ramos'),
+    path('metas/', views_base_formularios.lista_metas, name='lista_metas'),
     
     # 6.1 AÇÕES
     path('excluir-massa/', views.excluir_em_massa, name='excluir_em_massa'),
@@ -42,16 +42,16 @@ urlpatterns = [
     path('base/processamentos/', views.base_processamentos, name='base_processamentos'),
     path('base/relatorios/', views.base_relatorios, name='base_relatorios'),
     
-    path('colaboradores/', views.lista_colaboradores, name='lista_colaboradores'),
+    path('colaboradores/', views_base_formularios.lista_colaboradores, name='lista_colaboradores'),
     
-    path('contratados/', views.lista_contratados, name='lista_contratados'),
+    path('contratados/', views_base_formularios.lista_contratados, name='lista_contratados'),
     
-    path('seguradoras/', views.lista_seguradoras, name='lista_seguradoras'),
+    path('seguradoras/', views_base_formularios.lista_seguradoras, name='lista_seguradoras'),
     
-    path('tipos-documentos/', views.lista_tiposdoc, name='lista_tiposdoc'),
+    path('tipos-documentos/', views_base_formularios.lista_tiposdoc, name='lista_tiposdoc'),
 
-    path('base/formularios/estados-anbima/', views.lista_estados_anbima, name='lista_estados_anbima'),
-    path('base/formularios/fundos-anbima/', views.lista_fundos_anbima, name='lista_fundos_anbima'),
+    path('base/formularios/estados-anbima/', views_base_formularios.lista_estados_anbima, name='lista_estados_anbima'),
+    path('base/formularios/fundos-anbima/', views_base_formularios.lista_fundos_anbima, name='lista_fundos_anbima'),
 
     path('producao/processamentos/habitacional/', views.producao_habitacional_import, name='producao_habitacional_import'),
     path('producao/processamentos/anbima/', views.producao_anbima_import, name='producao_anbima_import'),
@@ -64,7 +64,7 @@ urlpatterns = [
     # 7. ROTA DO PAINEL DE VOLTAR TELA LOGIN
     path('logout/', views.sair_do_sistema, name='logout'),
     
-    path('clientes/', views.lista_clientes, name='lista_clientes'),
+    path('clientes/', views_base_formularios.lista_clientes, name='lista_clientes'),
     
     # 7.1 TELA LOGIN 
     path('login/', views.login_view, name='login'),
@@ -78,9 +78,9 @@ urlpatterns = [
     # 9.1 Esta rota abre a tela com os Cards (index)
     path('producao/vendas/', views_vendas.producao_vendas, name='producao_vendas'),
     
-    path('base/formularios/tipo-pessoa/', views.tipo_pessoa_lista, name='tipo_pessoa_lista'),
-    path('base/formularios/status-emissoes/', views.lista_status_emissao, name='lista_status_emissao'),
-    path('base/formularios/retorno-cliente-emissoes/', views.lista_retorno_emissao, name='lista_retorno_emissao'),
+    path('base/formularios/tipo-pessoa/', views_base_formularios.tipo_pessoa_lista, name='tipo_pessoa_lista'),
+    path('base/formularios/status-emissoes/', views_base_formularios.lista_status_emissao, name='lista_status_emissao'),
+    path('base/formularios/retorno-cliente-emissoes/', views_base_formularios.lista_retorno_emissao, name='lista_retorno_emissao'),
 
     # 10.1 Base Novo (Indicação de Seguridade) - card de Produção / Vendas
     path('producao/vendas/base-novo/', views_vendas.lista_base_novo, name='lista_base_novo'),
