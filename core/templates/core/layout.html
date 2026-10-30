@@ -1218,6 +1218,21 @@
         registrarAuditoria("Exportou CSV", nomeArquivo);
     }
 
+    // Trava contra envio repetido: depois que um formulário é enviado (passou nas validações da
+    // tela), novos envios do MESMO formulário são ignorados por alguns segundos. Evita registros
+    // duplicados quando a pessoa clica várias vezes no Salvar enquanto a página carrega.
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (e.defaultPrevented || !form || form.getAttribute('data-permite-reenvio') !== null) return;
+        if (form.dataset.enviando === '1') { e.preventDefault(); return; }
+        form.dataset.enviando = '1';
+        setTimeout(function () { delete form.dataset.enviando; }, 15000);
+    });
+    // Ao voltar pela seta do navegador, a página pode vir da memória ainda travada.
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('form[data-enviando]').forEach(function (f) { delete f.dataset.enviando; });
+    });
+
     window.limparCacheMenu = function() {
         Object.keys(localStorage).forEach(function(key) {
             if (key.startsWith('menu_')) {

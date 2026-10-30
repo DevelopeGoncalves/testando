@@ -1,3 +1,4 @@
+import hashlib
 import os
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -5,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
 
 from django.contrib import messages
+from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, OuterRef, Subquery, Prefetch
@@ -559,6 +561,26 @@ def _falta_premio_total_venda_central(request):
     return False
 
 
+def _cadastro_repetido(request, form, model_indicacao):
+    """Evita registro duplicado quando o mesmo cadastro novo é enviado mais de uma vez em
+    sequência (vários cliques no Salvar). Duas proteções:
+    1) trava de 30 s por usuário + CPF + nome (pega envios simultâneos);
+    2) já existe registro com o mesmo CPF, nome e "Data/hora do cadastro" do formulário
+       (a data/hora vem preenchida na abertura da ficha, então os reenvios trazem a mesma)."""
+    dados = form.cleaned_data
+    cpf = (dados.get('cpf_cliente') or '').strip()
+    nome = (dados.get('nome_cliente') or '').strip()
+    if not (cpf or nome):
+        return False
+    texto_chave = f'{model_indicacao._meta.label}|{request.user.pk}|{cpf}|{nome.lower()}'
+    chave = 'novo_registro:' + hashlib.md5(texto_chave.encode(), usedforsecurity=False).hexdigest()
+    if not cache.add(chave, 1, timeout=30):
+        return True
+    carimbo = dados.get('carimbo_data_hora')
+    if carimbo and model_indicacao.objects.filter(cpf_cliente=cpf, nome_cliente=nome, carimbo_data_hora=carimbo).exists():
+        return True
+    return False
+
 def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=None,
                                  campo_permissao='prod_vendas_novo',
                                  model_indicacao=Indicacao, model_ligacao=LigacaoIndicacao,
@@ -608,6 +630,10 @@ def _salvar_indicacao_e_ligacoes(request, processar_ligacoes=True, travar_dados=
         return form, erro_formulario_msg
 
     era_novo = instancia is None
+    if era_novo and _cadastro_repetido(request, form, model_indicacao):
+        # O mesmo cadastro chegou de novo (duplo/triplo clique no Salvar ou internet lenta):
+        # não cria outro registro igual.
+        return None, ''
     indicacao = form.save()
 
     # O card Clientes e a base: o CPF informado na ficha acha (ou cadastra) o
