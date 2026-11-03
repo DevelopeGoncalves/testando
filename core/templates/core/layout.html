@@ -277,12 +277,15 @@
         .dataTables_wrapper .dataTables_length,
         .dataTables_wrapper .dataTables_filter { display: none !important; }
 
+        /* A caixa da tabela ocupa a altura que sobra da tela (o cabeçalho das colunas fica fixo
+           enquanto as linhas rolam dentro dela). 210px = topo do sistema + título da página;
+           se mudar o topo, ajuste só esse número. */
         .tabela-container { 
             overflow-x: auto; 
             overflow-y: auto !important;
-            max-height: 70vh !important;
+            max-height: calc(100vh - 210px) !important;
             min-height: 450px; 
-            padding-bottom: 50px; 
+            padding-bottom: 20px; 
         }
 
         .dataTables_wrapper > .row:last-child,
