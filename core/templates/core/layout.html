@@ -278,8 +278,8 @@
         .dataTables_wrapper .dataTables_filter { display: none !important; }
 
         /* A caixa da tabela ocupa a altura que sobra da tela (o cabeçalho das colunas fica fixo
-           enquanto as linhas rolam dentro dela). 210px = topo do sistema + título da página;
-           se mudar o topo, ajuste só esse número. */
+           enquanto as linhas rolam dentro dela). O valor exato é calculado em ajustarAlturaTabelas()
+           (JavaScript); o 210px abaixo só vale até o script rodar. */
         .tabela-container { 
             overflow-x: auto; 
             overflow-y: auto !important;
@@ -754,7 +754,21 @@
     function revelarTabela(tabelaId) {
         $('#' + tabelaId).addClass('dt-pronta')
             .closest('.tabela-container').find('.tabela-loading').remove();
+        ajustarAlturaTabelas();
     }
+
+    // A caixa da tabela vai exatamente até o fim da tela (sem sobra embaixo): a altura é calculada
+    // pela posição real dela na página, então não depende do tamanho do topo/título. O cabeçalho das
+    // colunas fica fixo e só as linhas rolam. MARGEM_INFERIOR_TABELA = folga entre a caixa e o fim da tela.
+    var MARGEM_INFERIOR_TABELA = 12;
+    function ajustarAlturaTabelas() {
+        document.querySelectorAll('.tabela-container').forEach(function (caixa) {
+            var topo = caixa.getBoundingClientRect().top + window.scrollY;
+            var altura = Math.max(450, window.innerHeight - topo - MARGEM_INFERIOR_TABELA);
+            caixa.style.setProperty('max-height', altura + 'px', 'important');
+        });
+    }
+    window.addEventListener('resize', ajustarAlturaTabelas);
 
 
     function reordenarColunasDom(tabelaId, ordem) {
