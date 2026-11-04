@@ -50,7 +50,9 @@ def producao_vendas(request):
         return redirect('home')
     #----
 
-    return render(request, 'core/producao/vendas/index.html')
+    from .favoritos import cards_permitidos, marcar_favoritos
+    cards = {c['chave']: c for c in marcar_favoritos(user, cards_permitidos(user))}
+    return render(request, 'core/producao/vendas/index.html', {'cards': cards})
 
 @login_required
 @cache_navegador_vendas(TABELAS_ENDOSSO)

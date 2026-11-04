@@ -110,7 +110,9 @@ def ler_excel_robusto(arquivo, dtype=None):
 # 1. TELAS INICIAIS
 @login_required    
 def home(request):
-    return render(request, 'core/home.html')
+    from .favoritos import cards_permitidos, marcar_favoritos
+    favoritos = [c for c in marcar_favoritos(request.user, cards_permitidos(request.user)) if c['favorito']]
+    return render(request, 'core/home.html', {'favoritos': favoritos})
 
 # 3. FUNÇÕES DE EXCLUSÃO
 

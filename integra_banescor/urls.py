@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from core import views, views_vendas, views_usuarios, views_base_formularios
+from core import views, views_vendas, views_usuarios, views_base_formularios, views_favoritos
 from django.contrib.auth import views as auth_views
 
 
@@ -157,5 +157,6 @@ urlpatterns = [
 
     path('ping-online/', views_usuarios.ping_online, name='ping_online'),
     path('desconectar_usuarios/', views_usuarios.desconectar_usuarios, name='desconectar_usuarios'),
+    path('favoritos/alternar/', views_favoritos.alternar_favorito, name='alternar_favorito'),
     path('usuario/resetar-senha/', views_usuarios.resetar_senha_usuario, name='resetar_senha_usuario'),
 ]

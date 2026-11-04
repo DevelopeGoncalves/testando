@@ -18,49 +18,50 @@
 
     <div class="vendas-grid">
 
-        {# validador cpf alex: cada card so aparece pra quem tem permissao nele - antes todos #}
-        {# apareciam pra qualquer um que tivesse acesso a pelo menos um card de Vendas. #}
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_novo > 0 %}
-        <a href="{% url 'vendas_novo_negocio' %}" class="link-card">
-            <div class="card card-menu h-100" >
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-plus-circle fa-3x mb-3" style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Novo</h5>
-                    <p class="card-text text-muted small">Ligação</p>
+        {% if cards.vendas_novo %}{% with c=cards.vendas_novo %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_renovacao > 0 %}
-        <a href="{% url 'vendas_nova_renovacao' %}" class="link-card">
-            <div class="card card-menu h-100">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-redo fa-3x mb-3" style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Renovação</h5>
-                    <p class="card-text text-muted small">Ligação</p>
+            </a>
+        </div>
+        {% endwith %}{% endif %}
+        {% if cards.vendas_renovacao %}{% with c=cards.vendas_renovacao %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_endosso > 0 %}
-        <a href="{% url 'vendas_novo_endosso' %}" class="link-card">
-            <div class="card card-menu h-100">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-file-medical fa-3x mb-3" style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Endosso</h5>
-                    <p class="card-text text-muted small">Ligação</p>
+            </a>
+        </div>
+        {% endwith %}{% endif %}
+        {% if cards.vendas_endosso %}{% with c=cards.vendas_endosso %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_emissao > 0 %}
-        {# alex: card "Emissão" vira 2 botões (Banseg / Outras cias) em vez de um link só - cada #}
-        {# um já abre a tela de Emissão filtrada pela Seguradora da venda (BANESTES = Banseg, #}
-        {# qualquer outra = Outras cias). Filtro automático: segue o que já está em cada venda, #}
-        {# sem precisar marcar nada a mais - ver "cia" em views.py (_render_emissao). #}
+            </a>
+        </div>
+        {% endwith %}{% endif %}
+        {% if cards.vendas_emissao_banseg or cards.vendas_emissao_outras %}
+        {# Card "Emissão" com 2 botões (Banseg / Outras cias); cada metade tem a sua estrela. #}
         <div class="card card-menu h-100 d-flex flex-column">
             <div class="card-body text-center pb-2 pt-4">
                 <i class="fas fa-file-invoice-dollar fa-2x mb-2" style="color: var(--brand-green);"></i>
@@ -68,65 +69,83 @@
                 <p class="card-text text-muted small mb-0">Acompanhar vendas a emitir</p>
             </div>
             <div class="emissao-split mt-auto">
-                <a href="{% url 'vendas_emissao' %}?cia=banseg" class="emissao-metade">
-                    <i class="fas fa-dollar-sign mb-1"></i>
-                    <span class="d-block fw-bold text-dark small">Banseg</span>
-                </a>
-                <a href="{% url 'vendas_emissao' %}?cia=outras" class="emissao-metade">
-                    <i class="fas fa-dollar-sign mb-1"></i>
-                    <span class="d-block fw-bold text-dark small">Outras cias</span>
-                </a>
+                {% if cards.vendas_emissao_banseg %}{% with c=cards.vendas_emissao_banseg %}
+                <div class="emissao-metade fav-cell">
+                    <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+                    <a href="{{ c.url }}" class="emissao-link">
+                        <i class="fas fa-dollar-sign mb-1"></i>
+                        <span class="d-block fw-bold text-dark small">Banseg</span>
+                    </a>
+                </div>
+                {% endwith %}{% endif %}
+                {% if cards.vendas_emissao_outras %}{% with c=cards.vendas_emissao_outras %}
+                <div class="emissao-metade fav-cell">
+                    <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+                    <a href="{{ c.url }}" class="emissao-link">
+                        <i class="fas fa-dollar-sign mb-1"></i>
+                        <span class="d-block fw-bold text-dark small">Outras cias</span>
+                    </a>
+                </div>
+                {% endwith %}{% endif %}
             </div>
         </div>
         {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_basenovo > 0 %}
-        <a href="{% url 'lista_base_novo' %}" class="link-card">
-            <div class="card card-menu h-100">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-file-signature fa-3x mb-3" style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Novo</h5>
-                    <p class="card-text text-muted small">Gerenciar base de novos negócios</p>
+        {% if cards.vendas_base_novo %}{% with c=cards.vendas_base_novo %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_baserenovacao > 0 %}
-        <a href="{% url 'vendas_renovacao' %}" class="link-card">
-            <div class="card card-menu h-100">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-sync-alt fa-3x mb-3" style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Renovação</h5>
-                    <p class="card-text text-muted small">Gerenciar base de renovação</p>
+            </a>
+        </div>
+        {% endwith %}{% endif %}
+        {% if cards.vendas_base_renovacao %}{% with c=cards.vendas_base_renovacao %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_baseendosso > 0 %}
-        <a href="{% url 'vendas_endosso' %}" class="link-card">
-            <div class="card card-menu h-100">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-edit fa-3x mb-3 " style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Endosso</h5>
-                    <p class="card-text text-muted small">Gerenciar base de endossos</p>
+            </a>
+        </div>
+        {% endwith %}{% endif %}
+        {% if cards.vendas_base_endosso %}{% with c=cards.vendas_base_endosso %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
-
-        {% if request.user.is_superuser or request.user.perfil.prod_vendas_baseemissao > 0 %}
-        <a href="{% url 'vendas_base_emissao' %}" class="link-card">
-            <div class="card card-menu h-100">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-folder-open fa-3x mb-3" style="color: var(--brand-green);"></i>
-                    <h5 class="card-title text-dark fw-bold">Base Emissão</h5>
-                    <p class="card-text text-muted small">Gerenciar base de emissões</p>
+            </a>
+        </div>
+        {% endwith %}{% endif %}
+        {% if cards.vendas_base_emissao %}{% with c=cards.vendas_base_emissao %}
+        <div class="fav-cell">
+            <button type="button" class="btn-estrela{% if c.favorito %} ativo{% endif %}" data-chave="{{ c.chave }}" title="Favoritar (aparece na página inicial)" onclick="alternarFavorito(this)"><i class="{% if c.favorito %}fas{% else %}far{% endif %} fa-star ignorar-icone-global"></i></button>
+            <a href="{{ c.url }}" class="link-card">
+                <div class="card card-menu h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
+                        <h5 class="card-title text-dark fw-bold">{{ c.titulo }}</h5>
+                        <p class="card-text text-muted small">{{ c.subtitulo }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
-        {% endif %}
+            </a>
+        </div>
+        {% endwith %}{% endif %}
 
     </div>
 </div>
@@ -174,5 +193,8 @@
         display: block;
         color: var(--brand-green);
     }
+    .emissao-split .emissao-metade .btn-estrela i { color: inherit; display: inline; }
+    .emissao-split .emissao-link { display: block; text-decoration: none; color: inherit; }
+    .emissao-split .emissao-metade .btn-estrela { top: 2px; right: 6px; }
 </style>
 {% endblock %}

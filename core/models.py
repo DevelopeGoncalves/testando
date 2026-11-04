@@ -1243,3 +1243,19 @@ class FinanceiroHabitacional(models.Model):
 
     def __str__(self):
         return f"{self.registro_producao.chave_unica} - {self.data_processamento or 'Não Processado'}"
+
+
+class FavoritoUsuario(models.Model):
+    """Cards favoritados por cada usuário (estrela amarela) - aparecem na página inicial."""
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favoritos')
+    chave = models.CharField("Card", max_length=60)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('usuario', 'chave')
+        ordering = ['criado_em']
+        verbose_name = "Favorito do usuário"
+        verbose_name_plural = "Favoritos dos usuários"
+
+    def __str__(self):
+        return f"{self.usuario} - {self.chave}"
