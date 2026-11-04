@@ -87,6 +87,7 @@
                     <th class="text-center">Nivel Acesso</th>
                     <th class="text-center">Ativo</th>
                     <th class="text-center">Usuário</th>
+                    <th class="text-center">Matrícula</th>
                     <th>Nome</th>
                 </tr>
             </thead>
@@ -116,6 +117,7 @@
                         {% endif %}
                     </td>
                     <td class="text-center">{{ u.username }}</td>
+                    <td class="text-center">{{ u.perfil.colaborador.matricula|default:"-" }}</td>
                     <td>{{ u.perfil.colaborador|default:"-" }}</td>
                 </tr>
                 {% endfor %}
