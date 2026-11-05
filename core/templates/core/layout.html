@@ -1300,13 +1300,15 @@
             body: 'chave=' + encodeURIComponent(chave)
         }).then(function (r) { return r.json(); }).then(function (resp) {
             botao.disabled = false;
-            if (!resp.ok) { avisoElegante(resp.erro || 'Não foi possível favoritar.', 'Erro'); return; }
+            if (!resp.ok) { avisoElegante(resp.erro || 'Não foi possível favoritar.', resp.limite ? 'Limite de favoritos' : 'Erro'); return; }
             botao.classList.toggle('ativo', resp.favorito);
             var icone = botao.querySelector('i');
             if (icone) icone.className = (resp.favorito ? 'fas' : 'far') + ' fa-star ignorar-icone-global';
             var celula = botao.closest('[data-remover-ao-desfavoritar]');
             if (celula && !resp.favorito) {
                 celula.remove();
+                var qtd = document.getElementById('qtd-favoritos');
+                if (qtd) qtd.textContent = document.querySelectorAll('#grade-favoritos .fav-cell').length;
                 if (!document.querySelector('#grade-favoritos .fav-cell')) {
                     var vazio = document.getElementById('sem-favoritos');
                     if (vazio) vazio.style.display = '';

@@ -1,4 +1,5 @@
 {% extends 'core/layout.html' %}
+{% load formatos %}
 
 {% block title %}Base - Processamentos{% endblock %}
 
@@ -20,7 +21,8 @@
 <div class="row">
 
     {% if request.user.is_superuser or request.user.perfil.base_proc_unidade > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseproc_unidades' %}
         <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImportarUnidades">        
             <div class="card card-menu mb-4">
                 <div class="card-body text-center p-4">
@@ -34,7 +36,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_proc_colaboradores > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseproc_colaboradores' %}
         <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImportarColaboradores">        
             <div class="card card-menu mb-4">
                 <div class="card-body text-center p-4">
@@ -48,7 +51,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_proc_ramos > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseproc_ramos' %}
         <a href="#" class="link-card" data-bs-toggle="modal" data-bs-target="#modalImportarRamos">
             <div class="card card-menu mb-4">
                 <div class="card-body text-center p-4">
@@ -129,4 +133,15 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Vindo dos favoritos da página inicial: ?abrir=modalXxx abre o pop-up de importação direto.
+    (function () {
+        var id = new URLSearchParams(location.search).get('abrir');
+        var el = id && document.getElementById(id);
+        if (el && /^modalImportar/.test(id)) bootstrap.Modal.getOrCreateInstance(el).show();
+    })();
+</script>
 {% endblock %}

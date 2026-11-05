@@ -1,4 +1,5 @@
 {% extends 'core/layout.html' %}
+{% load formatos %}
 
 {% block title %}Base - Formulários{% endblock %}
 
@@ -15,7 +16,8 @@
 <div class="row">
 
     {% if request.user.is_superuser or request.user.perfil.base_form_unidade > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_unidades' %}
         <a href="{% url 'lista_unidades' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-building fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -28,7 +30,8 @@
     {% endif %}
     
     {% if request.user.is_superuser or request.user.perfil.base_form_colaboradores > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_colaboradores' %}
         <a href="{% url 'lista_colaboradores' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-user-tie fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -41,7 +44,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_contratados > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_contratados' %}
         <a href="{% url 'lista_contratados' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-file-signature fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -54,7 +58,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_seguradoras > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_seguradoras' %}
         <a href="{% url 'lista_seguradoras' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-shield-alt fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -67,7 +72,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_tiposdocumento > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_tiposdoc' %}
         <a href="{% url 'lista_tiposdoc' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-file-alt fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -80,7 +86,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_ramos > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_ramos' %}
         <a href="{% url 'lista_ramos' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-code-branch fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -93,7 +100,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_produtos > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_produtos' %}
         <a href="{% url 'lista_produtos' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-box-open fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -106,7 +114,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_agrupamentos > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_agrupamentos' %}
         <a href="{% url 'lista_agrupamentos' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-layer-group fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -119,7 +128,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_metas > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_metas' %}
         <a href="{% url 'lista_metas' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-bullseye fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -132,7 +142,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_tipopessoa > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_tipopessoa' %}
         <a href="{% url 'tipo_pessoa_lista' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-id-card fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -145,7 +156,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_clientes > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_clientes' %}
         <a href="{% url 'lista_clientes' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-user-friends fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -158,7 +170,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_estados_anbima > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_estados_anbima' %}
         <a href="{% url 'lista_estados_anbima' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-map-marker-alt fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -171,7 +184,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_fundos_anbima > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_fundos_anbima' %}
         <a href="{% url 'lista_fundos_anbima' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-coins fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -184,7 +198,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_status_emissao > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_status_emissao' %}
         <a href="{% url 'lista_status_emissao' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-tasks fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -197,7 +212,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.base_form_retorno_emissao > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'baseform_retorno_emissao' %}
         <a href="{% url 'lista_retorno_emissao' %}" class="link-card">
             <div class="card card-menu mb-4"> <div class="card-body text-center p-4">
                     <i class="fas fa-reply fa-3x mb-3" style="color: var(--brand-green);"></i>

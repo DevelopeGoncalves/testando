@@ -1,4 +1,5 @@
 {% extends 'core/layout.html' %}
+{% load formatos %}
 {% block title %}Estagiarios{% endblock %}
 
 {% block breadcrumb %}
@@ -23,7 +24,8 @@
 <div class="row">
 
     {% if request.user.is_superuser or request.user.perfil.admin_listaestagiarios > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'admin_lista_estagiarios' %}
         <a href="{% url 'lista_estagiarios' %}" class="link-card">
             <div class="card card-menu mb-4">
                 <div class="card-body text-center p-4">
@@ -37,7 +39,8 @@
     {% endif %}
 
     {% if request.user.is_superuser or request.user.perfil.admin_feriasestagiarios > 0 %}
-    <div class="col-lg-3 col-6">
+    <div class="col-lg-3 col-6 fav-cell">
+    {% estrela_favorito 'admin_ferias_estagiarios' %}
         <a href="{% url 'ferias_estagiarios' %}" class="link-card">
             <div class="card card-menu mb-4">
                 <div class="card-body text-center p-4">

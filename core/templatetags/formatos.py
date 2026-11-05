@@ -24,3 +24,20 @@ def atendente_usuario(user):
     """O usuário logado como "matrícula - nome"."""
     from core.atendentes import atendente_do_usuario
     return atendente_do_usuario(user)
+
+
+@register.simple_tag(takes_context=True)
+def estrela_favorito(context, chave):
+    """Estrela de favorito do card (amarela se já favoritado). Usar dentro de um bloco com a classe fav-cell."""
+    from django.utils.html import format_html
+    from core.favoritos import chaves_favoritas
+    request = context.get('request')
+    if request is None or not request.user.is_authenticated:
+        return ''
+    if not hasattr(request, '_favoritos_cache'):
+        request._favoritos_cache = chaves_favoritas(request.user)
+    ativo = chave in request._favoritos_cache
+    return format_html(
+        '<button type="button" class="btn-estrela{}" data-chave="{}" title="Favoritar (aparece na página inicial)" '
+        'onclick="alternarFavorito(this)"><i class="{} fa-star ignorar-icone-global"></i></button>',
+        ' ativo' if ativo else '', chave, 'fas' if ativo else 'far')

@@ -1,4 +1,5 @@
 {% extends 'core/layout.html' %}
+{% load formatos %}
 
 {% block title %}Produção - Formulários{% endblock %}
 
@@ -41,7 +42,8 @@
 
             {% if request.user.is_superuser or 'vida' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_vida > 0 or 'bap' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_bap > 0 or 'prestamista' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_prestamista > 0 or 'patrimonial' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_patrimonialedemais > 0 or 'cons' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_consorcio > 0 or 'odonto' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_odonto > 0 or 'previd' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_previdencia > 0 or 'banescap' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_banescap > 0 or 'saúd' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_saude > 0 or 'saud' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_saude > 0 or 'habitacional' in agrupamento.agrupamento|lower and request.user.perfil.prod_form_habitacional > 0 %}
 
-            <div class="col-lg-3 col-6">
+            <div class="col-lg-3 col-6 fav-cell">
+    {% if 'odonto' in agrupamento.agrupamento|lower or 'habitacional' in agrupamento.agrupamento|lower %}{% with idtxt=agrupamento.id|stringformat:'s' %}{% with chave_painel='prodform_painel_'|add:idtxt %}{% estrela_favorito chave_painel %}{% endwith %}{% endwith %}{% endif %}
 
                 {% if 'odonto' in agrupamento.agrupamento|lower or 'habitacional' in agrupamento.agrupamento|lower %}
 
