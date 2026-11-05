@@ -16,7 +16,8 @@
        (card com so 2 linhas de texto ficava mais baixo que o com 3, desalinhando
        as fileiras). O card_body vira flex e centraliza o conteudo verticalmente. */
     #grid-processamentos .card-menu .card-body {
-        min-height: 168px;
+        /* altura vem do padrão de todos os cards (--altura-card, em layout.html) */
+        flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;

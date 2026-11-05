@@ -172,6 +172,11 @@
             --estrela-off: #b0b7c3;
             --estrela-on: #ffc107;
 
+            /* TAMANHO PADRÃO DE TODOS OS CARDS (copiado do card de Vendas): altura mínima e espaço entre eles.
+               Muda aqui = muda em todas as abas. */
+            --altura-card: 156px;
+            --espaco-entre-cards: 1rem;
+
             --estrela-emissao-topo: 2px;
             --estrela-emissao-direita: 6px;
             --estrela-emissao-esquerda: auto;
@@ -180,6 +185,17 @@
            mesma linha ficam com o MESMO tamanho (a estrela fica na mesma posição em todos). */
         .fav-cell { position: relative; height: 100%; }
         .fav-cell > a.link-card { display: block; height: 100%; }
+
+        /* Mesmo tamanho de card em todas as abas (o de Vendas é a referência). */
+        .card-menu { min-height: var(--altura-card); }
+        .row:has(> .fav-cell) { --bs-gutter-x: var(--espaco-entre-cards); }
+        .row:has(> .fav-cell) .card-menu.mb-4 { margin-bottom: var(--espaco-entre-cards) !important; }
+        /* Nas telas em colunas do Bootstrap a célula tem uma folga lateral (gutter): compensa pra
+           estrela ficar no MESMO lugar do card que nas telas da grade (Vendas). */
+        .fav-cell[class*="col-"] .btn-estrela {
+            margin-right: calc(var(--bs-gutter-x) / 2);
+            margin-left: calc(var(--bs-gutter-x) / 2);
+        }
         .btn-estrela {
             position: absolute;
             top: var(--estrela-topo); right: var(--estrela-direita); left: var(--estrela-esquerda);

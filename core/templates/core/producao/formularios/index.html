@@ -14,7 +14,8 @@
 <style>
     /* Mesmo padrão da tela de Processamentos: todos os cards com a mesma altura... */
     #grid-formularios .card-menu .card-body {
-        min-height: 168px;
+        /* altura vem do padrão de todos os cards (--altura-card, em layout.html) */
+        flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;

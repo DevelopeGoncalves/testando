@@ -154,10 +154,9 @@
     .vendas-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        /* Altura das linhas = a do maior card (Emissão). Para fixar uma altura mínima padrão para todos,
-           troque 0px abaixo, ex.: 160px. */
-        grid-auto-rows: minmax(var(--altura-card-vendas, 0px), 1fr);
-        gap: 1rem;
+        /* Altura padrão dos cards = --altura-card (layout.html); cresce só se o conteúdo pedir. */
+        grid-auto-rows: minmax(var(--altura-card), 1fr);
+        gap: var(--espaco-entre-cards);
         margin-bottom: 1rem;
     }
     @media (max-width: 991.98px) {
