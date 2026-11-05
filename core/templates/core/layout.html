@@ -153,17 +153,42 @@
 
         a.link-card { text-decoration: none; color: inherit; display: block; }
 
-        /* --- ESTRELA DE FAVORITO (cards) ---
-           Cores: cinza = não favoritado | amarela = favoritado. Mude só estes dois valores. */
-        :root { --estrela-off: #b0b7c3; --estrela-on: #ffc107; }
+        /* =====================================================================================
+           ESTRELA DE FAVORITO - POSIÇÃO, TAMANHO E COR (vale para TODAS as abas que têm estrela)
+           Mude só os valores abaixo, salve e atualize a página (Ctrl+F5).
+             --estrela-topo      : distância do TOPO do card (maior = desce a estrela)
+             --estrela-direita   : distância da BORDA DIREITA do card (maior = vai pra esquerda).
+                                   Para ficar no lado esquerdo, use --estrela-esquerda no lugar
+                                   (e deixe --estrela-direita: auto)
+             --estrela-tamanho   : tamanho da estrela (ex.: 1rem, 1.5rem, 24px)
+             --estrela-off / on  : cor desfavoritada (cinza) / favoritada (amarela)
+           Os cards da Emissão (Banseg / Outras cias) têm a posição própria: --estrela-emissao-*
+           ===================================================================================== */
+        :root {
+            --estrela-topo: 8px;
+            --estrela-direita: 10px;
+            --estrela-esquerda: auto;
+            --estrela-tamanho: 1.15rem;
+            --estrela-off: #b0b7c3;
+            --estrela-on: #ffc107;
+
+            --estrela-emissao-topo: 2px;
+            --estrela-emissao-direita: 6px;
+            --estrela-emissao-esquerda: auto;
+        }
         .fav-cell { position: relative; }
         .btn-estrela {
-            position: absolute; top: 8px; right: 10px; z-index: 5;
+            position: absolute;
+            top: var(--estrela-topo); right: var(--estrela-direita); left: var(--estrela-esquerda);
+            z-index: 5;
             background: transparent; border: none; padding: 2px 4px; line-height: 1;
-            font-size: 1.15rem; cursor: pointer; color: var(--estrela-off);
+            font-size: var(--estrela-tamanho); cursor: pointer; color: var(--estrela-off);
             transition: transform .12s, color .12s;
         }
-        .btn-estrela i { color: inherit !important; }
+        .emissao-split .btn-estrela {
+            top: var(--estrela-emissao-topo); right: var(--estrela-emissao-direita); left: var(--estrela-emissao-esquerda);
+        }
+        .btn-estrela i { color: inherit !important; font-size: inherit; display: inline; }
         .btn-estrela:hover { transform: scale(1.2); color: var(--estrela-on); }
         .btn-estrela.ativo { color: var(--estrela-on); }
 
