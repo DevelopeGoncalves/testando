@@ -176,7 +176,10 @@
             --estrela-emissao-direita: 6px;
             --estrela-emissao-esquerda: auto;
         }
-        .fav-cell { position: relative; }
+        /* Todo card com estrela ocupa a altura inteira da célula da grade: assim todos os cards da
+           mesma linha ficam com o MESMO tamanho (a estrela fica na mesma posição em todos). */
+        .fav-cell { position: relative; height: 100%; }
+        .fav-cell > a.link-card { display: block; height: 100%; }
         .btn-estrela {
             position: absolute;
             top: var(--estrela-topo); right: var(--estrela-direita); left: var(--estrela-esquerda);
