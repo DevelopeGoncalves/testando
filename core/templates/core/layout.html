@@ -186,16 +186,31 @@
         .fav-cell { position: relative; height: 100%; }
         .fav-cell > a.link-card { display: block; height: 100%; }
 
-        /* Mesmo tamanho de card em todas as abas (o de Vendas é a referência). */
+        /* =====================================================================================
+           GRADE ÚNICA DE CARDS - o padrão do card de Vendas vale para TODO o sistema:
+           mesma largura (4 por linha, 2 no celular), mesma altura (--altura-card), mesmo espaço
+           (--espaco-entre-cards), mesma fonte e mesmo visual. Qualquer tela com cards (links .link-card
+           dentro de colunas) vira essa grade automaticamente.
+           ===================================================================================== */
         .card-menu { min-height: var(--altura-card); }
-        .row:has(> .fav-cell) { --bs-gutter-x: var(--espaco-entre-cards); }
-        .row:has(> .fav-cell) .card-menu.mb-4 { margin-bottom: var(--espaco-entre-cards) !important; }
-        /* Nas telas em colunas do Bootstrap a célula tem uma folga lateral (gutter): compensa pra
-           estrela ficar no MESMO lugar do card que nas telas da grade (Vendas). */
-        .fav-cell[class*="col-"] .btn-estrela {
-            margin-right: calc(var(--bs-gutter-x) / 2);
-            margin-left: calc(var(--bs-gutter-x) / 2);
+        .row:has(> [class*="col-"] a.link-card) {
+            --bs-gutter-x: 0; --bs-gutter-y: 0;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: minmax(var(--altura-card), 1fr);
+            gap: var(--espaco-entre-cards);
+            margin: 0 0 var(--espaco-entre-cards);
         }
+        .row:has(> [class*="col-"] a.link-card) > [class*="col-"] {
+            width: auto; max-width: none; flex: none; margin: 0; padding: 0; height: 100%;
+        }
+        .row:has(> [class*="col-"] a.link-card) > [class*="col-"] > a.link-card { display: block; height: 100%; }
+        .row:has(> [class*="col-"] a.link-card) .card-menu { height: 100%; margin-bottom: 0 !important; }
+        @media (max-width: 991.98px) {
+            .row:has(> [class*="col-"] a.link-card), .vendas-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Estrela de favorito (posição/tamanho/cor: variáveis --estrela-* no :root acima) */
         .btn-estrela {
             position: absolute;
             top: var(--estrela-topo); right: var(--estrela-direita); left: var(--estrela-esquerda);
@@ -210,6 +225,11 @@
         .btn-estrela i { color: inherit !important; font-size: inherit; display: inline; }
         .btn-estrela:hover { transform: scale(1.2); color: var(--estrela-on); }
         .btn-estrela.ativo { color: var(--estrela-on); }
+
+        /* Arrastar para reordenar os favoritos (página inicial) */
+        #grade-favoritos .fav-cell { cursor: grab; }
+        #grade-favoritos .fav-cell.arrastando { opacity: .35; }
+        #grade-favoritos .fav-cell.arrastando .card-menu { transform: scale(.97); }
 
         /* --- TABELAS --- */
         .tabela-container {

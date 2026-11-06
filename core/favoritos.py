@@ -103,8 +103,8 @@ def marcar_favoritos(user, cards):
 
 
 def favoritos_na_ordem(user):
-    """Favoritos do usuário na ordem em que foram marcados (só os que ele ainda pode abrir)."""
+    """Favoritos do usuário na ordem que ele arrastou (ou na de marcação), só os que ainda pode abrir."""
     from .models import FavoritoUsuario
-    ordem = list(FavoritoUsuario.objects.filter(usuario=user).order_by('criado_em', 'id').values_list('chave', flat=True))
+    ordem = list(FavoritoUsuario.objects.filter(usuario=user).order_by('ordem', 'criado_em', 'id').values_list('chave', flat=True))
     por_chave = {c['chave']: dict(c, favorito=True) for c in cards_permitidos(user)}
     return [por_chave[k] for k in ordem if k in por_chave]

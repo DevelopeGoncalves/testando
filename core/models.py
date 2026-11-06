@@ -1249,11 +1249,12 @@ class FavoritoUsuario(models.Model):
     """Cards favoritados por cada usuário (estrela amarela) - aparecem na página inicial."""
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favoritos')
     chave = models.CharField("Card", max_length=60)
+    ordem = models.PositiveIntegerField("Posição", default=0)  # posição na página inicial (o usuário arrasta)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('usuario', 'chave')
-        ordering = ['criado_em']
+        ordering = ['ordem', 'criado_em']
         verbose_name = "Favorito do usuário"
         verbose_name_plural = "Favoritos dos usuários"
 

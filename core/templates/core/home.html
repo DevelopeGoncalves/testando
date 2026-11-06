@@ -18,9 +18,9 @@
 
     <div class="vendas-grid" id="grade-favoritos">
         {% for c in favoritos %}
-        <div class="fav-cell" data-remover-ao-desfavoritar="1">
+        <div class="fav-cell" data-remover-ao-desfavoritar="1" draggable="true" title="Segure e arraste para mudar a posição">
             <button type="button" class="btn-estrela ativo" data-chave="{{ c.chave }}" title="Remover dos favoritos" onclick="alternarFavorito(this)"><i class="fas fa-star ignorar-icone-global"></i></button>
-            <a href="{{ c.url }}" class="link-card">
+            <a href="{{ c.url }}" class="link-card" draggable="false">
                 <div class="card card-menu h-100">
                     <div class="card-body text-center p-4">
                         <i class="{{ c.icone }} fa-3x mb-3" style="color: var(--brand-green);"></i>
@@ -45,4 +45,46 @@
     .vendas-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(var(--altura-card), 1fr); gap: var(--espaco-entre-cards); margin-bottom: 1rem; }
     @media (max-width: 991.98px) { .vendas-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Segure e arraste um favorito para mudar a posição; a ordem fica salva para o seu usuário.
+    (function () {
+        var grade = document.getElementById('grade-favoritos');
+        if (!grade) return;
+        var arrastado = null;
+
+        grade.addEventListener('dragstart', function (e) {
+            var cel = e.target.closest && e.target.closest('.fav-cell');
+            if (!cel) return;
+            arrastado = cel;
+            cel.classList.add('arrastando');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', cel.querySelector('.btn-estrela').dataset.chave);
+        });
+        grade.addEventListener('dragover', function (e) {
+            if (!arrastado) return;
+            e.preventDefault();
+            var alvo = e.target.closest && e.target.closest('.fav-cell');
+            if (!alvo || alvo === arrastado) return;
+            var r = alvo.getBoundingClientRect();
+            var depois = (e.clientX - r.left) > r.width / 2;
+            grade.insertBefore(arrastado, depois ? alvo.nextSibling : alvo);
+        });
+        grade.addEventListener('drop', function (e) { if (arrastado) e.preventDefault(); });
+        grade.addEventListener('dragend', function () {
+            if (!arrastado) return;
+            arrastado.classList.remove('arrastando');
+            arrastado = null;
+            var corpo = new URLSearchParams();
+            grade.querySelectorAll('.fav-cell .btn-estrela').forEach(function (b) { corpo.append('chaves', b.dataset.chave); });
+            fetch("{% url 'ordenar_favoritos' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: corpo.toString()
+            }).catch(function () {});
+        });
+    })();
+</script>
 {% endblock %}

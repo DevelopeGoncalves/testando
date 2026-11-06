@@ -157,6 +157,7 @@ urlpatterns = [
 
     path('ping-online/', views_usuarios.ping_online, name='ping_online'),
     path('desconectar_usuarios/', views_usuarios.desconectar_usuarios, name='desconectar_usuarios'),
+    path('favoritos/ordenar/', views_favoritos.ordenar_favoritos, name='ordenar_favoritos'),
     path('favoritos/alternar/', views_favoritos.alternar_favorito, name='alternar_favorito'),
     path('usuario/resetar-senha/', views_usuarios.resetar_senha_usuario, name='resetar_senha_usuario'),
 ]
