@@ -1470,28 +1470,34 @@ def importar_colaboradores(request):
                     if not matricula_bruta or matricula_bruta == '-': 
                         continue
 
-                    # Mapeia o nome e deixa o colaborador ativo por padrão
-                    defaults_data = {
-                        'colaborador': str(row.get('NOME', '')).strip(),
-                        'inativo': False,
-                    }
+                    nome_planilha = str(row.get('NOME', '')).strip()
                     
                     # Vincula a agência usando a coluna CID_COORDENADORIA
                     cid_lotacao = str(row.get('CID_COORDENADORIA', '')).strip()
+                    unidade_vinculo = None
                     if cid_lotacao and cid_lotacao != '-':
                         unidade_vinculo = Unidade.objects.filter(cid_unidade=cid_lotacao.zfill(4)).first()
-                        if unidade_vinculo: 
-                            defaults_data['unidade'] = unidade_vinculo
 
-                    # Salva ou atualiza utilizando a MATRÍCULA como chave única
-                    colab, criada = Colaborador.objects.update_or_create(
-                        matricula=matricula_bruta, 
-                        defaults=defaults_data
-                    )
-                    if criada: 
-                        contador_novos += 1
-                    else: 
+                    # Verifica se o colaborador já existe
+                    colaborador_existente = Colaborador.objects.filter(matricula=matricula_bruta).first()
+
+                    if colaborador_existente:
+                        # Atualiza apenas os campos da planilha, PRESERVANDO as datas de início e fim
+                        colaborador_existente.colaborador = nome_planilha
+                        colaborador_existente.inativo = False
+                        if unidade_vinculo: 
+                            colaborador_existente.unidade = unidade_vinculo
+                        colaborador_existente.save()
                         contador_atualizados += 1
+                    else:
+                        # Se não existe, cria um novo
+                        Colaborador.objects.create(
+                            matricula=matricula_bruta,
+                            colaborador=nome_planilha,
+                            inativo=False,
+                            unidade=unidade_vinculo
+                        )
+                        contador_novos += 1
                         
             messages.success(request, f'Sucesso! {contador_novos} criados e {contador_atualizados} atualizados.')
             registrar_auditoria_backend(usuario=request.user,acao="Importou", detalhe="Colaboradores")
