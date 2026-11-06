@@ -1199,7 +1199,9 @@ from django.core.exceptions import ValidationError
 class FeriasEstagiario(models.Model):
     colaborador = models.ForeignKey(
         'Colaborador', 
-        on_delete=models.CASCADE, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='historico_ferias',
         verbose_name="Estagiário"
     )
