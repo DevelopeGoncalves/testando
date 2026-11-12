@@ -566,10 +566,10 @@ class NovoUsuarioForm(BootstrapMixin, forms.Form):
 
     # --- PRODUÇÃO  henrique ---
     prod_vendas_novo = criar_campo_permissao("↳ Vendas - Novo")
-    prod_vendas_renovacao = criar_campo_permissao("↳ Vendas - Renovação")
-    prod_vendas_endosso = criar_campo_permissao("↳ Vendas - Endosso")
     prod_vendas_basenovo = criar_campo_permissao("↳ Vendas - Base Novo")
+    prod_vendas_renovacao = criar_campo_permissao("↳ Vendas - Renovação")
     prod_vendas_baserenovacao = criar_campo_permissao("↳ Vendas - Base Renovação")
+    prod_vendas_endosso = criar_campo_permissao("↳ Vendas - Endosso")
     prod_vendas_baseendosso = criar_campo_permissao("↳ Vendas - Base Endosso")
     prod_vendas_emissao = criar_campo_permissao("↳ Vendas - Emissao")
     prod_vendas_baseemissao = criar_campo_permissao("↳ Vendas - Base Emissao")
